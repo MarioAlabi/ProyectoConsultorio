@@ -1,0 +1,20 @@
+services:
+  # Eliminamos el servicio 'db' porque usaremos la del NAS
+
+  backend:
+    build: ./BackEnd
+    restart: always
+    # 'network_mode: host' es vital en Linux para acceder a la VPN de Tailscale del host
+    network_mode: host  
+    environment:
+      - DB_HOST=100.64.0.1         
+      - DB_USER=programaconsultorio
+      - DB_PASSWORD=Catolica_10
+      - DB_NAME=proyecto_consultorio
+      - DB_PORT=3306
+      - PORT=3000
+
+  frontend:
+    build: ./FrontEnd
+    restart: always
+    network_mode: host
