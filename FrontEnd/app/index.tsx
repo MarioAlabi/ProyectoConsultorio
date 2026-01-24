@@ -3,7 +3,7 @@ import { View, Text, TextInput, Button, Alert, StyleSheet } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 
-const API_URL = 'http://localhost:3000/api'; 
+const API_URL = '/api'; 
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

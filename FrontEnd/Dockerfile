@@ -1,26 +1,29 @@
-# ETAPA 1: Construcción
+# --- ETAPA 1: Construcción (Node.js) ---
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copiar package.json y lock para instalar dependencias primero
+# Copiamos dependencias
 COPY package*.json ./
 RUN npm install
 
-# Copiamos el resto del código
+# Copiamos el código fuente
 COPY . .
 
-# Generar la versión web estática de Expo
-RUN npx expo export -p web
+# Construimos la versión web estática de Expo
+# Esto generará una carpeta 'dist' con tu HTML/JS
+RUN npx expo export --platform web
 
-# ETAPA 2: Servidor Web (Nginx)
+# --- ETAPA 2: Servidor (Nginx) ---
 FROM nginx:alpine
 
-# Copiar los archivos generados en la etapa anterior a la carpeta de Nginx
+# Copiamos los archivos construidos en la etapa anterior a la carpeta de Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Exponer el puerto 80 (el estándar para web)
+# Copiamos TU configuración personalizada de Nginx
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Exponemos el puerto 80 (interno del contenedor)
 EXPOSE 80
 
-# Arrancamos Nginx
 CMD ["nginx", "-g", "daemon off;"]
