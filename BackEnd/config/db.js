@@ -1,20 +1,31 @@
-const mysql = require('mysql2');
+const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT
-});
-
-connection.connect((err) => {
-  if (err) {
-    console.error('❌ Error conectando a MariaDB:', err.code, err.sqlMessage);
-    return;
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD,
+  {
+    host: process.env.DB_HOST,
+    dialect: 'mysql',
+    port: process.env.DB_PORT,
+    logging: false, // Ponlo en true si quieres ver los comandos SQL en la consola
   }
-  console.log('✅ Conexión exitosa a la Base de Datos del NAS');
-});
+);
 
-module.exports = connection;
+// Función para probar conexión
+const connectDB = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Conectado a MariaDB con Sequelize');
+    // ESTA LÍNEA ES LA MAGIA: Crea las tablas si no existen
+    // 'force: false' significa: "Si ya existe, no la borres".
+    // 'alter: true' significa: "Si cambié algo en el código, actualiza la tabla".
+    await sequelize.sync({ force: false, alter: true });
+    console.log('✅ Tablas sincronizadas');
+  } catch (error) {
+    console.error('❌ Error conectando a la DB:', error);
+  }
+};
+
+module.exports = { sequelize, connectDB };
