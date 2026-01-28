@@ -1,6 +1,7 @@
 node_modules
-.expo
-dist
-web-build
 .git
 .gitignore
+.env
+Dockerfile
+docker-compose.yml
+README.md

@@ -10,14 +10,14 @@ RUN npm install
 # Copiamos el código fuente
 COPY . .
 
-# Construimos la versión web estática de Expo
-# Esto generará una carpeta 'dist' con tu HTML/JS
-RUN npx expo export --platform web
+# CAMBIO CRÍTICO: Usamos el build script de Vite (definido en package.json)
+# Esto generará la carpeta 'dist' con tu HTML/JS optimizado
+RUN npm run build
 
 # --- ETAPA 2: Servidor (Nginx) ---
 FROM nginx:alpine
 
-# Copiamos los archivos construidos en la etapa anterior a la carpeta de Nginx
+# Copiamos los archivos construidos (Vite genera 'dist')
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copiamos TU configuración personalizada de Nginx
