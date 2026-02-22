@@ -1,0 +1,56 @@
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ffffff;
+  padding: 0.5rem 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border-bottom: 2px solid #0d9488; /* Detalle aqua en el borde inferior */
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.navbar-brand .navbar-logo {
+  height: 50px;
+  width: auto;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 2rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-item {
+  text-decoration: none;
+  color: #4b5563;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.5rem 0;
+  transition: color 0.2s;
+}
+
+.nav-item:hover, .nav-item.active {
+  color: #0d9488;
+  border-bottom: 2px solid #0d9488;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-greeting {
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Ajustamos un poco el botón de Logout para que encaje mejor en el nav */
+.navbar-logout {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}

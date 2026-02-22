@@ -1,6 +1,6 @@
 import logoClinica from '../../assets/logo.png'; 
 import { LoginButton } from '../../components/LoginButton';
-import './Landing.css';
+import './Shared.css';
 
 export const Landing = () => {
   return (
