@@ -1,0 +1,123 @@
+/* Contenedor principal con el fondo aqua pastel */
+.landing-container {
+  min-height: 100vh;
+  width: 100%;
+  background-color: #e0f2f1; /* Azul/Verdoso muy suave */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* La tarjeta blanca redondeada del centro */
+.landing-card {
+  background-color: #ffffff;
+  border-radius: 3rem; /* Bordes bien redondeados como en tu dibujo */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  padding: 4rem;
+  max-width: 900px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centra el contenido verticalmente */
+  gap: 3rem; /* Espacio entre la info y el botón */
+}
+
+/* Contenedor para el logo y el texto lado a lado */
+.landing-content {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  width: 100%;
+}
+
+.landing-logo {
+  width: 220px; /* Tamaño del logo */
+  height: auto;
+  flex-shrink: 0;
+}
+
+.landing-text {
+  flex: 1;
+}
+
+.landing-title {
+  font-size: 2.8rem;
+  color: #1f2937;
+  margin-bottom: 1rem;
+  margin-top: 0;
+  font-weight: 800;
+}
+
+.landing-description {
+  font-size: 1.15rem;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+
+
+
+
+/* --- Estilos para el formulario de Login --- */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.form-input {
+  padding: 0.8rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: #0d9488; /* El color aqua del logo */
+}
+
+.submit-btn {
+  background-color: #0d9488;
+  color: white;
+  padding: 1rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 1rem;
+}
+
+.submit-btn:hover {
+  background-color: #0f766e;
+}
+
+.forgot-password {
+  color: #0d9488;
+  font-size: 0.9rem;
+  text-decoration: none;
+  margin-top: 1rem;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
