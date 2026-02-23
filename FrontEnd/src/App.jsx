@@ -15,6 +15,11 @@ import { DashboardRecepcion } from './views/recepcion/DashboardRecepcion';
 import { PacientesRecepcion } from './views/recepcion/PacientesRecepcion';
 import { Preclinica } from './views/recepcion/Preclinica';
 
+//vistas del medico
+import { SalaEspera } from './views/doctor/SalaEspera.jsx';
+import { PacientesDoctor } from './views/doctor/PacientesDoctor';
+import { ConsultaMedica } from './views/doctor/ConsultaMedica';
+
 function App() {
   return (
     <BrowserRouter>
@@ -37,6 +42,12 @@ function App() {
           <Route path="/recepcion/pacientes" element={<PacientesRecepcion />} />
           <Route path="/recepcion/preclinica" element={<Preclinica />} />
           
+
+          {/* Vistas de medico */}
+          <Route path="/doctor" element={<SalaEspera />} />
+          <Route path="/doctor/pacientes" element={<PacientesDoctor />} />
+          <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />
+
         </Route>
       </Routes>
     </BrowserRouter>
