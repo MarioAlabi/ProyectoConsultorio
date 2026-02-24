@@ -1,21 +1,28 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node src/config/index.js",
+    "dev": "nodemon src/config/index.js",
+    "seed": "node src/seed.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "better-auth": "^1.4.19",
     "cors": "^2.8.6",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.31.9",
+    "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
-    "mysql2": "^3.16.1",
+    "express-validator": "^7.3.1",
+    "mysql2": "^3.18.0",
+    "nodemon": "^3.1.14",
     "sequelize": "^6.37.7"
   }
 }
