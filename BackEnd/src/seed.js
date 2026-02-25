@@ -1,6 +1,7 @@
-import { auth } from "../src/config/auth.js";
-import { connectDB } from "../src/config/db.js";
 import 'dotenv/config';
+import { auth } from "./config/auth.js";
+import { connectDB } from "./config/db.js";
+import { ROLES } from "./constants/roles.js";
 
 const createUsers = async () => {
     try {
@@ -12,34 +13,30 @@ const createUsers = async () => {
                 email: "admin@consultorio.com",
                 password: "AdminPassword123!",
                 name: "Central Administrator",
-                role: "admin",
-                username: "admin_root"
+                role: ROLES.ADMIN,
             },
             {
                 email: "doctor@consultorio.com",
                 password: "DoctorPassword123!",
                 name: "Dr. Gregory House",
-                role: "doctor",
-                username: "dr_house"
+                role: ROLES.DOCTOR,
             },
             {
                 email: "assistant@consultorio.com",
                 password: "AssistantPassword123!",
                 name: "Ana Reception",
-                role: "assistant",
-                username: "ana_recep"
+                role: ROLES.ASSISTANT,
             }
         ];
 
         for (const u of usersToCreate) {
             console.log(`Creating user: ${u.email}...`);
-            await auth.api.signUpEmail({
+            await auth.api.createUser({
                 body: {
                     email: u.email,
                     password: u.password,
                     name: u.name,
                     role: u.role,
-                    username: u.username
                 }
             });
         }
