@@ -1,24 +1,22 @@
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authClient } from '../lib/auth-client';
 
 export const LogoutButton = ({ className = '' }) => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const confirmLogout = () => {
-    // Aquí irá la lógica para limpiar la sesión. 
-    // Por ahora, simulamos limpiando el localStorage:
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    
-    // Redirigimos a la página de inicio/recepción
-    navigate('/');
+    startTransition(async () => {
+      await authClient.signOut();
+      navigate('/');
+    });
   };
 
   return (
     <>
-      <button 
+      <button
         onClick={() => setShowModal(true)}
         className={className}
         style={{
@@ -34,7 +32,7 @@ export const LogoutButton = ({ className = '' }) => {
         onMouseOver={(e) => e.target.style.backgroundColor = '#dc2626'}
         onMouseOut={(e) => e.target.style.backgroundColor = '#ef4444'}
       >
-        Cerrar Sesión
+        Cerrar Sesion
       </button>
 
       {showModal && (
@@ -47,22 +45,24 @@ export const LogoutButton = ({ className = '' }) => {
             backgroundColor: 'white', padding: '2rem', borderRadius: '1rem',
             boxShadow: '0 10px 25px rgba(0,0,0,0.1)', textAlign: 'center', maxWidth: '400px', width: '90%'
           }}>
-            <h3 style={{ marginTop: 0, color: '#1f2937', marginBottom: '1rem' }}>¿Cerrar Sesión?</h3>
+            <h3 style={{ marginTop: 0, color: '#1f2937', marginBottom: '1rem' }}>Cerrar Sesion?</h3>
             <p style={{ color: '#4b5563', marginBottom: '2rem' }}>
-              ¿Estás seguro que quieres salir del sistema?
+              Estas seguro que quieres salir del sistema?
             </p>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <button 
+              <button
                 onClick={() => setShowModal(false)}
+                disabled={isPending}
                 style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #d1d5db', background: 'white', cursor: 'pointer', color: '#374151' }}
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={confirmLogout}
-                style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', background: '#ef4444', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
+                disabled={isPending}
+                style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', background: '#ef4444', color: 'white', fontWeight: 'bold', cursor: isPending ? 'not-allowed' : 'pointer', opacity: isPending ? 0.7 : 1 }}
               >
-                Sí, salir
+                {isPending ? 'Saliendo...' : 'Si, salir'}
               </button>
             </div>
           </div>

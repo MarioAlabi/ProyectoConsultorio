@@ -89,7 +89,7 @@ export const PacientesRecepcion = () => {
                   <button onClick={() => handleAbrirModal(p)} style={{ background: 'none', border: 'none', color: '#0ea5e9', cursor: 'pointer', marginRight: '1rem', fontWeight: '600' }}>
                     Editar
                   </button>
-                  <button onClick={() => navigate('/recepcion/preclinica', { state: { pacienteSeleccionado: p } })} style={{ color: 'white', backgroundColor: '#0ea5e9', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer' }}>
+                  <button onClick={() => navigate('/reception/preclinica', { state: { pacienteSeleccionado: p } })} style={{ color: 'white', backgroundColor: '#0ea5e9', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer' }}>
                     Pre-clínica
                   </button>
                 </td>

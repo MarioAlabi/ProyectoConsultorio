@@ -1,48 +1,48 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LogoutButton } from './LogoutButton';
+import { authClient } from '../lib/auth-client';
+import { ROLES } from '../lib/constants/roles';
 import logoClinica from '../assets/logo.png';
 import './Navbar.css';
 
+const MENU_CONFIG = {
+  [ROLES.DOCTOR]: [
+    { label: 'Lista de Espera', path: '/doctor' },
+    { label: 'Listado de Pacientes', path: '/doctor/pacientes' },
+  ],
+  [ROLES.ASSISTANT]: [
+    { label: 'Dashboard', path: '/reception' },
+    { label: 'Pacientes', path: '/reception/pacientes' },
+    { label: 'Pre-clinica', path: '/reception/preclinica' },
+  ],
+  [ROLES.ADMIN]: [
+    { label: 'Dashboard', path: '/admin' },
+    { label: 'Administrar Usuarios', path: '/admin/usuarios' },
+  ],
+};
+
 export const Navbar = () => {
   const location = useLocation();
-  
-  // Leemos el usuario activo desde el LocalStorage
-  const userRole = localStorage.getItem('userRole') || 'recepcion'; 
-  const userName = localStorage.getItem('userName') || 'Usuario';
+  const { data: session } = authClient.useSession();
 
-  // Configuración de rutas basadas en tu diseño y CA
-  const menuConfig = {
-    medico: [
-      { titulo: 'Lista de Espera', ruta: '/doctor' },
-      { titulo: 'Listado de Pacientes', ruta: '/doctor/pacientes' }
-    ],
-recepcion: [
-      { titulo: 'Dashboard', ruta: '/recepcion' },
-      { titulo: 'Pacientes', ruta: '/recepcion/pacientes' },
-      { titulo: 'Pre-clínica', ruta: '/recepcion/preclinica' }
-    ],
-    admin: [
-      { titulo: 'Dashboard', ruta: '/admin' },
-      { titulo: 'Administrar Usuarios', ruta: '/admin/usuarios' } // <-- ¡Corregido aquí!
-    ]
-  };
-
-  const currentLinks = menuConfig[userRole] || [];
+  const role = session?.user?.role ?? '';
+  const userName = session?.user?.name ?? 'Usuario';
+  const currentLinks = MENU_CONFIG[role] ?? [];
 
   return (
     <nav className="navbar-container">
       <div className="navbar-brand">
-        <img src={logoClinica} alt="Clínica Esperanza de Vida" className="navbar-logo" />
+        <img src={logoClinica} alt="Clinica Esperanza de Vida" className="navbar-logo" />
       </div>
 
       <ul className="navbar-links">
         {currentLinks.map((link) => (
-          <li key={link.ruta}>
-            <Link 
-              to={link.ruta} 
-              className={`nav-item ${location.pathname === link.ruta ? 'active' : ''}`}
+          <li key={link.path}>
+            <Link
+              to={link.path}
+              className={`nav-item ${location.pathname === link.path ? 'active' : ''}`}
             >
-              {link.titulo}
+              {link.label}
             </Link>
           </li>
         ))}
