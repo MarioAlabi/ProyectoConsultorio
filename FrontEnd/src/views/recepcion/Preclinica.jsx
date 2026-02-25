@@ -1,25 +1,24 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import '../../views/shared/Shared.css'; 
+import '../../views/shared/Shared.css';
 
 export const Preclinica = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const pacienteInicial = location.state?.pacienteSeleccionado || null;
-  
+
+  const pacienteInicial = location.state?.pacienteSeleccionado ?? null;
+
   const [paciente, setPaciente] = useState(pacienteInicial);
   const [busqueda, setBusqueda] = useState('');
   const [formulario, setFormulario] = useState({ motivo: '', presion: '', temperatura: '', peso: '', altura: '' });
 
-  // Datos simulados para el buscador (incluimos flag de menor)
   const mockDB = [
     { id: 1, nombre: 'Carlos Ruiz', dui: '12345678-9', edad: 45, sexo: 'M', esMenor: false },
     { id: 4, nombre: 'Luisito Comunicas', dui: '00000000-0', edad: 8, sexo: 'M', esMenor: true },
   ];
 
-  const resultadosBusqueda = busqueda.length > 2 
-    ? mockDB.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase())) 
+  const resultadosBusqueda = busqueda.length > 2
+    ? mockDB.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()))
     : [];
 
   const handleSeleccionarPaciente = (p) => {
@@ -29,15 +28,14 @@ export const Preclinica = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Aquí solo enviamos los datos. El IMC se calculará en la vista del médico.
-    console.log('Datos enviados a cola médica:', { paciente, formulario });
-    alert(`Pre-clínica de ${paciente.nombre} enviada al médico.`);
-    navigate('/recepcion');
+    console.log('Datos enviados a cola medica:', { paciente, formulario });
+    alert(`Pre-clinica de ${paciente.nombre} enviada al medico.`);
+    navigate('/reception');
   };
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      <h1 style={{ color: '#1f2937', marginBottom: '1.5rem' }}>Registro de Pre-clínica</h1>
+      <h1 style={{ color: '#1f2937', marginBottom: '1.5rem' }}>Registro de Pre-clinica</h1>
 
       {!paciente ? (
         <div style={{ position: 'relative', marginBottom: '2rem' }}>
@@ -54,12 +52,11 @@ export const Preclinica = () => {
           )}
         </div>
       ) : (
-        /* Tarjeta de Información del Paciente con reflejo de Menor de Edad */
-        <div style={{ 
-          backgroundColor: paciente.esMenor ? '#eff6ff' : '#f0fdf4', 
-          border: `1px solid ${paciente.esMenor ? '#bfdbfe' : '#bbf7d0'}`, 
-          padding: '1.5rem', borderRadius: '1rem', marginBottom: '2rem', 
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+        <div style={{
+          backgroundColor: paciente.esMenor ? '#eff6ff' : '#f0fdf4',
+          border: `1px solid ${paciente.esMenor ? '#bfdbfe' : '#bbf7d0'}`,
+          padding: '1.5rem', borderRadius: '1rem', marginBottom: '2rem',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -73,7 +70,7 @@ export const Preclinica = () => {
               )}
             </div>
             <p style={{ margin: '8px 0 0 0', color: '#4b5563', fontSize: '0.95rem' }}>
-              <strong>Edad:</strong> {paciente.edad} años | 
+              <strong>Edad:</strong> {paciente.edad} anos |
               <strong> {paciente.esMenor ? 'DUI Responsable:' : 'DUI:'}</strong> {paciente.dui}
             </p>
           </div>
@@ -94,25 +91,25 @@ export const Preclinica = () => {
             <h4 style={{ color: '#0d9488', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem', margin: '1.5rem 0 1rem 0' }}>Signos Vitales</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div className="form-group">
-                <label className="form-label">Presión Arterial</label>
+                <label className="form-label">Presion Arterial</label>
                 <input type="text" className="form-input" required placeholder="120/80" value={formulario.presion} onChange={e => setFormulario({...formulario, presion: e.target.value})} />
               </div>
               <div className="form-group">
-                <label className="form-label">Temperatura (°C)</label>
+                <label className="form-label">Temperatura (C)</label>
                 <input type="number" step="0.1" className="form-input" required placeholder="36.5" value={formulario.temperatura} onChange={e => setFormulario({...formulario, temperatura: e.target.value})} />
               </div>
               <div className="form-group">
                 <label className="form-label">Peso (lb)</label>
-                <input type="number" step="0.1" className="form-input" required placeholder="150" value={formulario.weight} onChange={e => setFormulario({...formulario, peso: e.target.value})} />
+                <input type="number" step="0.1" className="form-input" required placeholder="150" value={formulario.peso} onChange={e => setFormulario({...formulario, peso: e.target.value})} />
               </div>
               <div className="form-group">
                 <label className="form-label">Estatura (m)</label>
-                <input type="number" step="0.01" className="form-input" required placeholder="1.70" value={formulario.height} onChange={e => setFormulario({...formulario, altura: e.target.value})} />
+                <input type="number" step="0.01" className="form-input" required placeholder="1.70" value={formulario.altura} onChange={e => setFormulario({...formulario, altura: e.target.value})} />
               </div>
             </div>
 
             <button type="submit" className="submit-btn" style={{ marginTop: '2rem' }}>
-              Confirmar Pre-clínica
+              Confirmar Pre-clinica
             </button>
           </form>
         </div>

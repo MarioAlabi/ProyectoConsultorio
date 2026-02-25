@@ -1,65 +1,53 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-
-// Importamos las vistas compartidas
+import { ROLES } from './lib/constants/roles';
 import { Landing } from './views/shared/Landing';
 import { Login } from './views/shared/Login';
+import { ForgotPassword } from './views/shared/ForgotPassword';
+import { ResetPassword } from './views/shared/ResetPassword';
 import { Layout } from './components/Layout';
-
-// Vistas del Administrador
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { DashboardAdmin } from './views/admin/DashboardAdmin';
 import { AdministrarUsuarios } from './views/admin/AdministrarUsuarios';
-
-// Vistas de Recepción
 import { DashboardRecepcion } from './views/recepcion/DashboardRecepcion';
 import { PacientesRecepcion } from './views/recepcion/PacientesRecepcion';
 import { Preclinica } from './views/recepcion/Preclinica';
-
-// Vistas del Médico
 import { SalaEspera } from './views/doctor/SalaEspera.jsx';
 import { PacientesDoctor } from './views/doctor/PacientesDoctor';
 import { ConsultaMedica } from './views/doctor/ConsultaMedica';
 
-/**
- * Componente Principal App
- * Maneja el enrutamiento global de la aplicación del consultorio.
- */
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* --- RUTAS PÚBLICAS --- */}
-        {/* Landing page informativa */}
         <Route path="/" element={<Landing />} />
-        
-        {/* Login de acceso para personal */}
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* --- RUTAS PRIVADAS (Requieren Layout con Navbar y Outlet) --- */}
-        <Route element={<Layout />}>
-          
-          {/* SECCIÓN: ADMINISTRADOR */}
-          {/* Ruta base: /admin */}
-          <Route path="/admin" element={<DashboardAdmin />} />
-          <Route path="/admin/usuarios" element={<AdministrarUsuarios />} />
-          
-          {/* SECCIÓN: RECEPCIÓN / ASISTENTE */}
-          {/* Ruta base: /recepcion */}
-          <Route path="/recepcion" element={<DashboardRecepcion />} />
-          <Route path="/recepcion/pacientes" element={<PacientesRecepcion />} />
-          <Route path="/recepcion/preclinica" element={<Preclinica />} />
-
-          {/* SECCIÓN: MÉDICO */}
-          {/* Ruta base: /doctor */}
-          <Route path="/doctor" element={<SalaEspera />} />
-          <Route path="/doctor/pacientes" element={<PacientesDoctor />} />
-          <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />
-
+        <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+          <Route element={<Layout />}>
+            <Route path="/admin" element={<DashboardAdmin />} />
+            <Route path="/admin/usuarios" element={<AdministrarUsuarios />} />
+          </Route>
         </Route>
 
-        {/* --- RUTA 404 / REDIRECCIÓN --- */}
-        {/* Si el usuario escribe cualquier otra cosa, lo mandamos al login o landing */}
+        <Route element={<ProtectedRoute allowedRoles={[ROLES.ASSISTANT]} />}>
+          <Route element={<Layout />}>
+            <Route path="/reception" element={<DashboardRecepcion />} />
+            <Route path="/reception/pacientes" element={<PacientesRecepcion />} />
+            <Route path="/reception/preclinica" element={<Preclinica />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={[ROLES.DOCTOR]} />}>
+          <Route element={<Layout />}>
+            <Route path="/doctor" element={<SalaEspera />} />
+            <Route path="/doctor/pacientes" element={<PacientesDoctor />} />
+            <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />
+          </Route>
+        </Route>
+
         <Route path="*" element={<Navigate to="/login" replace />} />
-        
       </Routes>
     </BrowserRouter>
   );

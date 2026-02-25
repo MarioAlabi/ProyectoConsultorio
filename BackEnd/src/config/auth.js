@@ -61,6 +61,7 @@ export const auth = betterAuth({
         },
         sendOnSignUp: true,
     },
+    trustedOrigins: (process.env.APP_ALLOWED_ORIGINS || "http://localhost:5173").split(","),
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
 });

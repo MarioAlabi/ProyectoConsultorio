@@ -150,3 +150,8 @@ out/
 .docusaurus
 
 .svelte-kit
+
+# AI Config
+.agents/
+.agents/*
+skills-lock.json
