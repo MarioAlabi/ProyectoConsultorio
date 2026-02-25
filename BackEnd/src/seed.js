@@ -4,30 +4,30 @@ import 'dotenv/config';
 
 const createUsers = async () => {
     try {
-        console.log("Iniciando siembra de datos (Seeding)...");
+        console.log("Starting data seeding...");
         await connectDB();
 
         const usersToCreate = [
             {
                 email: "admin@consultorio.com",
                 password: "AdminPassword123!",
-                name: "Administrador Central",
-                rol: "admin",
-                nombreUsuario: "admin_root"
+                name: "Central Administrator",
+                role: "admin",
+                username: "admin_root"
             },
             {
-                email: "medico@consultorio.com",
-                password: "MedicoPassword123!",
+                email: "doctor@consultorio.com",
+                password: "DoctorPassword123!",
                 name: "Dr. Gregory House",
-                rol: "medico",
-                nombreUsuario: "dr_house"
+                role: "doctor",
+                username: "dr_house"
             },
             {
-                email: "asistente@consultorio.com",
-                password: "AsistentePassword123!",
-                name: "Ana Recepción",
-                rol: "asistente",
-                nombreUsuario: "ana_recep"
+                email: "assistant@consultorio.com",
+                password: "AssistantPassword123!",
+                name: "Ana Reception",
+                role: "assistant",
+                username: "ana_recep"
             }
         ];
 
@@ -38,16 +38,16 @@ const createUsers = async () => {
                     email: u.email,
                     password: u.password,
                     name: u.name,
-                    rol: u.rol,
-                    nombreUsuario: u.nombreUsuario
+                    role: u.role,
+                    username: u.username
                 }
             });
         }
 
-        console.log("Datos sembrados con éxito. Ya puedes iniciar sesión.");
+        console.log("Seeding completed successfully. You can now log in.");
         process.exit(0);
     } catch (error) {
-        console.error("Error en el seeding:", error);
+        console.error("Seeding error:", error);
         process.exit(1);
     }
 };

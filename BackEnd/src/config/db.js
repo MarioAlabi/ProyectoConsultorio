@@ -2,7 +2,9 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../models/schema.js";
 import dotenv from "dotenv";
+
 dotenv.config();
+
 const poolConnection = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -13,15 +15,17 @@ const poolConnection = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 });
+
 export const db = drizzle(poolConnection, { schema, mode: "default" });
 
 export const connectDB = async () => {
   try {
     const connection = await poolConnection.getConnection();
-    console.log('Conexion exitosa a la base de datos');
-    connection.release(); 
+    console.log('Database connection successful');
+    connection.release();
+
   } catch (error) {
-    console.error('Error conectando a la base de datos MariaDB:', error.message);
-    process.exit(1); 
+    console.error('Error connecting to MariaDB database:', error.message);
+    process.exit(1);
   }
 };
