@@ -1,5 +1,4 @@
-import { mysqlTable, varchar, text, datetime, boolean, int, bigint } from "drizzle-orm/mysql-core";
-
+import { mysqlTable, varchar, text, datetime, boolean, int, bigint, uniqueIndex, date, mysqlEnum, timestamp } from "drizzle-orm/mysql-core";
 export const users = mysqlTable("users", {
     id: varchar("id", { length: 36 }).primaryKey(),
     name: varchar("name", { length: 80 }).notNull(),
@@ -50,4 +49,18 @@ export const rateLimit = mysqlTable("rate_limit", {
     key: text("key").notNull(),
     count: int("count").notNull(),
     lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+});
+export const patients = mysqlTable("patients", {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    fullName: varchar("full_name", { length: 150 }).notNull(),
+    yearOfBirth: date("year_of_birth").notNull(),
+    identityDocument: varchar("identity_document", { length: 20 }).notNull(),
+    gender: mysqlEnum("gender", ["male", "female"]).notNull(),
+    phone: varchar("phone", { length: 20 }),
+    address: text("address"),
+    fileNumber: varchar("file_number", { length: 20 }).notNull().unique(),
+    isMinor: int("is_minor").default(0), 
+    status: varchar("status", { length: 50 }).default("active"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });

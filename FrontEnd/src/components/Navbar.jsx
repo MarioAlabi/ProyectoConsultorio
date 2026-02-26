@@ -9,15 +9,18 @@ const MENU_CONFIG = {
   [ROLES.DOCTOR]: [
     { label: 'Lista de Espera', path: '/doctor' },
     { label: 'Listado de Pacientes', path: '/doctor/pacientes' },
+    { label: 'Cambiar contraseña', path: '/doctor/changePassword' },
   ],
   [ROLES.ASSISTANT]: [
     { label: 'Dashboard', path: '/reception' },
     { label: 'Pacientes', path: '/reception/pacientes' },
     { label: 'Pre-clinica', path: '/reception/preclinica' },
+    { label:'Cambiar contraseña', path:'/reception/changePassword' }
   ],
   [ROLES.ADMIN]: [
     { label: 'Dashboard', path: '/admin' },
     { label: 'Administrar Usuarios', path: '/admin/usuarios' },
+    { label: 'Cambiar contraseña', path: '/admin/changePassword'},
   ],
 };
 
