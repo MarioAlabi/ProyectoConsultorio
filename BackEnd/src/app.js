@@ -6,8 +6,12 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import patientRoutes from "./routes/patientRoutes.js";
 const app = express();
 
+const allowedOrigins = process.env.APP_ALLOWED_ORIGINS 
+    ? process.env.APP_ALLOWED_ORIGINS.split(',') 
+    : ["http://localhost:5173"];
+
 app.use(cors({
-    origin: process.env.APP_ALLOWED_ORIGINS || "http://localhost:5173",
+    origin: allowedOrigins, 
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
