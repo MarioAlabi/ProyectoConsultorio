@@ -134,9 +134,9 @@ export const Login = () => {
           </button>
         </form>
 
-        {/*<Link to="/forgot-password" className="forgot-password" style={{ fontSize: '0.9rem', textAlign: 'center' }}>
+        <Link to="/forgot-password" className="forgot-password" style={{ fontSize: '0.9rem', textAlign: 'center' }}>
           Olvide mi Contraseña
-        </Link>*/}
+        </Link>
       </div>
     </div>
   );
