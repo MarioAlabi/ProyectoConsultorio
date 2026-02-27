@@ -1,5 +1,5 @@
-import { useState, useTransition } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { authClient } from '../../lib/auth-client';
 import { ROLE_HOME_PATHS } from '../../lib/constants/roles';
 import { PasswordInput } from '../../components/PasswordInput';
@@ -10,10 +10,24 @@ export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { data: session, isPending } = authClient.useSession();
 
-  const handleLogin = (e) => {
+  if (isPending) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#6b7280' }}>
+        Cargando...
+      </div>
+    );
+  }
+
+  if (session?.user) {
+    const targetPath = ROLE_HOME_PATHS[session.user.role] || '/login';
+    return <Navigate to={targetPath} replace />;
+  }
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -22,26 +36,27 @@ export const Login = () => {
       return;
     }
 
-    startTransition(async () => {
-      await authClient.signIn.email({
-        email,
-        password,
-        fetchOptions: {
-          onSuccess: (ctx) => {
-            const role = ctx.data?.user?.role;
-            const targetPath = ROLE_HOME_PATHS[role];
+    setIsLoading(true);
+    await authClient.signIn.email({
+      email,
+      password,
+      fetchOptions: {
+        onSuccess: (ctx) => {
+          const role = ctx.data?.user?.role;
+          const targetPath = ROLE_HOME_PATHS[role];
 
-            if (targetPath) {
-              navigate(targetPath);
-            } else {
-              setErrorMsg('Error de configuracion de rol.');
-            }
-          },
-          onError: (ctx) => {
-            setErrorMsg(ctx.error?.message || 'Error de credenciales o conexion');
-          },
+          if (targetPath) {
+            navigate(targetPath, { replace: true });
+          } else {
+            setErrorMsg('Error de configuracion de rol.');
+            setIsLoading(false);
+          }
         },
-      });
+        onError: (ctx) => {
+          setErrorMsg(ctx.error?.message || 'Error de credenciales o conexion');
+          setIsLoading(false);
+        },
+      },
     });
   };
 
@@ -104,10 +119,10 @@ export const Login = () => {
           <button
             type="submit"
             className="submit-btn"
-            disabled={isPending}
-            style={{ opacity: isPending ? 0.7 : 1, cursor: isPending ? 'not-allowed' : 'pointer' }}
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.7 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
           >
-            {isPending ? 'Validando...' : 'Ingresar'}
+            {isLoading ? 'Validando...' : 'Ingresar'}
           </button>
         </form>
 
