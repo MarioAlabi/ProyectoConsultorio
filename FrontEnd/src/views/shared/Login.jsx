@@ -105,7 +105,7 @@ export const Login = () => {
                   position: 'absolute',
                   right: '12px',
                   top: '50%',
-                  transform: 'translateY(-50%)',
+                  tranChangsform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
@@ -134,9 +134,9 @@ export const Login = () => {
           </button>
         </form>
 
-        <Link to="/forgot-password" className="forgot-password" style={{ fontSize: '0.9rem', textAlign: 'center' }}>
+        {/*<Link to="/forgot-password" className="forgot-password" style={{ fontSize: '0.9rem', textAlign: 'center' }}>
           Olvide mi Contraseña
-        </Link>
+        </Link>*/}
       </div>
     </div>
   );
