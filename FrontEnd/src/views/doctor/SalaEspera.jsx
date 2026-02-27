@@ -12,9 +12,9 @@ export const SalaEspera = () => {
     <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
         <h1>Sala de Espera</h1>
-        <button onClick={() => navigate('/doctor/pacientes')} className="submit-btn" style={{ backgroundColor: '#0ea5e9' }}>
+         {/*<button onClick={() => navigate('/doctor/pacientes')} className="submit-btn" style={{ backgroundColor: '#0ea5e9' }}>
           + Atención Directa (Sin Pre-clínica)
-        </button>
+        </button>*/}
       </div>
       
       <div className="card-container">
@@ -24,9 +24,9 @@ export const SalaEspera = () => {
               <h3 style={{ margin: 0 }}>{p.nombre}</h3>
               <p style={{ margin: '5px 0', color: '#666' }}>{p.motivo} • <b>{p.hora}</b></p>
             </div>
-            <button onClick={() => navigate(`/doctor/consulta/${p.id}`, { state: { paciente: p } })} className="submit-btn" style={{ width: 'auto' }}>
+            {/*<button onClick={() => navigate(`/doctor/consulta/${p.id}`, { state: { paciente: p } })} className="submit-btn" style={{ width: 'auto' }}>
               Iniciar Consulta
-            </button>
+            </button>*/}
           </div>
         ))}
       </div>

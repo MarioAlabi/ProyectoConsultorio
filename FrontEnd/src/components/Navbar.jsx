@@ -8,7 +8,7 @@ import './Navbar.css';
 const MENU_CONFIG = {
   [ROLES.DOCTOR]: [
     { label: 'Lista de Espera', path: '/doctor' },
-    { label: 'Listado de Pacientes', path: '/doctor/pacientes' },
+    //{ label: 'Listado de Pacientes', path: '/doctor/pacientes' },
     { label: 'Cambiar contraseña', path: '/doctor/changePassword' },
   ],
   [ROLES.ASSISTANT]: [
