@@ -14,7 +14,7 @@ const MENU_CONFIG = {
   [ROLES.ASSISTANT]: [
     { label: 'Dashboard', path: '/reception' },
     { label: 'Pacientes', path: '/reception/pacientes' },
-    { label: 'Pre-clinica', path: '/reception/preclinica' },
+    //{ label: 'Pre-clinica', path: '/reception/preclinica' },
     { label:'Cambiar contraseña', path:'/reception/changePassword' }
   ],
   [ROLES.ADMIN]: [
