@@ -72,9 +72,9 @@ export const DashboardRecepcion = () => {
           <button onClick={() => navigate('/reception/patients')} style={actionButtonStyle}>
             📂 Gestionar Expedientes
           </button>
-          <button onClick={() => navigate('/reception/patients')} style={{ ...actionButtonStyle, backgroundColor: '#0ea5e9' }}>
+          {/*<button onClick={() => navigate('/reception/patients')} style={{ ...actionButtonStyle, backgroundColor: '#0ea5e9' }}>
             🩺 Ir a Pre-clínica
-          </button>
+          </button>*/}
         </div>
       </div>
 
