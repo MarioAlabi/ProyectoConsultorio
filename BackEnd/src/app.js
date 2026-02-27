@@ -5,6 +5,7 @@ import { auth } from "./config/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import patientRoutes from "./routes/patientRoutes.js";
 const app = express();
+app.use(express.json());
 
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS 
     ? process.env.APP_ALLOWED_ORIGINS.split(',') 

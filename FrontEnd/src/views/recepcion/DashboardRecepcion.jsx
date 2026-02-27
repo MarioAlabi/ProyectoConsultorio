@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../Enviroment/enviroment.js';
+import { api } from '../../lib/api.js';
 
 export const DashboardRecepcion = () => {
   const navigate = useNavigate();
