@@ -9,8 +9,13 @@ export const LogoutButton = ({ className = '' }) => {
 
   const confirmLogout = () => {
     startTransition(async () => {
-      await authClient.signOut();
-      navigate('/');
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            navigate('/login');
+          },
+        },
+      });
     });
   };
 
