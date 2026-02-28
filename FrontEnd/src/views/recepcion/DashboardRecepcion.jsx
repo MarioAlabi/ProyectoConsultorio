@@ -72,9 +72,9 @@ export const DashboardRecepcion = () => {
           <button onClick={() => navigate('/reception/patients')} style={actionButtonStyle}>
             📂 Gestionar Expedientes
           </button>
-          {/*<button onClick={() => navigate('/reception/patients')} style={{ ...actionButtonStyle, backgroundColor: '#0ea5e9' }}>
+          <button onClick={() => navigate('/reception/patients')} style={{ ...actionButtonStyle, backgroundColor: '#0ea5e9' }}>
             🩺 Ir a Pre-clínica
-          </button>*/}
+          </button>
         </div>
       </div>
 
@@ -106,12 +106,12 @@ export const DashboardRecepcion = () => {
                     </span>
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
-                    {/*<button 
+                    <button 
                       onClick={() => navigate('/reception/preclinica', { state: { paciente: p } })}
                       style={{ background: 'none', border: 'none', color: '#0ea5e9', cursor: 'pointer', fontWeight: 'bold' }}
                     >
                       Tomar Signos
-                    </button>*/}
+                    </button>
                   </td>
                 </tr>
               ))}

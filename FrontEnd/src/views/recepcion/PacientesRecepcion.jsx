@@ -148,13 +148,13 @@ export const PacientesRecepcion = () => {
                   <button onClick={() => handleAbrirModal(p)} style={{ background: 'none', border: 'none', color: '#0ea5e9', cursor: 'pointer', marginRight: '1rem', fontWeight: '600' }}>
                     Editar
                   </button>
-                  {/*<button 
+                  <button 
                     onClick={() => navigate('/reception/preclinica', { state: { paciente: p } })}
                     className="submit-btn" 
                     style={{ backgroundColor: '#0ea5e9', padding: '0.5rem 1rem', width: 'auto', fontSize: '0.85rem', margin: 0 }}
                   >
                     Pre-clínica
-                  </button>*/}
+                  </button>
                 </td>
               </tr>
             ))}
