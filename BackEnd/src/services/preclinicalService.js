@@ -1,6 +1,8 @@
 import { db } from "../config/db.js";
 import { preclinicalRecords } from "../models/schema.js";
 import { v4 as uuidv4 } from "uuid";
+import { eq } from "drizzle-orm";
+import { patients } from "../models/schema.js";
 
 const normalizeNullable = (value) => {
   if (value === "" || value === undefined) return null;
@@ -50,3 +52,19 @@ export const createPreclinical = async (data, user) => {
   await db.insert(preclinicalRecords).values(newRecord);
   return newRecord;
 };
+
+export const getPreclinicalByStatus = async (status = "waiting") => {
+    return await db
+      .select({
+        id: preclinicalRecords.id,
+        motivo: preclinicalRecords.motivo,
+        status: preclinicalRecords.status,
+        createdAt: preclinicalRecords.createdAt,
+  
+        patientId: patients.id,
+        fullName: patients.fullName,
+      })
+      .from(preclinicalRecords)
+      .leftJoin(patients, eq(preclinicalRecords.patientId, patients.id))
+      .where(eq(preclinicalRecords.status, status));
+  };
