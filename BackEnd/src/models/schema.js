@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, text, datetime, boolean, int, bigint, uniqueIndex, date, mysqlEnum, timestamp } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, text, datetime, boolean, int, bigint, uniqueIndex, date, mysqlEnum, timestamp, decimal  } from "drizzle-orm/mysql-core";
 export const users = mysqlTable("users", {
     id: varchar("id", { length: 36 }).primaryKey(),
     name: varchar("name", { length: 80 }).notNull(),
@@ -64,3 +64,25 @@ export const patients = mysqlTable("patients", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
+export const preclinicalRecords = mysqlTable("preclinical_records", {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    patientId: varchar("patient_id", { length: 36 })
+      .notNull()
+      .references(() => patients.id, { onDelete: "cascade" }),
+    createdByUserId: varchar("created_by_user_id", { length: 36 })
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdByRole: varchar("created_by_role", { length: 20 }).notNull(), 
+    motivo: text("motivo").notNull(),
+    bloodPressure: varchar("blood_pressure", { length: 20 }), 
+    temperature: decimal("temperature", { precision: 5, scale: 2 }),  
+    weight: decimal("weight", { precision: 6, scale: 2 }),             
+    height: decimal("height", { precision: 4, scale: 2 }),              
+    heartRate: int("heart_rate"),                                       
+    bmi: decimal("bmi", { precision: 5, scale: 2 }), 
+    status: mysqlEnum("status", ["waiting", "in_consultation", "done", "cancelled"])
+      .notNull()
+      .default("waiting"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  });
