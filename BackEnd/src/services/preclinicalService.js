@@ -87,3 +87,35 @@ export const updatePreclinicalStatus = async (id, status) => {
     return { id, status };
 };
 
+export const getPreclinicalById = async (id) => {
+    const [record] = await db
+      .select({
+        id: preclinicalRecords.id,
+        motivo: preclinicalRecords.motivo,
+        status: preclinicalRecords.status,
+        createdAt: preclinicalRecords.createdAt,
+  
+        bloodPressure: preclinicalRecords.bloodPressure,
+        temperature: preclinicalRecords.temperature,
+        weight: preclinicalRecords.weight,
+        height: preclinicalRecords.height,
+        heartRate: preclinicalRecords.heartRate,
+        bmi: preclinicalRecords.bmi,
+  
+        patientId: patients.id,
+        fullName: patients.fullName,
+      })
+      .from(preclinicalRecords)
+      .leftJoin(patients, eq(preclinicalRecords.patientId, patients.id))
+      .where(eq(preclinicalRecords.id, id))
+      .limit(1);
+  
+    if (!record) {
+      const error = new Error("Preclínica no encontrada");
+      error.status = 404;
+      throw error;
+    }
+  
+    return record;
+};
+                           
