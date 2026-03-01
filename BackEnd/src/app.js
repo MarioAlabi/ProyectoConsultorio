@@ -4,6 +4,7 @@ import express from "express";
 import { auth } from "./config/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import patientRoutes from "./routes/patientRoutes.js";
+import preclinicalRoutes from "./routes/preclinicalRoutes.js";
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use(cors({
 app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(express.json());
 app.use("/api/patients", patientRoutes);
+app.use("/api/preclinical", preclinicalRoutes);
 
 app.get("/status", (req, res) => {
     res.json({

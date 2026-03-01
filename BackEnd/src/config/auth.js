@@ -7,7 +7,12 @@ import * as schema from "../models/schema.js";
 import { ROLES } from "../constants/roles.js";
 import 'dotenv/config'
 
+/*
 const resend = new Resend(process.env.RESEND_API_KEY);
+const emailFrom = process.env.RESEND_EMAIL_FROM || "no-reply@example.com";*/
+
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 const emailFrom = process.env.RESEND_EMAIL_FROM || "no-reply@example.com";
 
 export const auth = betterAuth({
