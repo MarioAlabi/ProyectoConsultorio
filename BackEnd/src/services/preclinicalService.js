@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from "uuid";
 import { eq } from "drizzle-orm";
 import { patients } from "../models/schema.js";
 
+const ALLOWED_STATUS = ["waiting", "in_consultation", "done", "cancelled"];
+
 const normalizeNullable = (value) => {
   if (value === "" || value === undefined) return null;
   return value;
@@ -68,3 +70,20 @@ export const getPreclinicalByStatus = async (status = "waiting") => {
       .leftJoin(patients, eq(preclinicalRecords.patientId, patients.id))
       .where(eq(preclinicalRecords.status, status));
   };
+
+export const updatePreclinicalStatus = async (id, status) => {
+    if (!ALLOWED_STATUS.includes(status)) {
+      const error = new Error("Estado inválido.");
+      error.status = 400;
+      throw error;
+    }
+  
+    const result = await db
+      .update(preclinicalRecords)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(preclinicalRecords.id, id));
+  
+    
+    return { id, status };
+};
+

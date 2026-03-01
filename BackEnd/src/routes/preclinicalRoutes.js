@@ -1,7 +1,7 @@
 import express from "express";
-import { createPreclinicalController } from "../controllers/preclinicalController.js";
+import { createPreclinicalController, getPreclinicalController, updatePreclinicalStatusController } from "../controllers/preclinicalController.js";
 import { requireRole } from "../middleware/requireRole.js";
-import { getPreclinicalController } from "../controllers/preclinicalController.js";
+
 
 const router = express.Router();
 
@@ -14,6 +14,12 @@ router.get(
     "/",
     requireRole(["DOCTOR", "ADMIN"]),
     getPreclinicalController
-  );
+);
+  
+router.patch(
+    "/:id/status",
+    requireRole(["DOCTOR", "ADMIN"]),
+    updatePreclinicalStatusController
+);
 
 export default router;
