@@ -5,7 +5,7 @@ import { requireRole } from "../middleware/requireRole.js";
 import { ROLES } from "../constants/roles.js";
 
 const router = express.Router();
-const canWrite = [ROLES.ASSISTANT, ROLES.ADMIN];
+const canWrite = [ROLES.ASSISTANT, ROLES.DOCTOR, ROLES.ADMIN];
 const canRead = [ROLES.ASSISTANT, ROLES.ADMIN, ROLES.DOCTOR];
 
 router.post("/register", isAuth, requireRole(canWrite), patientController.createPatient);
