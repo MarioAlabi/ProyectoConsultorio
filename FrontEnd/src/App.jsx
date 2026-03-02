@@ -11,7 +11,7 @@ import { AdministrarUsuarios } from './views/admin/AdministrarUsuarios';
 import { DashboardRecepcion } from './views/recepcion/DashboardRecepcion';
 import { PacientesRecepcion } from './views/recepcion/PacientesRecepcion';
 import { ChangePassword } from './views/shared/ChangePassword';
-import { Preclinica } from './views/recepcion/Preclinica';
+import { PreclinicaShared } from './views/shared/PreClinicaShared.jsx';
 import { SalaEspera } from './views/doctor/SalaEspera.jsx';
 //import { PacientesDoctor } from './views/doctor/PacientesDoctor';
 import { ConsultaMedica } from './views/doctor/ConsultaMedica';
@@ -37,7 +37,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/reception" element={<DashboardRecepcion />} />
             <Route path="/reception/pacientes" element={<PacientesRecepcion />} />
-            <Route path="/reception/preclinica" element={<Preclinica />} />
+            <Route path="/reception/preclinica" element={<PreclinicaShared />} />
             <Route path="/reception/changePassword" element={<ChangePassword />} />
           </Route>
         </Route>
@@ -45,6 +45,8 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={[ROLES.DOCTOR]} />}>
           <Route element={<Layout />}>
             <Route path="/doctor" element={<SalaEspera />} />
+            <Route path="/doctor/preclinica" element={<PreclinicaShared />} />
+            <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />
             {/* <Route path="/doctor/pacientes" element={<PacientesDoctor />} />
             <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />*/}
             <Route path="/doctor/changePassword" element={<ChangePassword />} />

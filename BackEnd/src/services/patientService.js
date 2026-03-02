@@ -1,6 +1,6 @@
 import { db } from "../config/db.js";
 import { patients } from "../models/schema.js";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, or, like } from "drizzle-orm";
 import { v4 as uuidv4 } from 'uuid';
 
 export const registerPatient = async (data) => {

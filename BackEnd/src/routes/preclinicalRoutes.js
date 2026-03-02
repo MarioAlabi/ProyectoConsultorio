@@ -7,24 +7,25 @@ const router = express.Router();
 
 router.post(
   "/",
-  requireRole(["ASSISTANT", "DOCTOR", "ADMIN"]),
+  requireRole(["assistant", "doctor", "admin"]),
   createPreclinicalController
-);
-router.get(
-    "/",
-    requireRole(["DOCTOR", "ADMIN"]),
-    getPreclinicalController
-);
-  
-router.patch(
-    "/:id/status",
-    requireRole(["DOCTOR", "ADMIN"]),
-    updatePreclinicalStatusController
 );
 
 router.get(
+    "/",
+    requireRole(["doctor", "assistant", "admin"]),
+    getPreclinicalController
+  );
+
+router.patch(
+    "/:id/status",
+    requireRole(["doctor", "assistant", "admin"]),
+    updatePreclinicalStatusController
+  );
+
+router.get(
     "/:id",
-    requireRole(["DOCTOR", "ADMIN"]),
+    requireRole(["doctor", "admin"]),
     getPreclinicalByIdController
 );
 
