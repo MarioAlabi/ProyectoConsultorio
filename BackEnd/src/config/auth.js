@@ -22,6 +22,9 @@ export const auth = betterAuth({
             rateLimit: schema.rateLimit,
         }
     }),
+    advanced: {
+        cookieDomain: ".marioalabi.com", 
+    },
     plugins: [
         admin({
             defaultRole: ROLES.ASSISTANT,
@@ -44,7 +47,8 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         sendResetPassword: async ({ user, url }) => {
-            resend.emails.send({
+            console.log(`Enviando reset a ${user.email} desde ${emailFrom}`);
+            await resend.emails.send({
                 from: emailFrom,
                 to: user.email,
                 subject: "Reset your password",
