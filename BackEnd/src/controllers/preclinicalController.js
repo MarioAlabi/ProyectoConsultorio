@@ -1,4 +1,4 @@
-import { createPreclinical, getPreclinicalByStatus, updatePreclinicalStatus, getPreclinicalById  } from "../services/preclinicalService.js";
+import { createPreclinical, getPreclinicalByStatus, updatePreclinicalStatus, getPreclinicalById, getPreclinicalsByPatientId  } from "../services/preclinicalService.js";
 
 
 export const createPreclinicalController = async (req, res, next) => {
@@ -49,6 +49,21 @@ export const getPreclinicalByIdController = async (req, res, next) => {
   
       const data = await getPreclinicalById(id);
   
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+};
+
+export const getPreclinicalsByPatientIdController = async (req, res, next) => {
+    try {
+      const { patientId } = req.params;
+
+      const data = await getPreclinicalsByPatientId(patientId);
+
       res.json({
         success: true,
         data,

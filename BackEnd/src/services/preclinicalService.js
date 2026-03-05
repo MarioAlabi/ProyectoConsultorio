@@ -1,7 +1,7 @@
 import { db } from "../config/db.js";
 import { preclinicalRecords } from "../models/schema.js";
 import { v4 as uuidv4 } from "uuid";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { patients } from "../models/schema.js";
 
 const ALLOWED_STATUS = ["waiting", "in_consultation", "done", "cancelled"];
@@ -31,8 +31,9 @@ export const createPreclinical = async (data, user) => {
   if (weight !== null && height !== null) {
     const w = Number(weight);
     const h = Number(height);
-    if (!Number.isNaN(w) && !Number.isNaN(h) && h > 0) {
-      bmi = Number((w / (h * h)).toFixed(2));
+    if (!Number.isNaN(w) && !Number.isNaN(h) && w > 0 && h > 0) {
+      const wKg = w / 2.2046; // lb a kg
+      bmi = Number((wKg / (h * h)).toFixed(2));
     }
   }
 
@@ -104,6 +105,9 @@ export const getPreclinicalById = async (id) => {
   
         patientId: patients.id,
         fullName: patients.fullName,
+        isMinor: patients.isMinor,
+        yearOfBirth: patients.yearOfBirth,
+        gender: patients.gender,
       })
       .from(preclinicalRecords)
       .leftJoin(patients, eq(preclinicalRecords.patientId, patients.id))
@@ -117,5 +121,26 @@ export const getPreclinicalById = async (id) => {
     }
   
     return record;
+};
+
+export const getPreclinicalsByPatientId = async (patientId) => {
+    const records = await db
+      .select({
+        id: preclinicalRecords.id,
+        motivo: preclinicalRecords.motivo,
+        status: preclinicalRecords.status,
+        createdAt: preclinicalRecords.createdAt,
+        bloodPressure: preclinicalRecords.bloodPressure,
+        temperature: preclinicalRecords.temperature,
+        weight: preclinicalRecords.weight,
+        height: preclinicalRecords.height,
+        heartRate: preclinicalRecords.heartRate,
+        bmi: preclinicalRecords.bmi,
+      })
+      .from(preclinicalRecords)
+      .where(eq(preclinicalRecords.patientId, patientId))
+      .orderBy(desc(preclinicalRecords.createdAt));
+
+    return records;
 };
                            
