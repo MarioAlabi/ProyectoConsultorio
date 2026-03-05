@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+console.log('Intentando conectar a:', process.env.DB_HOST);
+
 const poolConnection = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
