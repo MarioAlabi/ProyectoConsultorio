@@ -9,6 +9,8 @@ RUN npm install
 
 # Copiamos el código fuente
 COPY . .
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # CAMBIO CRÍTICO: Usamos el build script de Vite (definido en package.json)
 # Esto generará la carpeta 'dist' con tu HTML/JS optimizado
