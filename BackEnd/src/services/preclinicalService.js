@@ -1,7 +1,7 @@
 import { db } from "../config/db.js";
 import { preclinicalRecords } from "../models/schema.js";
 import { v4 as uuidv4 } from "uuid";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { patients } from "../models/schema.js";
 
 const ALLOWED_STATUS = ["waiting", "in_consultation", "done", "cancelled"];
@@ -56,20 +56,25 @@ export const createPreclinical = async (data, user) => {
   return newRecord;
 };
 
-export const getPreclinicalByStatus = async (status = "waiting") => {
+export const getPreclinicalByStatus = async (user) => {
+    let statuses = ["waiting"];
+    
+    if (user.role === "doctor") {
+      statuses = ["waiting", "in_consultation"];
+    }
+
     return await db
       .select({
         id: preclinicalRecords.id,
         motivo: preclinicalRecords.motivo,
         status: preclinicalRecords.status,
         createdAt: preclinicalRecords.createdAt,
-  
         patientId: patients.id,
         fullName: patients.fullName,
       })
       .from(preclinicalRecords)
       .leftJoin(patients, eq(preclinicalRecords.patientId, patients.id))
-      .where(eq(preclinicalRecords.status, status));
+      .where(inArray(preclinicalRecords.status, statuses));
   };
 
 export const updatePreclinicalStatus = async (id, status) => {

@@ -15,8 +15,7 @@ export const createPreclinicalController = async (req, res, next) => {
 
 export const getPreclinicalController = async (req, res, next) => {
   try {
-    const status = req.query.status || "waiting";
-    const data = await getPreclinicalByStatus(status);
+    const data = await getPreclinicalByStatus(req.user);
 
     res.json({
       success: true,

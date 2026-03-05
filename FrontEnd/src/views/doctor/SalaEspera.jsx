@@ -17,7 +17,9 @@ export const SalaEspera = () => {
       setLoading(true);
       setError("");
 
-      const res = await api.get("/preclinical", { params: { status: "waiting" } });
+      // 🟢 CAMBIO 1: Quitamos el params: { status: "waiting" } 
+      // para que el backend nos mande los "waiting" y los "in_consultation"
+      const res = await api.get("/preclinical");
       const data = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
 
       if (!cancelFlag?.current) setItems(data);
@@ -44,6 +46,7 @@ export const SalaEspera = () => {
 
   const handleAttend = async (preclinicalId, row) => {
     try {
+      // Si ya está en consulta, esto simplemente lo re-confirma, no hace daño.
       await api.patch(`/preclinical/${preclinicalId}/status`, { status: "in_consultation" });
 
       const paciente = {
@@ -108,7 +111,6 @@ export const SalaEspera = () => {
     return { minors, adults };
   }, [items, count]);
 
-  // ✅ estilos “más pro”
   const S = {
     page: {
       minHeight: "100vh",
@@ -212,6 +214,17 @@ export const SalaEspera = () => {
       color: minor ? "#1e40af" : "#065f46",
     }),
 
+    // 🟢 ESTILOS PARA LAS NUEVAS ETIQUETAS DE ESTADO
+    statusBadge: (status) => ({
+      borderRadius: 999,
+      padding: "6px 10px",
+      fontSize: 12,
+      fontWeight: 950,
+      border: `1px solid ${status === 'in_consultation' ? "#fde68a" : "#bbf7d0"}`,
+      background: status === 'in_consultation' ? "#fef9c3" : "#dcfce7",
+      color: status === 'in_consultation' ? "#854d0e" : "#166534",
+    }),
+
     motivo: { marginTop: 8, color: "#475569", fontSize: 14, lineHeight: 1.35 },
     label: { fontWeight: 900, color: "#0f172a" },
 
@@ -231,8 +244,9 @@ export const SalaEspera = () => {
       transition: "transform .08s ease",
     }),
 
-    btnPrimary: (disabled) => ({
-      background: disabled ? "#c7d2fe" : "linear-gradient(90deg, #0d9488, #22c55e)",
+    btnPrimary: (disabled, isConsulting) => ({
+      // Si ya está en consulta, cambiamos un poco el color para diferenciarlo
+      background: disabled ? "#c7d2fe" : (isConsulting ? "linear-gradient(90deg, #f59e0b, #d97706)" : "linear-gradient(90deg, #0d9488, #22c55e)"),
       border: "none",
       color: disabled ? "#1e3a8a" : "white",
       borderRadius: 14,
@@ -240,7 +254,7 @@ export const SalaEspera = () => {
       fontWeight: 950,
       cursor: disabled ? "not-allowed" : "pointer",
       width: "auto",
-      boxShadow: disabled ? "none" : "0 12px 25px rgba(13,148,136,0.18)",
+      boxShadow: disabled ? "none" : (isConsulting ? "0 12px 25px rgba(245,158,11,0.18)" : "0 12px 25px rgba(13,148,136,0.18)"),
       transition: "transform .08s ease",
     }),
 
@@ -268,7 +282,6 @@ export const SalaEspera = () => {
 
   return (
     <div style={S.page}>
-      {/* animación skeleton (inline) */}
       <style>
         {`@keyframes skeleton{0%{background-position:100% 0}100%{background-position:0 0}}`}
       </style>
@@ -349,6 +362,7 @@ export const SalaEspera = () => {
             {items.map((p) => {
               const isCancelling = cancellingId === p.id;
               const minor = Boolean(p.isMinor);
+              const isConsulting = p.status === 'in_consultation';
 
               return (
                 <div key={p.id} style={S.card}>
@@ -356,6 +370,11 @@ export const SalaEspera = () => {
                     <div style={S.nameRow}>
                       <h3 style={S.name}>{p.fullName ?? "Paciente"}</h3>
                       <span style={S.badge(minor)}>{minor ? "MENOR" : "ADULTO"}</span>
+                      
+                      {/* 🟢 CAMBIO 2: Añadimos la etiqueta de estado al lado del nombre */}
+                      <span style={S.statusBadge(p.status)}>
+                        {isConsulting ? "🩺 EN CONSULTA" : "⏳ EN ESPERA"}
+                      </span>
                     </div>
 
                     <div style={S.motivo}>
@@ -387,24 +406,18 @@ export const SalaEspera = () => {
                       type="button"
                       disabled={isCancelling}
                       onClick={() => handleAttend(p.id, p)}
-                      style={S.btnPrimary(isCancelling)}
+                      style={S.btnPrimary(isCancelling, isConsulting)}
                       onMouseDown={(e) => !isCancelling && (e.currentTarget.style.transform = "translateY(1px)")}
                       onMouseUp={(e) => (e.currentTarget.style.transform = "translateY(0px)")}
-                      title={isCancelling ? "Espera a que termine la cancelación" : "Iniciar consulta"}
+                      title={isCancelling ? "Espera a que termine la cancelación" : (isConsulting ? "Continuar con la consulta" : "Iniciar consulta")}
                     >
-                      🩺 Iniciar Consulta
+                      {/* 🟢 CAMBIO 3: El texto del botón cambia según el estado */}
+                      {isConsulting ? "🩺 Continuar Consulta" : "🩺 Iniciar Consulta"}
                     </button>
                   </div>
                 </div>
               );
             })}
-          </div>
-        )}
-
-        {/* tip pequeño */}
-        {!loading && !error && items.length > 0 && (
-          <div style={{ marginTop: 10, color: "#64748b", fontSize: 12 }}>
-           
           </div>
         )}
       </div>

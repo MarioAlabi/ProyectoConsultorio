@@ -20,7 +20,7 @@ export const PatientsShared = () => {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [intentado, setIntentado] = useState(false);
+  const [, setIntentado] = useState(false);
 
   const [mostrarExpediente, setMostrarExpediente] = useState(false);
   const [expedientePaciente, setExpedientePaciente] = useState(null);
@@ -72,7 +72,6 @@ export const PatientsShared = () => {
 
   const handleAbrirModal = (paciente = null) => {
     setErrorMsg("");
-    setIntentado(false);
 
     if (paciente) {
       setFormData({
@@ -93,11 +92,6 @@ export const PatientsShared = () => {
 
     setMostrarModal(true);
   };
-  const handleCerrarModal = () => {
-    setMostrarModal(false);
-    setErrorMsg(""); // Limpiamos el mensaje de error para que no pase a la vista de atrás
-    setIntentado(false); // Reiniciamos el color rojo de los inputs
-  };
 
   const handleGuardar = async (e) => {
     e.preventDefault();
@@ -105,7 +99,7 @@ export const PatientsShared = () => {
     setErrorMsg("");
     if (!formData.fullName || !formData.identityDocument || !formData.dateOfBirth) {
       setErrorMsg("Por favor, completa los campos obligatorios en rojo.");
-      return;}
+    return;}
 
     const duiRegex = /^\d{8}-\d{1}$/;
     if (!duiRegex.test(formData.identityDocument)) {
@@ -225,7 +219,7 @@ export const PatientsShared = () => {
   };
 
   return (
-<div style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+    <div style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
         <div>
           <h1 style={{ color: "#1f2937", margin: 0 }}>{pageTitle}</h1>
@@ -243,7 +237,7 @@ export const PatientsShared = () => {
         </button>
       </div>
 
-      {errorMsg && !mostrarModal && (
+      {errorMsg && (
         <div
           style={{
             padding: "12px 14px",
@@ -359,7 +353,7 @@ export const PatientsShared = () => {
                       margin: 0,
                     }}
                   >
-                    Pre-clínica
+                    Pre-cl\u00ednica
                   </button>
                 </td>
               </tr>
@@ -376,6 +370,7 @@ export const PatientsShared = () => {
         </table>
       </div>
 
+      {/* ── Modal: Ver Expediente Completo (HU-19) ── */}
       {mostrarExpediente && expedientePaciente && (
         <div
           style={{
@@ -405,6 +400,7 @@ export const PatientsShared = () => {
               </button>
             </div>
 
+            {/* Datos Personales */}
             <div style={{
               backgroundColor: "#f8fafc", borderRadius: "0.8rem", padding: "1.2rem",
               border: "1px solid #e2e8f0", marginBottom: "1.5rem",
@@ -458,6 +454,7 @@ export const PatientsShared = () => {
               </div>
             </div>
 
+            {/* Historial de Pre-clinicas */}
             <div>
               <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", color: "#374151" }}>
                 Historial de Pre-clinicas
@@ -561,8 +558,7 @@ export const PatientsShared = () => {
               {modoEdicion ? "Actualizar Expediente" : "Nuevo Registro Clínico"}
             </h2>
 
-            {/* 🟢 NUEVO: Etiqueta noValidate agregada aquí */}
-            <form onSubmit={handleGuardar} className="login-form" noValidate>
+            <form onSubmit={handleGuardar} className="login-form">
               <div
                 style={{
                   display: "flex",
@@ -593,10 +589,9 @@ export const PatientsShared = () => {
                   <input
                     type="text"
                     className="form-input"
+                    required
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    /* 🟢 NUEVO: Cambio de borde si se intentó guardar y está vacío */
-                    style={{ borderColor: intentado && !formData.fullName ? "#ef4444" : undefined }}
                   />
                 </div>
 
@@ -607,10 +602,9 @@ export const PatientsShared = () => {
                     className="form-input"
                     placeholder="00000000-0"
                     maxLength="10"
+                    required
                     value={formData.identityDocument}
                     onChange={handleDUIChange}
-                    /* 🟢 NUEVO: Cambio de borde si se intentó guardar y está vacío */
-                    style={{ borderColor: intentado && !formData.identityDocument ? "#ef4444" : undefined }}
                   />
                 </div>
 
@@ -619,10 +613,9 @@ export const PatientsShared = () => {
                   <input
                     type="date"
                     className="form-input"
+                    required
                     value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                    /* 🟢 NUEVO: Cambio de borde si se intentó guardar y está vacío */
-                    style={{ borderColor: intentado && !formData.dateOfBirth ? "#ef4444" : undefined }}
                   />
                 </div>
 
@@ -674,13 +667,13 @@ export const PatientsShared = () => {
 
               <div style={{ display: "flex", gap: "1rem", marginTop: "2.5rem" }}>
                 <button
-  type="button"
-  onClick={handleCerrarModal} 
-  className="form-input"
-  style={{ flex: 1, cursor: "pointer", background: "#f9fafb" }}
->
-  Cancelar
-</button>
+                  type="button"
+                  onClick={() => setMostrarModal(false)}
+                  className="form-input"
+                  style={{ flex: 1, cursor: "pointer", background: "#f9fafb" }}
+                >
+                  Cancelar
+                </button>
 
                 <button type="submit" disabled={loading} className="submit-btn" style={{ flex: 1, margin: 0 }}>
                   {loading ? "Procesando..." : modoEdicion ? "Guardar Cambios" : "Finalizar Registro"}
