@@ -31,7 +31,7 @@ export const updatePreclinicalStatusController = async (req, res, next) => {
       const { id } = req.params;
       const { status } = req.body;
   
-      const data = await updatePreclinicalStatus(id, status);
+      const data = await updatePreclinicalStatus(id, req.body);
   
       res.json({
         success: true,

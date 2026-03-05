@@ -77,20 +77,30 @@ export const getPreclinicalByStatus = async (user) => {
       .where(inArray(preclinicalRecords.status, statuses));
   };
 
-export const updatePreclinicalStatus = async (id, status) => {
-    if (!ALLOWED_STATUS.includes(status)) {
-      const error = new Error("Estado inválido.");
-      error.status = 400;
-      throw error;
-    }
-  
-    const result = await db
+export const updatePreclinicalStatus = async (id, updateData) => {
+    const { 
+        status, bloodPressure, temperature, weight, height, heartRate, bmi 
+    } = updateData;
+
+    const toUpdate = { updatedAt: new Date() };
+
+    if (status) toUpdate.status = status;
+
+    if (bloodPressure !== undefined) toUpdate.bloodPressure = normalizeNullable(bloodPressure);
+    if (temperature !== undefined) toUpdate.temperature = normalizeNullable(temperature);
+    if (weight !== undefined) toUpdate.weight = normalizeNullable(weight);
+    if (height !== undefined) toUpdate.height = normalizeNullable(height);
+    if (heartRate !== undefined) toUpdate.heartRate = normalizeNullable(heartRate);
+    if (bmi !== undefined) toUpdate.bmi = normalizeNullable(bmi);
+
+    console.log("Intentando guardar en BD:", toUpdate);
+
+    await db
       .update(preclinicalRecords)
-      .set({ status, updatedAt: new Date() })
+      .set(toUpdate)
       .where(eq(preclinicalRecords.id, id));
   
-    
-    return { id, status };
+    return { id, status: toUpdate.status || "updated" };
 };
 
 export const getPreclinicalById = async (id) => {
