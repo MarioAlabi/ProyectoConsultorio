@@ -92,7 +92,7 @@ export const ConsultaMedica = () => {
         }
       } catch (e) {
         console.error(e);
-        if (!cancel) _setError("No se pudo cargar la pre-cl\u00ednica.");
+        if (!cancel) _setError("No se pudo cargar la pre-clinica.");
       } finally {
         if (!cancel) setLoading(false);
       }

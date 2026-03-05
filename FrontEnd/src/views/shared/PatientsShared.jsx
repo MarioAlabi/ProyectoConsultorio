@@ -353,7 +353,7 @@ export const PatientsShared = () => {
                       margin: 0,
                     }}
                   >
-                    Pre-cl\u00ednica
+                    Pre-clinica
                   </button>
                 </td>
               </tr>
