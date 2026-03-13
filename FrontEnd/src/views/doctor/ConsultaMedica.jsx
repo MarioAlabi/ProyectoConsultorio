@@ -62,15 +62,32 @@ export const ConsultaMedica = () => {
   const [_error, _setError] = useState("");
   const [data, setData] = useState(null);
 
+  // Estados de la consulta actual
   const [anamnesis, setAnamnesis] = useState("");
   const [examen, setExamen] = useState("");
   const [diagnostico, setDiagnostico] = useState("");
+  const [medicamentos, setMedicamentos] = useState([]);
 
+  // Estados de interfaz
   const [editVitals, setEditVitals] = useState(false);
   const [savingVitals, setSavingVitals] = useState(false);
+  const [showDocMenu, setShowDocMenu] = useState(false);
+  const [showHistorial, setShowHistorial] = useState(false);
+  
+  // NUEVO: Estados para Modales de Documentos
+  const [activeDocModal, setActiveDocModal] = useState(null); // 'receta', 'constancia', 'incapacidad'
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [generatedDocText, setGeneratedDocText] = useState("");
+  const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
+
   const [vitals, setVitals] = useState({
     presion: "", temperatura: "", peso: "", altura: "", frecuencia: ""
   });
+
+  const historialMock = [
+    { id: 1, fecha: "2026-02-15T10:00:00", motivo: "Dolor de cabeza severo", diagnostico: "Migraña tensional", signos: "PA: 130/85, Temp: 37.1" },
+    { id: 2, fecha: "2025-11-02T09:30:00", motivo: "Chequeo general", diagnostico: "Paciente sano", signos: "PA: 120/80, Temp: 36.5" }
+  ];
 
   useEffect(() => {
     let cancel = false;
@@ -161,6 +178,7 @@ export const ConsultaMedica = () => {
         anamnesis,
         physicalExam: examen,
         diagnosis: diagnostico,
+        receta: medicamentos,
         bloodPressure: vitals.presion,
         temperature: vitals.temperatura,
         weight: vitals.peso,
@@ -176,51 +194,103 @@ export const ConsultaMedica = () => {
     }
   };
 
+  // NUEVO: Manejo de Documentos
+  const handleGenerarDocumento = (tipo) => {
+    setShowDocMenu(false);
+    setActiveDocModal(tipo);
+    setAiPrompt("");
+    setGeneratedDocText("");
+  };
+
+  const handleSimularIA = () => {
+    if (!aiPrompt.trim()) return alert("Por favor ingresa instrucciones para la IA.");
+    setIsGeneratingDoc(true);
+    
+    // Simulación de llamada al backend
+    setTimeout(() => {
+      const tipoDoc = activeDocModal === 'constancia' ? 'Constancia Médica' : 'Incapacidad Médica';
+      const fechaActual = new Date().toLocaleDateString("es-SV", { day: 'numeric', month: 'long', year: 'numeric' });
+      
+      setGeneratedDocText(`El suscrito médico hace constar que:\n\nEl paciente ${p.nombre}, de ${p.edad} años de edad, fue evaluado en esta clínica el día ${fechaActual}.\n\nBasado en las indicaciones proporcionadas: "${aiPrompt}".\n\n[El sistema backend completará esta plantilla con formato formal, sellos digitales y firmas correspondientes según las instrucciones dadas].\n\nSe extiende la presente ${tipoDoc.toLowerCase()} a solicitud del interesado para los fines que estime convenientes.`);
+      setIsGeneratingDoc(false);
+    }, 1500);
+  };
+
   const formatDate = (d) => {
     if (!d) return "N/A";
     const date = new Date(d);
     return date.toLocaleDateString("es-SV", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
+  const agregarMedicamento = () => {
+    setMedicamentos([...medicamentos, { 
+      nombre: "", concentracion: "", unidadConcentracion: "mg", 
+      dosis: "", unidadDosis: "tableta(s)", via: "Vía Oral", 
+      frecuencia: "", duracion: "", indicaciones: "" 
+    }]);
+  };
+
+  const removerMedicamento = (index) => {
+    const nuevosMeds = [...medicamentos];
+    nuevosMeds.splice(index, 1);
+    setMedicamentos(nuevosMeds);
+  };
+
+  const updateMed = (index, campo, valor) => {
+    const nuevosMeds = [...medicamentos];
+    nuevosMeds[index][campo] = valor;
+    setMedicamentos(nuevosMeds);
+  };
+
   if (loading) return <div style={{ padding: "2rem", color: "#6b7280" }}>Cargando consulta...</div>;
 
   const S = {
-    editBtn: {
-      fontSize: "0.75rem", fontWeight: 700, padding: "4px 10px", borderRadius: 999,
-      cursor: savingVitals ? "wait" : "pointer", border: "1px solid #0d9488",
-      backgroundColor: editVitals ? "#0d9488" : "white", color: editVitals ? "white" : "#0d9488",
-      transition: "all 0.2s"
-    },
-    vitalInput: {
-      width: "100%", border: "1px solid #0d9488", borderRadius: "6px",
-      fontSize: "0.95rem", padding: "4px 8px", fontWeight: 700, color: "#0f766e",
-      backgroundColor: "#f0fdfa", outline: "none"
-    },
+    editBtn: { fontSize: "0.75rem", fontWeight: 700, padding: "4px 10px", borderRadius: 999, cursor: savingVitals ? "wait" : "pointer", border: "1px solid #0d9488", backgroundColor: editVitals ? "#0d9488" : "white", color: editVitals ? "white" : "#0d9488", transition: "all 0.2s" },
+    vitalInput: { width: "100%", border: "1px solid #0d9488", borderRadius: "6px", fontSize: "0.95rem", padding: "4px 8px", fontWeight: 700, color: "#0f766e", backgroundColor: "#f0fdfa", outline: "none" },
     grid: { display: 'grid', gridTemplateColumns: '370px 1fr', gap: '20px', padding: '20px', height: 'calc(100vh - 80px)' },
     aside: { backgroundColor: '#f8fafc', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0', overflowY: 'auto' },
     sectionHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
     patientCard: { marginBottom: '16px', padding: '14px', backgroundColor: 'white', borderRadius: '10px', border: '1px solid #e2e8f0' },
     vitalGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' },
-    vitalBox: (evalInfo) => ({
-      padding: "10px 12px", borderRadius: "10px", backgroundColor: "white",
-      border: `1px solid ${evalInfo ? evalInfo.color + "40" : "#e2e8f0"}`
-    }),
+    vitalBox: (evalInfo) => ({ padding: "10px 12px", borderRadius: "10px", backgroundColor: "white", border: `1px solid ${evalInfo ? evalInfo.color + "40" : "#e2e8f0"}` }),
     vitalLabel: { fontSize: "0.75rem", color: "#64748b", fontWeight: 600, marginBottom: 4, display: "block" },
     vitalValue: { fontSize: "1.05rem", fontWeight: 800, color: "#1f2937" },
-    vitalIndicator: (evalInfo) => ({
-      display: "inline-block", fontSize: "0.68rem", fontWeight: 700,
-      padding: "2px 6px", borderRadius: 999, marginLeft: 6,
-      backgroundColor: evalInfo ? evalInfo.color + "18" : "transparent",
-      color: evalInfo ? evalInfo.color : "#6b7280", verticalAlign: "middle"
-    }),
+    vitalIndicator: (evalInfo) => ({ display: "inline-block", fontSize: "0.68rem", fontWeight: 700, padding: "2px 6px", borderRadius: 999, marginLeft: 6, backgroundColor: evalInfo ? evalInfo.color + "18" : "transparent", color: evalInfo ? evalInfo.color : "#6b7280", verticalAlign: "middle" }),
     imcCard: { marginTop: '16px', padding: '16px', borderRadius: '12px', backgroundColor: imcData.bg, border: `1.5px solid ${imcData.border}` },
-    main: { backgroundColor: 'white', padding: '25px', borderRadius: '14px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', overflowY: 'auto' },
+    main: { display: 'flex', flexDirection: 'column', backgroundColor: 'white', padding: '25px', borderRadius: '14px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', overflowY: 'auto' },
+    contentArea: { flex: 1 },
+    actionBar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px", paddingTop: "20px", borderTop: "2px dashed #e5e7eb" },
+    docDropdownContainer: { position: "relative" },
+    btnDocumento: { display: "flex", alignItems: "center", gap: "8px", backgroundColor: "white", border: "1.5px solid #0d9488", color: "#0d9488", padding: "10px 18px", borderRadius: "8px", fontWeight: "bold", cursor: "pointer", transition: "all 0.2s" },
+    docMenu: { position: "absolute", bottom: "110%", left: 0, backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "10px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", display: showDocMenu ? "flex" : "none", flexDirection: "column", width: "220px", overflow: "hidden", zIndex: 10 },
+    docMenuItem: { padding: "12px 16px", backgroundColor: "white", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", cursor: "pointer", fontSize: "0.95rem", color: "#374151", fontWeight: 600, transition: "background 0.2s" },
+    medCard: { backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "15px", marginBottom: "15px", position: "relative" },
+    medGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px", marginBottom: "10px" },
+    medInputGroup: { display: "flex", flexDirection: "column", gap: "4px" },
+    medLabel: { fontSize: "0.8rem", fontWeight: "600", color: "#4b5563" },
+    medInput: { padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "0.9rem", outline: "none" },
+    medSelect: { padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "0.9rem", outline: "none", backgroundColor: "white" },
+    btnRemoveMed: { position: "absolute", top: "10px", right: "10px", background: "none", border: "none", color: "#ef4444", fontWeight: "bold", cursor: "pointer", fontSize: "0.8rem" },
+    modalOverlay: { position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000, padding: "20px", backdropFilter: "blur(4px)" },
+    modalContent: { backgroundColor: "white", borderRadius: "14px", width: "100%", maxWidth: "750px", maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" },
+    modalHeader: { padding: "20px 24px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#f8fafc" },
+    modalBody: { padding: "24px", overflowY: "auto", flex: 1 },
+    modalFooter: { padding: "20px 24px", borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "flex-end", gap: "12px", backgroundColor: "#f8fafc" }
   };
 
   return (
     <div style={S.grid}>
       <aside style={S.aside}>
-        <div style={S.sectionHeader}><h2 style={{ fontSize: '1.15rem', color: '#0f766e', margin: 0 }}>Expediente</h2></div>
+        <div style={S.sectionHeader}>
+          <h2 style={{ fontSize: '1.15rem', color: '#0f766e', margin: 0 }}>Expediente</h2>
+          <button 
+            type="button"
+            onClick={() => setShowHistorial(true)}
+            style={{ ...S.editBtn, backgroundColor: "#f0fdfa", color: "#0f766e", border: "1px solid #ccfbf1" }}>
+            📋 Ver Historial
+          </button>
+        </div>
+        
         <div style={S.patientCard}>
           <p style={{ margin: "0 0 4px", fontWeight: 800, fontSize: "1.1rem" }}>{p.nombre}</p>
           <p style={{ fontSize: "0.9rem", color: "#4b5563" }}><strong>Edad:</strong> {p.edad} años</p>
@@ -270,18 +340,284 @@ export const ConsultaMedica = () => {
       </aside>
 
       <main style={S.main}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-           <h2 style={{ margin: 0 }}>Consulta Actual</h2>
+        <div style={S.contentArea}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+             <h2 style={{ margin: 0, color: '#1f2937' }}>Consulta Actual</h2>
+          </div>
+          
+          <div className="form-group" style={{ marginBottom: "15px" }}>
+            <label className="form-label">Anamnesis / Motivo</label>
+            <textarea className="form-input" rows="3" value={anamnesis} onChange={(e) => setAnamnesis(e.target.value)} placeholder="Síntomas que presenta el paciente..." />
+          </div>
+          <div className="form-group" style={{ marginBottom: "15px" }}>
+            <label className="form-label">Examen Físico</label>
+            <textarea className="form-input" rows="3" value={examen} onChange={(e) => setExamen(e.target.value)} placeholder="Hallazgos clínicos..." />
+          </div>
+          <div className="form-group" style={{ marginBottom: "25px" }}>
+            <label className="form-label">Diagnóstico</label>
+            <textarea className="form-input" rows="3" value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} placeholder="Diagnóstico principal y secundarios..." />
+          </div>
+
+          {/* Sección de Medicamentos Recetados */}
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px", marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+              <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.2rem' }}>Medicamentos Recetados</h3>
+              <button type="button" onClick={agregarMedicamento} style={{ ...S.btnDocumento, padding: "6px 12px", fontSize: "0.85rem" }}>
+                + Agregar Medicamento
+              </button>
+            </div>
+
+            {medicamentos.length === 0 && (
+              <div style={{ textAlign: "center", padding: "20px", color: "#9ca3af", backgroundColor: "#f9fafb", borderRadius: "10px", border: "1px dashed #d1d5db" }}>
+                No se han recetado medicamentos en esta consulta.
+              </div>
+            )}
+
+            {medicamentos.map((med, index) => (
+              <div key={index} style={S.medCard}>
+                <button type="button" onClick={() => removerMedicamento(index)} style={S.btnRemoveMed}>✖ Quitar</button>
+                
+                <div style={S.medGrid}>
+                  <div style={{ ...S.medInputGroup, gridColumn: "span 2" }}>
+                    <label style={S.medLabel}>Nombre del Medicamento</label>
+                    <input type="text" style={S.medInput} placeholder="Ej. Paracetamol" value={med.nombre} onChange={(e) => updateMed(index, 'nombre', e.target.value)} />
+                  </div>
+                  
+                  <div style={S.medInputGroup}>
+                    <label style={S.medLabel}>Concentración</label>
+                    <div style={{ display: "flex", gap: "5px" }}>
+                      <input type="text" style={{ ...S.medInput, width: "60%" }} placeholder="Ej. 500" value={med.concentracion} onChange={(e) => updateMed(index, 'concentracion', e.target.value)} />
+                      <select style={{ ...S.medSelect, width: "40%", padding: "8px 2px" }} value={med.unidadConcentracion} onChange={(e) => updateMed(index, 'unidadConcentracion', e.target.value)}>
+                        <option value="mg">mg</option>
+                        <option value="g">g</option>
+                        <option value="mcg">mcg</option>
+                        <option value="ml">ml</option>
+                        <option value="%">%</option>
+                        <option value="UI">UI</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={S.medInputGroup}>
+                    <label style={S.medLabel}>Dosis</label>
+                    <div style={{ display: "flex", gap: "5px" }}>
+                      <input type="text" style={{ ...S.medInput, width: "40%" }} placeholder="Ej. 1" value={med.dosis} onChange={(e) => updateMed(index, 'dosis', e.target.value)} />
+                      <select style={{ ...S.medSelect, width: "60%", padding: "8px 2px" }} value={med.unidadDosis} onChange={(e) => updateMed(index, 'unidadDosis', e.target.value)}>
+                        <option value="tableta(s)">Tableta(s)</option>
+                        <option value="cápsula(s)">Cápsula(s)</option>
+                        <option value="ml">ml</option>
+                        <option value="gotas">Gotas</option>
+                        <option value="cucharadita(s)">Cucharadita(s)</option>
+                        <option value="aplicación">Aplicación</option>
+                        <option value="puff(s)">Puff(s)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={S.medGrid}>
+                  <div style={S.medInputGroup}>
+                    <label style={S.medLabel}>Vía de Administración</label>
+                    <select style={S.medSelect} value={med.via} onChange={(e) => updateMed(index, 'via', e.target.value)}>
+                      <option value="Vía Oral">Vía Oral</option>
+                      <option value="Tópica">Tópica</option>
+                      <option value="Intramuscular">Intramuscular</option>
+                      <option value="Intravenosa">Intravenosa</option>
+                      <option value="Sublingual">Sublingual</option>
+                      <option value="Oftálmica">Oftálmica</option>
+                      <option value="Ótica">Ótica</option>
+                      <option value="Respiratoria">Respiratoria / Inhalatoria</option>
+                    </select>
+                  </div>
+
+                  <div style={S.medInputGroup}>
+                    <label style={S.medLabel}>Frecuencia</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>Cada</span>
+                      <input type="text" style={{ ...S.medInput, width: "50px", textAlign: "center" }} placeholder="8" value={med.frecuencia} onChange={(e) => updateMed(index, 'frecuencia', e.target.value)} />
+                      <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>hrs</span>
+                    </div>
+                  </div>
+
+                  <div style={S.medInputGroup}>
+                    <label style={S.medLabel}>Duración</label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>Por</span>
+                      <input type="text" style={{ ...S.medInput, width: "50px", textAlign: "center" }} placeholder="7" value={med.duracion} onChange={(e) => updateMed(index, 'duracion', e.target.value)} />
+                      <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>días</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={S.medInputGroup}>
+                  <label style={S.medLabel}>Indicaciones adicionales (Opcional)</label>
+                  <input type="text" style={S.medInput} placeholder="Ej. Tomar después de las comidas" value={med.indicaciones} onChange={(e) => updateMed(index, 'indicaciones', e.target.value)} />
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
-        
-        <div className="form-group"><label className="form-label">Anamnesis / Motivo</label><textarea className="form-input" rows="3" value={anamnesis} onChange={(e) => setAnamnesis(e.target.value)} /></div>
-        <div className="form-group"><label className="form-label">Examen Físico</label><textarea className="form-input" rows="4" value={examen} onChange={(e) => setExamen(e.target.value)} /></div>
-        <div className="form-group"><label className="form-label">Diagnóstico</label><textarea className="form-input" rows="4" value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} /></div>
-        
-        <button className="submit-btn" type="button" onClick={handleFinish} style={{ marginTop: "10px" }}>
-          Finalizar y Guardar Consulta
-        </button>
+
+        <div style={S.actionBar}>
+          <div style={S.docDropdownContainer}>
+            <div style={S.docMenu}>
+              <button style={S.docMenuItem} onClick={() => handleGenerarDocumento('receta')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>💊 Emitir Receta</button>
+              <button style={S.docMenuItem} onClick={() => handleGenerarDocumento('constancia')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>📄 Constancia Médica</button>
+              <button style={{...S.docMenuItem, borderBottom: 'none'}} onClick={() => handleGenerarDocumento('incapacidad')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>🛌 Incapacidad</button>
+            </div>
+            
+            <button 
+              type="button" 
+              style={{...S.btnDocumento, backgroundColor: showDocMenu ? '#f0fdfa' : 'white'}} 
+              onClick={() => setShowDocMenu(!showDocMenu)}
+            >
+              📝 Generar Documento {showDocMenu ? '▲' : '▼'}
+            </button>
+          </div>
+
+          <button className="submit-btn" type="button" onClick={handleFinish} style={{ margin: 0, width: "auto" }}>
+            Finalizar y Guardar Consulta
+          </button>
+        </div>
       </main>
+
+      {/* --- MODAL: HISTORIAL CLÍNICO --- */}
+      {showHistorial && (
+        <div style={S.modalOverlay}>
+          <div style={S.modalContent}>
+            <div style={S.modalHeader}>
+              <div>
+                <h2 style={{ margin: 0, color: "#0d9488", fontSize: "1.4rem" }}>Historial Clínico</h2>
+                <p style={{ margin: "5px 0 0", color: "#6b7280", fontSize: "0.9rem" }}>Paciente: {p.nombre}</p>
+              </div>
+              <button onClick={() => setShowHistorial(false)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#6b7280" }}>✖</button>
+            </div>
+            
+            <div style={S.modalBody}>
+              {historialMock.length === 0 ? (
+                <p style={{ textAlign: "center", color: "#6b7280" }}>No hay registros previos para este paciente.</p>
+              ) : (
+                historialMock.map((registro) => (
+                  <div key={registro.id} style={{ border: "1px solid #e5e7eb", borderRadius: "10px", padding: "15px", marginBottom: "15px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", borderBottom: "1px dashed #d1d5db", paddingBottom: "10px" }}>
+                      <span style={{ fontWeight: "bold", color: "#1f2937" }}>Consulta del {formatDate(registro.fecha)}</span>
+                      <span style={{ fontSize: "0.85rem", color: "#6b7280", backgroundColor: "#f3f4f6", padding: "4px 8px", borderRadius: "999px" }}>Pre-clínica</span>
+                    </div>
+                    <p style={{ margin: "0 0 8px", fontSize: "0.95rem" }}><strong>Motivo:</strong> {registro.motivo}</p>
+                    <p style={{ margin: "0 0 8px", fontSize: "0.95rem" }}><strong>Diagnóstico:</strong> {registro.diagnostico}</p>
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#4b5563" }}><strong>Signos:</strong> {registro.signos}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODALES DE DOCUMENTOS --- */}
+      {activeDocModal && (
+        <div style={S.modalOverlay}>
+          <div style={{ ...S.modalContent, maxWidth: activeDocModal === 'receta' ? '600px' : '750px' }}>
+            
+            {/* Cabecera del Documento */}
+            <div style={S.modalHeader}>
+              <div>
+                <h2 style={{ margin: 0, color: "#0f766e", fontSize: "1.4rem" }}>
+                  {activeDocModal === 'receta' ? '💊 Emitir Receta Médica' : 
+                   activeDocModal === 'constancia' ? '📄 Generar Constancia Médica' : '🛌 Generar Incapacidad'}
+                </h2>
+                <p style={{ margin: "5px 0 0", color: "#6b7280", fontSize: "0.9rem" }}>Paciente: {p.nombre}</p>
+              </div>
+              <button onClick={() => setActiveDocModal(null)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#6b7280" }}>✖</button>
+            </div>
+
+            {/* Cuerpo del Modal */}
+            <div style={S.modalBody}>
+              
+              {/* VISTA RECETA */}
+              {activeDocModal === 'receta' && (
+                <div>
+                  {medicamentos.length === 0 ? (
+                    <div style={{ padding: "20px", textAlign: "center", color: "#b91c1c", backgroundColor: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca" }}>
+                      <strong>Atención:</strong> No has agregado ningún medicamento a la receta en la consulta actual. Cierra esta ventana y agrega los medicamentos primero.
+                    </div>
+                  ) : (
+                    <div>
+                      <p style={{ color: "#4b5563", marginBottom: "15px" }}>Se imprimirán los siguientes medicamentos:</p>
+                      <ul style={{ paddingLeft: "20px", color: "#1f2937", lineHeight: "1.6" }}>
+                        {medicamentos.map((m, i) => (
+                          <li key={i} style={{ marginBottom: "10px" }}>
+                            <strong>{m.nombre} {m.concentracion}{m.unidadConcentracion}</strong> <br/>
+                            <span style={{ fontSize: "0.9rem", color: "#4b5563" }}>
+                              Tomar/Aplicar: {m.dosis} {m.unidadDosis} por {m.via}, cada {m.frecuencia} hrs por {m.duracion} días. 
+                              {m.indicaciones && ` (${m.indicaciones})`}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* VISTA CONSTANCIA E INCAPACIDAD (IA) */}
+              {(activeDocModal === 'constancia' || activeDocModal === 'incapacidad') && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                  
+                  <div style={{ backgroundColor: "#f0fdfa", padding: "15px", borderRadius: "10px", border: "1px solid #ccfbf1" }}>
+                    <label style={{ ...S.medLabel, display: "block", marginBottom: "8px", color: "#0f766e" }}>
+                      Instrucciones para la IA:
+                    </label>
+                    <textarea 
+                      style={{ ...S.medInput, width: "100%", height: "80px", resize: "none" }} 
+                      placeholder="Ej. El paciente necesita 3 días de reposo absoluto por diagnóstico de faringitis aguda..." 
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                    />
+                    <button 
+                      onClick={handleSimularIA} 
+                      disabled={isGeneratingDoc}
+                      style={{ ...S.btnDocumento, marginTop: "10px", width: "100%", justifyContent: "center", backgroundColor: isGeneratingDoc ? "#e5e7eb" : "white" }}>
+                      {isGeneratingDoc ? "Generando documento..." : "✨ Generar Redacción"}
+                    </button>
+                  </div>
+
+                  {generatedDocText && (
+                    <div>
+                      <label style={{ ...S.medLabel, display: "block", marginBottom: "8px" }}>Vista previa del documento (Puedes editarlo):</label>
+                      <textarea 
+                        style={{ ...S.medInput, width: "100%", height: "200px", lineHeight: "1.5", fontSize: "0.95rem" }} 
+                        value={generatedDocText}
+                        onChange={(e) => setGeneratedDocText(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+            </div>
+
+            {/* Pie del Modal (Acciones) */}
+            <div style={S.modalFooter}>
+              <button 
+                onClick={() => setActiveDocModal(null)} 
+                style={{ padding: "10px 18px", backgroundColor: "white", border: "1px solid #d1d5db", borderRadius: "8px", fontWeight: "bold", color: "#374151", cursor: "pointer" }}>
+                Cancelar
+              </button>
+              
+              <button 
+                disabled={activeDocModal === 'receta' && medicamentos.length === 0}
+                style={{ padding: "10px 18px", background: "linear-gradient(90deg, #0ea5e9, #22c55e)", border: "none", borderRadius: "8px", fontWeight: "bold", color: "white", cursor: (activeDocModal === 'receta' && medicamentos.length === 0) ? "not-allowed" : "pointer", opacity: (activeDocModal === 'receta' && medicamentos.length === 0) ? 0.6 : 1 }}>
+                🖨️ Imprimir / Guardar PDF
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
