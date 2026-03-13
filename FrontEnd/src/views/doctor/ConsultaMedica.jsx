@@ -66,6 +66,7 @@ export const ConsultaMedica = () => {
   const [anamnesis, setAnamnesis] = useState("");
   const [examen, setExamen] = useState("");
   const [diagnostico, setDiagnostico] = useState("");
+  const [resultadosLab, setResultadosLab] = useState(""); // NUEVO: Resumen de laboratorio
   const [medicamentos, setMedicamentos] = useState([]);
 
   // Estados de interfaz
@@ -73,9 +74,13 @@ export const ConsultaMedica = () => {
   const [savingVitals, setSavingVitals] = useState(false);
   const [showDocMenu, setShowDocMenu] = useState(false);
   const [showHistorial, setShowHistorial] = useState(false);
+  const [showAgendarModal, setShowAgendarModal] = useState(false); // NUEVO: Modal agenda
   
-  // NUEVO: Estados para Modales de Documentos
-  const [activeDocModal, setActiveDocModal] = useState(null); // 'receta', 'constancia', 'incapacidad'
+  // NUEVO: Estado para programar cita de seguimiento
+  const [seguimiento, setSeguimiento] = useState({ fecha: "", hora: "", motivo: "Control de niño sano" });
+
+  // Estados para Modales de Documentos
+  const [activeDocModal, setActiveDocModal] = useState(null); 
   const [aiPrompt, setAiPrompt] = useState("");
   const [generatedDocText, setGeneratedDocText] = useState("");
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
@@ -173,19 +178,24 @@ export const ConsultaMedica = () => {
 
   const handleFinish = async () => {
     try {
-      await api.patch(`/preclinical/${id}/status`, { 
+      // Si se definió un seguimiento, lo enviamos también
+      const body = { 
         status: "done",
         anamnesis,
         physicalExam: examen,
         diagnosis: diagnostico,
+        labResults: resultadosLab, // NUEVO
         receta: medicamentos,
         bloodPressure: vitals.presion,
         temperature: vitals.temperatura,
         weight: vitals.peso,
         height: vitals.altura,
         heartRate: vitals.frecuencia,
-        bmi: p.bmi
-      });
+        bmi: p.bmi,
+        proximaCita: seguimiento.fecha ? seguimiento : null // NUEVO: Agendar desde aquí
+      };
+
+      await api.patch(`/preclinical/${id}/status`, body);
       alert("Consulta finalizada correctamente.");
       navigate("/doctor");
     } catch (e) {
@@ -194,7 +204,6 @@ export const ConsultaMedica = () => {
     }
   };
 
-  // NUEVO: Manejo de Documentos
   const handleGenerarDocumento = (tipo) => {
     setShowDocMenu(false);
     setActiveDocModal(tipo);
@@ -206,7 +215,6 @@ export const ConsultaMedica = () => {
     if (!aiPrompt.trim()) return alert("Por favor ingresa instrucciones para la IA.");
     setIsGeneratingDoc(true);
     
-    // Simulación de llamada al backend
     setTimeout(() => {
       const tipoDoc = activeDocModal === 'constancia' ? 'Constancia Médica' : 'Incapacidad Médica';
       const fechaActual = new Date().toLocaleDateString("es-SV", { day: 'numeric', month: 'long', year: 'numeric' });
@@ -353,9 +361,21 @@ export const ConsultaMedica = () => {
             <label className="form-label">Examen Físico</label>
             <textarea className="form-input" rows="3" value={examen} onChange={(e) => setExamen(e.target.value)} placeholder="Hallazgos clínicos..." />
           </div>
-          <div className="form-group" style={{ marginBottom: "25px" }}>
+          <div className="form-group" style={{ marginBottom: "15px" }}>
             <label className="form-label">Diagnóstico</label>
-            <textarea className="form-input" rows="3" value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} placeholder="Diagnóstico principal y secundarios..." />
+            <textarea className="form-input" rows="2" value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} placeholder="Diagnóstico principal..." />
+          </div>
+
+          {/* NUEVA SECCIÓN: Resultados de Laboratorio */}
+          <div className="form-group" style={{ marginBottom: "25px", borderTop: "1px solid #f3f4f6", paddingTop: "15px" }}>
+            <label className="form-label" style={{ color: "#0d9488" }}>🧬 Resumen de Laboratorio</label>
+            <textarea 
+              className="form-input" 
+              rows="3" 
+              value={resultadosLab} 
+              onChange={(e) => setResultadosLab(e.target.value)} 
+              placeholder="Resume los resultados de los exámenes (ej. Hemoglobina normal, glucosa elevada...)" 
+            />
           </div>
 
           {/* Sección de Medicamentos Recetados */}
@@ -460,19 +480,30 @@ export const ConsultaMedica = () => {
         </div>
 
         <div style={S.actionBar}>
-          <div style={S.docDropdownContainer}>
-            <div style={S.docMenu}>
-              <button style={S.docMenuItem} onClick={() => handleGenerarDocumento('receta')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>💊 Emitir Receta</button>
-              <button style={S.docMenuItem} onClick={() => handleGenerarDocumento('constancia')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>📄 Constancia Médica</button>
-              <button style={{...S.docMenuItem, borderBottom: 'none'}} onClick={() => handleGenerarDocumento('incapacidad')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>🛌 Incapacidad</button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={S.docDropdownContainer}>
+              <div style={S.docMenu}>
+                <button style={S.docMenuItem} onClick={() => handleGenerarDocumento('receta')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>💊 Emitir Receta</button>
+                <button style={S.docMenuItem} onClick={() => handleGenerarDocumento('constancia')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>📄 Constancia Médica</button>
+                <button style={{...S.docMenuItem, borderBottom: 'none'}} onClick={() => handleGenerarDocumento('incapacidad')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>🛌 Incapacidad</button>
+              </div>
+              
+              <button 
+                type="button" 
+                style={{...S.btnDocumento, backgroundColor: showDocMenu ? '#f0fdfa' : 'white'}} 
+                onClick={() => setShowDocMenu(!showDocMenu)}
+              >
+                📝 Documentos {showDocMenu ? '▲' : '▼'}
+              </button>
             </div>
-            
+
+            {/* NUEVO BOTÓN: Agendar Seguimiento */}
             <button 
               type="button" 
-              style={{...S.btnDocumento, backgroundColor: showDocMenu ? '#f0fdfa' : 'white'}} 
-              onClick={() => setShowDocMenu(!showDocMenu)}
+              style={{ ...S.btnDocumento, border: "1.5px solid #0ea5e9", color: "#0ea5e9" }}
+              onClick={() => setShowAgendarModal(true)}
             >
-              📝 Generar Documento {showDocMenu ? '▲' : '▼'}
+              📅 Agendar Seguimiento
             </button>
           </div>
 
@@ -481,6 +512,38 @@ export const ConsultaMedica = () => {
           </button>
         </div>
       </main>
+
+      {/* --- MODAL: AGENDAR CITA DE SEGUIMIENTO (NUEVO) --- */}
+      {showAgendarModal && (
+        <div style={S.modalOverlay}>
+          <div style={{ ...S.modalContent, maxWidth: "450px" }}>
+            <div style={S.modalHeader}>
+              <h2 style={{ margin: 0, color: "#0ea5e9" }}>📅 Agendar Control</h2>
+              <button onClick={() => setShowAgendarModal(false)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer" }}>✖</button>
+            </div>
+            <div style={S.modalBody}>
+              <div className="form-group">
+                <label className="form-label">Fecha de Control</label>
+                <input type="date" className="form-input" value={seguimiento.fecha} onChange={(e) => setSeguimiento({...seguimiento, fecha: e.target.value})} />
+              </div>
+              <div className="form-group" style={{ marginTop: "15px" }}>
+                <label className="form-label">Hora</label>
+                <input type="time" className="form-input" value={seguimiento.hora} onChange={(e) => setSeguimiento({...seguimiento, hora: e.target.value})} />
+              </div>
+              <div className="form-group" style={{ marginTop: "15px" }}>
+                <label className="form-label">Motivo</label>
+                <input type="text" className="form-input" value={seguimiento.motivo} onChange={(e) => setSeguimiento({...seguimiento, motivo: e.target.value})} />
+              </div>
+              <p style={{ fontSize: "0.8rem", color: "#6b7280", marginTop: "15px" }}>
+                * La cita se agendará automáticamente al finalizar la consulta actual.
+              </p>
+            </div>
+            <div style={S.modalFooter}>
+              <button className="submit-btn" style={{ margin: 0, backgroundColor: "#0ea5e9" }} onClick={() => setShowAgendarModal(false)}>Confirmar Fecha</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- MODAL: HISTORIAL CLÍNICO --- */}
       {showHistorial && (
@@ -520,7 +583,6 @@ export const ConsultaMedica = () => {
         <div style={S.modalOverlay}>
           <div style={{ ...S.modalContent, maxWidth: activeDocModal === 'receta' ? '600px' : '750px' }}>
             
-            {/* Cabecera del Documento */}
             <div style={S.modalHeader}>
               <div>
                 <h2 style={{ margin: 0, color: "#0f766e", fontSize: "1.4rem" }}>
@@ -532,15 +594,13 @@ export const ConsultaMedica = () => {
               <button onClick={() => setActiveDocModal(null)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#6b7280" }}>✖</button>
             </div>
 
-            {/* Cuerpo del Modal */}
             <div style={S.modalBody}>
               
-              {/* VISTA RECETA */}
               {activeDocModal === 'receta' && (
                 <div>
                   {medicamentos.length === 0 ? (
                     <div style={{ padding: "20px", textAlign: "center", color: "#b91c1c", backgroundColor: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca" }}>
-                      <strong>Atención:</strong> No has agregado ningún medicamento a la receta en la consulta actual. Cierra esta ventana y agrega los medicamentos primero.
+                      <strong>Atención:</strong> No has agregado ningún medicamento a la receta en la consulta actual.
                     </div>
                   ) : (
                     <div>
@@ -551,7 +611,6 @@ export const ConsultaMedica = () => {
                             <strong>{m.nombre} {m.concentracion}{m.unidadConcentracion}</strong> <br/>
                             <span style={{ fontSize: "0.9rem", color: "#4b5563" }}>
                               Tomar/Aplicar: {m.dosis} {m.unidadDosis} por {m.via}, cada {m.frecuencia} hrs por {m.duracion} días. 
-                              {m.indicaciones && ` (${m.indicaciones})`}
                             </span>
                           </li>
                         ))}
@@ -561,17 +620,13 @@ export const ConsultaMedica = () => {
                 </div>
               )}
 
-              {/* VISTA CONSTANCIA E INCAPACIDAD (IA) */}
               {(activeDocModal === 'constancia' || activeDocModal === 'incapacidad') && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-                  
                   <div style={{ backgroundColor: "#f0fdfa", padding: "15px", borderRadius: "10px", border: "1px solid #ccfbf1" }}>
-                    <label style={{ ...S.medLabel, display: "block", marginBottom: "8px", color: "#0f766e" }}>
-                      Instrucciones para la IA:
-                    </label>
+                    <label style={{ ...S.medLabel, display: "block", marginBottom: "8px", color: "#0f766e" }}>Instrucciones para la IA:</label>
                     <textarea 
                       style={{ ...S.medInput, width: "100%", height: "80px", resize: "none" }} 
-                      placeholder="Ej. El paciente necesita 3 días de reposo absoluto por diagnóstico de faringitis aguda..." 
+                      placeholder="Ej. Reposo por faringitis..." 
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
                     />
@@ -579,45 +634,27 @@ export const ConsultaMedica = () => {
                       onClick={handleSimularIA} 
                       disabled={isGeneratingDoc}
                       style={{ ...S.btnDocumento, marginTop: "10px", width: "100%", justifyContent: "center", backgroundColor: isGeneratingDoc ? "#e5e7eb" : "white" }}>
-                      {isGeneratingDoc ? "Generando documento..." : "✨ Generar Redacción"}
+                      {isGeneratingDoc ? "Generando..." : "✨ Generar Redacción"}
                     </button>
                   </div>
-
                   {generatedDocText && (
-                    <div>
-                      <label style={{ ...S.medLabel, display: "block", marginBottom: "8px" }}>Vista previa del documento (Puedes editarlo):</label>
-                      <textarea 
-                        style={{ ...S.medInput, width: "100%", height: "200px", lineHeight: "1.5", fontSize: "0.95rem" }} 
-                        value={generatedDocText}
-                        onChange={(e) => setGeneratedDocText(e.target.value)}
-                      />
-                    </div>
+                    <textarea 
+                      style={{ ...S.medInput, width: "100%", height: "200px", lineHeight: "1.5" }} 
+                      value={generatedDocText}
+                      onChange={(e) => setGeneratedDocText(e.target.value)}
+                    />
                   )}
-
                 </div>
               )}
-
             </div>
 
-            {/* Pie del Modal (Acciones) */}
             <div style={S.modalFooter}>
-              <button 
-                onClick={() => setActiveDocModal(null)} 
-                style={{ padding: "10px 18px", backgroundColor: "white", border: "1px solid #d1d5db", borderRadius: "8px", fontWeight: "bold", color: "#374151", cursor: "pointer" }}>
-                Cancelar
-              </button>
-              
-              <button 
-                disabled={activeDocModal === 'receta' && medicamentos.length === 0}
-                style={{ padding: "10px 18px", background: "linear-gradient(90deg, #0ea5e9, #22c55e)", border: "none", borderRadius: "8px", fontWeight: "bold", color: "white", cursor: (activeDocModal === 'receta' && medicamentos.length === 0) ? "not-allowed" : "pointer", opacity: (activeDocModal === 'receta' && medicamentos.length === 0) ? 0.6 : 1 }}>
-                🖨️ Imprimir / Guardar PDF
-              </button>
+              <button onClick={() => setActiveDocModal(null)} style={{ padding: "10px 18px", border: "1px solid #d1d5db", borderRadius: "8px", cursor: "pointer" }}>Cancelar</button>
+              <button style={{ padding: "10px 18px", background: "linear-gradient(90deg, #0ea5e9, #22c55e)", border: "none", borderRadius: "8px", color: "white", cursor: "pointer" }}>🖨️ Imprimir PDF</button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 };

@@ -13,8 +13,11 @@ import { PatientsShared } from './views/shared/PatientsShared.jsx';
 import { ChangePassword } from './views/shared/ChangePassword';
 import { PreclinicaShared } from './views/shared/PreClinicaShared.jsx';
 import { SalaEspera } from './views/doctor/SalaEspera.jsx';
-//import { PacientesDoctor } from './views/doctor/PacientesDoctor';
 import { ConsultaMedica } from './views/doctor/ConsultaMedica';
+
+// 1. IMPORTA LAS VISTAS NUEVAS AQUÍ
+import { AgendaCitas } from './views/shared/AgendaCitas'; 
+// import { AseguradorasShared } from './views/shared/AseguradorasShared'; (Cuando la crees)
 
 function App() {
   return (
@@ -25,32 +28,40 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
+        {/* --- RUTAS ADMINISTRADOR --- */}
         <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
           <Route element={<Layout />}>
             <Route path="/admin" element={<DashboardAdmin />} />
             <Route path="/admin/usuarios" element={<AdministrarUsuarios />} />
             <Route path="/admin/changePassword" element={<ChangePassword />} />
+            {/* Aquí puedes agregar Auditoría o Configuración luego */}
           </Route>
         </Route>
 
+        {/* --- RUTAS RECEPCIÓN --- */}
         <Route element={<ProtectedRoute allowedRoles={[ROLES.ASSISTANT]} />}>
           <Route element={<Layout />}>
             <Route path="/reception" element={<DashboardRecepcion />} />
             <Route path="/reception/pacientes" element={<PatientsShared />} />
             <Route path="/reception/preclinica" element={<PreclinicaShared />} />
             <Route path="/reception/changePassword" element={<ChangePassword />} />
+            
+            {/* 2. NUEVA RUTA DE AGENDA PARA RECEPCIÓN */}
+            <Route path="/reception/agenda" element={<AgendaCitas />} />
           </Route>
         </Route>
 
+        {/* --- RUTAS DOCTOR --- */}
         <Route element={<ProtectedRoute allowedRoles={[ROLES.DOCTOR]} />}>
           <Route element={<Layout />}>
             <Route path="/doctor" element={<SalaEspera />} />
             <Route path="/doctor/pacientes" element={<PatientsShared />} />
             <Route path="/doctor/preclinica" element={<PreclinicaShared />} />
             <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />
-            {/* <Route path="/doctor/pacientes" element={<PacientesDoctor />} />
-            <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />*/}
             <Route path="/doctor/changePassword" element={<ChangePassword />} />
+
+            {/* 3. NUEVA RUTA DE AGENDA PARA DOCTOR */}
+            <Route path="/doctor/agenda" element={<AgendaCitas />} />
           </Route>
         </Route>
 
