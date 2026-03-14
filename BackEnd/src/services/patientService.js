@@ -38,7 +38,10 @@ export const registerPatient = async (data) => {
         phone: data.phone || null,
         address: data.address || null,
         fileNumber: fileNumber,
-        isMinor: data.isMinor ? 1 : 0, 
+        isMinor: data.isMinor ? 1 : 0,
+        responsibleName: data.isMinor ? data.responsibleName : null,
+        personalHistory: data.personalHistory || null,
+        familyHistory: data.familyHistory || null, 
         status: "active"
     });
     return { id: newId, fileNumber };
@@ -92,12 +95,17 @@ export const updatePatient = async (id, updateData) => {
             throw error;
         }
     }
+    const finalUpdate = {
+        ...updateData,
+        yearOfBirth: updateData.dateOfBirth || currentPatient.yearOfBirth,
+        personalHistory: updateData.personalHistory || currentPatient.personalHistory,
+        familyHistory: updateData.familyHistory || currentPatient.familyHistory,
+        responsibleName: isMinor ? (updateData.responsibleName || currentPatient.responsibleName) : null,
+        updatedAt: new Date()
+    };
+    delete finalUpdate.dateOfBirth;
     await db.update(patients)
-        .set({ 
-            ...updateData, 
-            yearOfBirth: updateData.dateOfBirth, 
-            updatedAt: new Date() 
-        })
+        .set(finalUpdate)
         .where(eq(patients.id, id));
 
     return { id, message: "Información actualizada correctamente" };
