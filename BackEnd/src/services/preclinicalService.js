@@ -1,7 +1,7 @@
 import { db } from "../config/db.js";
 import { preclinicalRecords } from "../models/schema.js";
 import { v4 as uuidv4 } from "uuid";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray,and } from "drizzle-orm";
 import { patients } from "../models/schema.js";
 
 const ALLOWED_STATUS = ["waiting", "in_consultation", "done", "cancelled"];
@@ -21,6 +21,21 @@ export const createPreclinical = async (data, user) => {
   if (!data?.patientId) {
     const error = new Error("patientId es obligatorio.");
     error.status = 400;
+    throw error;
+  }
+  const [existingRecord] = await db
+    .select()
+    .from(preclinicalRecords)
+    .where(
+      and(
+        eq(preclinicalRecords.patientId, data.patientId),
+        eq(preclinicalRecords.status, "waiting")
+      )
+    )
+    .limit(1);
+  if (existingRecord) {
+    const error = new Error("El paciente ya se encuentra en la sala de espera (Estado: Esperando).");
+    error.status = 409; 
     throw error;
   }
 

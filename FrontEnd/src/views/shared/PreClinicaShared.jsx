@@ -35,6 +35,7 @@ export const PreclinicaShared = () => {
     peso: "",
     altura: "",
     frecuencia: "",
+    saturacion: "",
   });
 
   const toNull = (v) => (v === "" || v === undefined ? null : v);
@@ -44,7 +45,8 @@ export const PreclinicaShared = () => {
     (f.temperatura === "" || f.temperatura == null) &&
     (f.peso === "" || f.peso == null) &&
     (f.altura === "" || f.altura == null) &&
-    (f.frecuencia === "" || f.frecuencia == null);
+    (f.frecuencia === "" || f.frecuencia == null) &&
+    (f.saturacion === "" || f.saturacion == null);
 
   const validate = () => {
     const errs = {};
@@ -85,6 +87,11 @@ export const PreclinicaShared = () => {
       if (Number.isNaN(hr)) errs.frecuencia = "Frecuencia inválida.";
       else if (hr < 20 || hr > 250) errs.frecuencia = "Rango esperado: 20 a 250 bpm.";
     }
+    if (formulario.saturacion !== "") {
+      const o2 = Number(formulario.saturacion);
+      if (Number.isNaN(o2)) errs.saturacion = "Valor inválido.";
+      else if (o2 < 0 || o2 > 100) errs.saturacion = "Rango esperado: 0 a 100%.";
+    }
 
     return errs;
   };
@@ -98,6 +105,7 @@ export const PreclinicaShared = () => {
     if (status === 404) return "No se encontró el paciente. Vuelve a seleccionarlo.";
     if (status === 409) return msg || "Conflicto al guardar. Revisa los datos e intenta de nuevo.";
     if (status === 400) return msg || "Datos inválidos. Revisa los campos marcados.";
+    if(status === 100) return msg || "El paciente ya está en sala de espera. Espera a que el doctor lo atienda o cancela la visita anterior.";
     if (status >= 500) return "Error del servidor. Intenta nuevamente en unos segundos.";
     return msg || "No se pudo guardar la pre-clínica. Verifica tu conexión e intenta de nuevo.";
   };
@@ -142,6 +150,7 @@ export const PreclinicaShared = () => {
     esMenor: Boolean(p.isMinor ?? p.esMenor),
     edad: p.age ?? p.edad ?? "",
     dui: p.identityDocument ?? p.dui ?? "",
+    responsibleName: p.responsibleName || "",
   });
 
   useEffect(() => {
@@ -187,7 +196,7 @@ export const PreclinicaShared = () => {
     }
 
     if (allEmptyVitals(formulario)) {
-      const ok = confirm("No se han ingresado signos vitales. ¿Desea continuar?");
+      const ok = confirm("No se han ingresado signos vitales. ¿Desea continuar solo con el motivo?");
       if (!ok) return;
     }
 
@@ -199,13 +208,15 @@ export const PreclinicaShared = () => {
       weight: toNull(formulario.peso),
       height: toNull(formulario.altura),
       heartRate: toNull(formulario.frecuencia),
+      oxygenSaturation: toNull(formulario.saturacion), 
     };
 
     try {
       setSaving(true);
       await api.post("/preclinical", payload);
 
-      setSuccessMsg("Pre-clínica registrada ✅ Se envió a sala de espera del médico.");
+      setSuccessMsg("Pre-clínica registrada Se envió a sala de espera del médico.");
+      
       setFormulario({
         motivo: "",
         presion: "",
@@ -213,12 +224,16 @@ export const PreclinicaShared = () => {
         peso: "",
         altura: "",
         frecuencia: "",
+        saturacion: "",
       });
 
-      navigate(redirectTo);
+      setTimeout(() => navigate(redirectTo), 1500);
+      
     } catch (err) {
       console.error(err);
-      setGeneralError(parseBackendError(err));
+      const errorMsg = parseBackendError(err);
+      setGeneralError(errorMsg);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);
     }
@@ -386,6 +401,7 @@ export const PreclinicaShared = () => {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
+        {/* Header con botón de volver */}
         <div style={styles.header}>
           <h1 style={styles.title}>{title}</h1>
           <button
@@ -397,26 +413,35 @@ export const PreclinicaShared = () => {
           </button>
         </div>
 
+        {/* Alertas de Mensajes Generales */}
         {generalError && (
           <div style={{ ...styles.alertBase, ...styles.alertError }}>
-            <span style={{ fontSize: 18 }}>⚠️</span>
-            <span>{generalError}</span>
+            <span style={{ fontSize: 20 }}>⚠️</span>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span>{generalError}</span>
+              {generalError.includes("espera") && (
+                <small style={{ fontWeight: 400, marginTop: 4 }}>
+                  El paciente debe ser atendido por el doctor o cancelado antes de registrar una nueva visita.
+                </small>
+              )}
+            </div>
           </div>
         )}
 
         {successMsg && (
           <div style={{ ...styles.alertBase, ...styles.alertOk }}>
-            <span style={{ fontSize: 18 }}>✅</span>
+            <span style={{ fontSize: 20 }}>✅</span>
             <span>{successMsg}</span>
           </div>
         )}
 
+        {/* Sección de Selección de Paciente */}
         {!paciente ? (
           <div style={styles.card}>
             <div style={{ marginBottom: 12 }}>
               <h3 style={styles.sectionTitle}>Seleccionar paciente</h3>
               <p style={styles.sectionSub}>
-                Busca por nombre, DUI o expediente. (mínimo 3 letras)
+                Busca por nombre, DUI o número de expediente.
               </p>
             </div>
 
@@ -425,243 +450,160 @@ export const PreclinicaShared = () => {
                 <span style={styles.iconLeft}>🔎</span>
                 <input
                   type="text"
-                  placeholder="Ej: Ana López, 01234567-8, EXP-001..."
+                  placeholder="Ej: Ana López, 01234567-8..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                   style={{ ...styles.input, ...styles.inputWithIcon }}
-                  onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 4px rgba(13,148,136,0.12)")}
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                 />
               </div>
 
-              {busqueda.trim().length > 0 && busqueda.trim().length <= 2 && (
-                <div style={styles.help}>Escribe al menos 3 caracteres para buscar.</div>
-              )}
-
-              {searching && busqueda.trim().length > 2 && (
-                <div style={styles.help}>Buscando pacientes...</div>
-              )}
+              {searching && <div style={styles.help}>Buscando en la base de datos...</div>}
 
               {resultadosBusqueda.length > 0 && (
                 <div style={styles.dropdown}>
-                  {resultadosBusqueda.map((res) => {
-                    const isMinor = Boolean(res.isMinor ?? res.esMenor);
-                    const nombre = res.fullName ?? res.nombre ?? "Paciente";
-                    const doc = res.identityDocument ?? res.dui ?? "—";
-                    return (
-                      <button
-                        key={res.id}
-                        type="button"
-                        onClick={() => handleSeleccionarPaciente(res)}
-                        style={styles.dropdownItem}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
-                      >
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 900, color: "#0f172a" }}>
-                            {nombre}
-                          </div>
-                          <div style={{ fontSize: 13, color: "#64748b" }}>
-                            {doc}
-                            {res.fileNumber ? ` • ${res.fileNumber}` : ""}
-                          </div>
-                        </div>
-                        <span style={styles.badge(isMinor)}>
-                          {isMinor ? "MENOR" : "ADULTO"}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {resultadosBusqueda.map((res) => (
+                    <button
+                      key={res.id}
+                      type="button"
+                      onClick={() => handleSeleccionarPaciente(res)}
+                      style={styles.dropdownItem}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 900, color: "#0f172a" }}>{res.fullName}</div>
+                        <div style={{ fontSize: 13, color: "#64748b" }}>{res.identityDocument}</div>
+                      </div>
+                      <span style={styles.badge(res.isMinor)}>{res.isMinor ? "MENOR" : "ADULTO"}</span>
+                    </button>
+                  ))}
                 </div>
-              )}
-
-              {busqueda.trim().length > 2 && !searching && resultadosBusqueda.length === 0 && (
-                <div style={styles.help}>No hay resultados para “{busqueda.trim()}”.</div>
               )}
             </div>
           </div>
         ) : (
+          /* Tarjeta de Paciente Seleccionado */
           <div style={styles.patientCard(paciente.esMenor)}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <h3 style={{ margin: 0, fontWeight: 900, color: "#0f172a" }}>
-                  {paciente.nombre}
-                </h3>
+                <h3 style={{ margin: 0, fontWeight: 900, color: "#0f172a" }}>{paciente.nombre}</h3>
                 <span style={styles.badge(paciente.esMenor)}>
-                  {paciente.esMenor ? "MENOR DE EDAD" : "ADULTO"}
+                  {paciente.esMenor ? "PACIENTE MENOR" : "PACIENTE ADULTO"}
                 </span>
               </div>
 
               <p style={{ margin: "8px 0 0", color: "#475569", fontSize: 14 }}>
-                {paciente.edad !== "" && (
-                  <>
-                    <strong>Edad:</strong> {paciente.edad} años {" • "}
-                  </>
-                )}
-                <strong>{paciente.esMenor ? "DUI Responsable:" : "DUI:"}</strong> {paciente.dui}
+                <strong>{paciente.esMenor ? "DUI Responsable:" : "DUI Paciente:"}</strong> {paciente.dui}
               </p>
+              
+              {paciente.esMenor && paciente.responsibleName && (
+                <p style={{ margin: "4px 0 0", color: "#0369a1", fontSize: 14, fontWeight: 700 }}>
+                  Acompañado por: {paciente.responsibleName}
+                </p>
+              )}
             </div>
 
             <button
-              onClick={() => setPaciente(null)}
+              onClick={() => { setPaciente(null); setGeneralError(""); }}
               type="button"
               style={styles.linkDanger}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.08)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              Cambiar
+              Cambiar Paciente
             </button>
           </div>
         )}
 
+        {/* Formulario de Registro de Signos Vitales */}
         {paciente && (
-          <div style={{ ...styles.card, padding: 20 }}>
+          <div style={{ ...styles.card, padding: 24 }}>
             <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 20 }}>
                 <label style={{ display: "block", fontWeight: 900, color: "#0f172a", marginBottom: 8 }}>
-                  Motivo de la Consulta
+                  Motivo de Atención *
                 </label>
                 <textarea
                   rows="2"
                   value={formulario.motivo}
                   onChange={onChangeField("motivo")}
-                  placeholder="Ej: consulta general, curación, inyectable..."
-                  style={{ ...styles.input, resize: "vertical" }}
-                  onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 4px rgba(13,148,136,0.12)")}
-                  onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
+                  placeholder="Ej: Control de embarazo, fiebre alta, dolor de espalda..."
+                  style={{ ...styles.input, resize: "vertical", borderColor: formErrors.motivo ? "#ef4444" : "#e5e7eb" }}
                 />
                 {formErrors.motivo && <div style={styles.fieldErr}>{formErrors.motivo}</div>}
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 6 }}>
-                <h4 style={{ margin: 0, color: "#0f766e", fontWeight: 900 }}>
-                  Signos Vitales (Opcionales)
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: 10, marginBottom: 15 }}>
+                <h4 style={{ margin: 0, color: "#0d9488", fontWeight: 900, fontSize: 16 }}>
+                  Signos Vitales
                 </h4>
-                <span style={{ color: "#64748b", fontSize: 13 }}>
-                  Puedes dejarlo en blanco
-                </span>
+                <span style={{ color: "#94a3b8", fontSize: 12, fontWeight: 700 }}>DATOS OPCIONALES</span>
               </div>
 
-              <div style={{ marginTop: 12, ...styles.grid }}>
-                {/* Presión */}
+              <div style={styles.grid}>
+                {/* Presión Arterial */}
                 <div>
-                  <label style={{ display: "block", fontWeight: 900, color: "#0f172a", marginBottom: 8 }}>
-                    Presión Arterial
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="120/80"
-                    value={formulario.presion}
-                    onChange={onChangeField("presion")}
-                    style={styles.input}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 4px rgba(13,148,136,0.12)")}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  />
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#475569", marginBottom: 6 }}>P. Arterial (mmHg)</label>
+                  <input type="text" placeholder="120/80" value={formulario.presion} onChange={onChangeField("presion")} style={styles.input} />
                   {formErrors.presion && <div style={styles.fieldErr}>{formErrors.presion}</div>}
                 </div>
 
-                {/* Temp */}
+                {/* Temperatura */}
                 <div>
-                  <label style={{ display: "block", fontWeight: 900, color: "#0f172a", marginBottom: 8 }}>
-                    Temperatura (°C)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="30"
-                    max="45"
-                    placeholder="36.5"
-                    value={formulario.temperatura}
-                    onChange={onChangeField("temperatura")}
-                    style={styles.input}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 4px rgba(13,148,136,0.12)")}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  />
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#475569", marginBottom: 6 }}>Temperatura (°C)</label>
+                  <input type="number" step="0.1" placeholder="36.5" value={formulario.temperatura} onChange={onChangeField("temperatura")} style={styles.input} />
                   {formErrors.temperatura && <div style={styles.fieldErr}>{formErrors.temperatura}</div>}
+                </div>
+
+                {/* Frecuencia Cardíaca */}
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#475569", marginBottom: 6 }}>Frec. Cardíaca (bpm)</label>
+                  <input type="number" placeholder="75" value={formulario.frecuencia} onChange={onChangeField("frecuencia")} style={styles.input} />
+                  {formErrors.frecuencia && <div style={styles.fieldErr}>{formErrors.frecuencia}</div>}
+                </div>
+
+                {/* Saturación de Oxígeno (NUEVO) */}
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#475569", marginBottom: 6 }}>Saturación O₂ (%)</label>
+                  <input type="number" placeholder="98" value={formulario.saturacion} onChange={onChangeField("saturacion")} 
+                    style={{ ...styles.input, borderColor: formErrors.saturacion ? "#ef4444" : "#e5e7eb" }} 
+                  />
+                  {formErrors.saturacion && <div style={styles.fieldErr}>{formErrors.saturacion}</div>}
                 </div>
 
                 {/* Peso */}
                 <div>
-                  <label style={{ display: "block", fontWeight: 900, color: "#0f172a", marginBottom: 8 }}>
-                    Peso (lb)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="1"
-                    max="1500"
-                    placeholder="150"
-                    value={formulario.peso}
-                    onChange={onChangeField("peso")}
-                    style={styles.input}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 4px rgba(13,148,136,0.12)")}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  />
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#475569", marginBottom: 6 }}>Peso (lb)</label>
+                  <input type="number" step="0.1" placeholder="160" value={formulario.peso} onChange={onChangeField("peso")} style={styles.input} />
                   {formErrors.peso && <div style={styles.fieldErr}>{formErrors.peso}</div>}
                 </div>
 
-                {/* Altura */}
+                {/* Estatura */}
                 <div>
-                  <label style={{ display: "block", fontWeight: 900, color: "#0f172a", marginBottom: 8 }}>
-                    Estatura (m)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.3"
-                    max="3"
-                    placeholder="1.70"
-                    value={formulario.altura}
-                    onChange={onChangeField("altura")}
-                    style={styles.input}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 4px rgba(13,148,136,0.12)")}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  />
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#475569", marginBottom: 6 }}>Estatura (m)</label>
+                  <input type="number" step="0.01" placeholder="1.70" value={formulario.altura} onChange={onChangeField("altura")} style={styles.input} />
                   {formErrors.altura && <div style={styles.fieldErr}>{formErrors.altura}</div>}
                 </div>
-
-                {/* Frecuencia */}
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={{ display: "block", fontWeight: 900, color: "#0f172a", marginBottom: 8 }}>
-                    Frecuencia Cardíaca (bpm)
-                  </label>
-                  <input
-                    type="number"
-                    min="20"
-                    max="250"
-                    placeholder="80"
-                    value={formulario.frecuencia}
-                    onChange={onChangeField("frecuencia")}
-                    style={styles.input}
-                    onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 4px rgba(13,148,136,0.12)")}
-                    onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
-                  />
-                  {formErrors.frecuencia && <div style={styles.fieldErr}>{formErrors.frecuencia}</div>}
-                </div>
               </div>
 
+              {/* Botón de envío dinámico */}
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || generalError.includes("espera")}
                 style={{
                   ...styles.btnPrimary,
-                  ...(saving ? styles.btnPrimaryDisabled : {}),
+                  ...(saving || generalError.includes("espera") ? styles.btnPrimaryDisabled : {}),
+                  background: generalError.includes("espera") ? "#94a3b8" : "linear-gradient(90deg, #0d9488, #22c55e)",
+                  marginTop: 30
                 }}
-                onMouseDown={(e) => !saving && (e.currentTarget.style.transform = "translateY(1px)")}
-                onMouseUp={(e) => (e.currentTarget.style.transform = "translateY(0px)")}
               >
-                {saving ? "Guardando..." : "Confirmar Pre-clínica"}
+                {saving ? "Registrando..." : generalError.includes("espera") ? "Paciente ya en espera" : "Confirmar e ingresar a sala"}
               </button>
 
-              <div style={{ marginTop: 10, color: "#64748b", fontSize: 12 }}>
-                Al guardar, se enviará a sala de espera del médico.
-              </div>
+              <p style={{ marginTop: 14, color: "#94a3b8", fontSize: 12, textAlign: "center", fontWeight: 600 }}>
+                Esta acción notificará al médico de turno.
+              </p>
             </form>
           </div>
         )}
-
-        {/* ✅ responsive sin media query (truco simple):
-            si quieres full responsive real, te dejo abajo CSS opcional */}
       </div>
     </div>
   );

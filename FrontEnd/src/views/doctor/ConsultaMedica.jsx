@@ -28,7 +28,7 @@ const evaluarTemperatura = (temp) => {
   const t = Number(temp);
   if (Number.isNaN(t)) return null;
   if (t >= 36 && t <= 37.5) return { status: "normal", color: "#16a34a", label: "Normal" };
-  if (t > 37.5 && t <= 38.5) return { status: "elevada", color: "#ca8a04", label: "Febr\u00edcula" };
+  if (t > 37.5 && t <= 38.5) return { status: "elevada", color: "#ca8a04", label: "Febrícula" };
   if (t > 38.5) return { status: "alto", color: "#dc2626", label: "Fiebre" };
   return { status: "bajo", color: "#ea580c", label: "Baja" };
 };
@@ -39,6 +39,14 @@ const evaluarFC = (fc) => {
   if (v >= 60 && v <= 100) return { status: "normal", color: "#16a34a", label: "Normal" };
   if (v > 100) return { status: "alto", color: "#dc2626", label: "Taquicardia" };
   return { status: "bajo", color: "#ea580c", label: "Bradicardia" };
+};
+
+const evaluarSaturacion = (spo2) => {
+  const v = Number(spo2);
+  if (Number.isNaN(v) || v === 0) return null;
+  if (v >= 95) return { status: "normal", color: "#16a34a", label: "Normal" };
+  if (v >= 90 && v < 95) return { status: "bajo", color: "#ca8a04", label: "Hipoxia Leve" };
+  return { status: "critico", color: "#dc2626", label: "Hipoxia Severa" };
 };
 
 const calcularEdad = (yearOfBirth) => {
@@ -66,7 +74,8 @@ export const ConsultaMedica = () => {
   const [anamnesis, setAnamnesis] = useState("");
   const [examen, setExamen] = useState("");
   const [diagnostico, setDiagnostico] = useState("");
-  const [resultadosLab, setResultadosLab] = useState(""); // NUEVO: Resumen de laboratorio
+  const [resultadosLab, setResultadosLab] = useState(""); 
+  const [observaciones, setObservaciones] = useState(""); 
   const [medicamentos, setMedicamentos] = useState([]);
 
   // Estados de interfaz
@@ -74,9 +83,9 @@ export const ConsultaMedica = () => {
   const [savingVitals, setSavingVitals] = useState(false);
   const [showDocMenu, setShowDocMenu] = useState(false);
   const [showHistorial, setShowHistorial] = useState(false);
-  const [showAgendarModal, setShowAgendarModal] = useState(false); // NUEVO: Modal agenda
+  const [showAgendarModal, setShowAgendarModal] = useState(false); 
   
-  // NUEVO: Estado para programar cita de seguimiento
+  // Estado para programar cita de seguimiento
   const [seguimiento, setSeguimiento] = useState({ fecha: "", hora: "", motivo: "Control de niño sano" });
 
   // Estados para Modales de Documentos
@@ -86,7 +95,7 @@ export const ConsultaMedica = () => {
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
 
   const [vitals, setVitals] = useState({
-    presion: "", temperatura: "", peso: "", altura: "", frecuencia: ""
+    presion: "", temperatura: "", peso: "", altura: "", frecuencia: "", saturacion: ""
   });
 
   const historialMock = [
@@ -109,7 +118,8 @@ export const ConsultaMedica = () => {
             temperatura: payload?.temperature || "",
             peso: payload?.weight || "",
             altura: payload?.height || "",
-            frecuencia: payload?.heartRate || ""
+            frecuencia: payload?.heartRate || "",
+            saturacion: payload?.oxygenSaturation || ""
           });
         }
       } catch (e) {
@@ -123,6 +133,8 @@ export const ConsultaMedica = () => {
     return () => { cancel = true; };
   }, [id]);
 
+  const evalO2 = useMemo(() => evaluarSaturacion(vitals.saturacion), [vitals.saturacion]);
+  
   const imcCalculado = useMemo(() => {
     const w = Number(vitals.weight || vitals.peso);
     const h = Number(vitals.height || vitals.altura);
@@ -155,17 +167,21 @@ export const ConsultaMedica = () => {
   const evalTemp = useMemo(() => evaluarTemperatura(vitals.temperatura), [vitals.temperatura]);
   const _evalFC = useMemo(() => evaluarFC(vitals.frecuencia), [vitals.frecuencia]);
 
+  // Helper para enviar a DB
+  const toNull = (v) => (v === "" || v === undefined ? null : v);
+
   const handleUpdateVitals = async () => {
     setSavingVitals(true);
     try {
       await api.patch(`/preclinical/${id}/status`, { 
         status: "in_consultation",
-        bloodPressure: vitals.presion,
-        temperature: vitals.temperatura,
-        weight: vitals.peso,
-        height: vitals.altura,
-        heartRate: vitals.frecuencia,
-        bmi: p.bmi
+        bloodPressure: toNull(vitals.presion),
+        temperature: toNull(vitals.temperatura),
+        weight: toNull(vitals.peso),
+        height: toNull(vitals.altura),
+        heartRate: toNull(vitals.frecuencia),
+        oxygenSaturation: toNull(vitals.saturacion),
+        bmi: toNull(p.bmi)
       });
       setEditVitals(false);
     } catch (e) {
@@ -178,21 +194,22 @@ export const ConsultaMedica = () => {
 
   const handleFinish = async () => {
     try {
-      // Si se definió un seguimiento, lo enviamos también
       const body = { 
         status: "done",
         anamnesis,
         physicalExam: examen,
         diagnosis: diagnostico,
-        labResults: resultadosLab, // NUEVO
+        labResults: resultadosLab,
+        observations: observaciones,
         receta: medicamentos,
-        bloodPressure: vitals.presion,
-        temperature: vitals.temperatura,
-        weight: vitals.peso,
-        height: vitals.altura,
-        heartRate: vitals.frecuencia,
-        bmi: p.bmi,
-        proximaCita: seguimiento.fecha ? seguimiento : null // NUEVO: Agendar desde aquí
+        bloodPressure: toNull(vitals.presion),
+        temperature: toNull(vitals.temperatura),
+        weight: toNull(vitals.peso),
+        height: toNull(vitals.altura),
+        heartRate: toNull(vitals.frecuencia),
+        oxygenSaturation: toNull(vitals.saturacion),
+        bmi: toNull(p.bmi),
+        proximaCita: seguimiento.fecha ? seguimiento : null 
       };
 
       await api.patch(`/preclinical/${id}/status`, body);
@@ -291,24 +308,46 @@ export const ConsultaMedica = () => {
       <aside style={S.aside}>
         <div style={S.sectionHeader}>
           <h2 style={{ fontSize: '1.15rem', color: '#0f766e', margin: 0 }}>Expediente</h2>
-          <button 
+          <button
             type="button"
             onClick={() => setShowHistorial(true)}
-            style={{ ...S.editBtn, backgroundColor: "#f0fdfa", color: "#0f766e", border: "1px solid #ccfbf1" }}>
+            style={{ ...S.editBtn, backgroundColor: "#f0fdfa", color: "#0f766e", border: "1px solid #ccfbf1" }}
+          >
             📋 Ver Historial
           </button>
         </div>
-        
         <div style={S.patientCard}>
-          <p style={{ margin: "0 0 4px", fontWeight: 800, fontSize: "1.1rem" }}>{p.nombre}</p>
-          <p style={{ fontSize: "0.9rem", color: "#4b5563" }}><strong>Edad:</strong> {p.edad} años</p>
-          <p style={{ fontSize: "0.82rem", color: "#6b7280", marginTop: 4 }}><strong>Fecha preclínica:</strong> {formatDate(p.createdAt)}</p>
+          <p style={{ margin: "0 0 4px", fontWeight: 800, fontSize: "1.1rem" }}>
+            {p.nombre}
+          </p>
+          <p style={{ fontSize: "0.9rem", color: "#4b5563" }}>
+            <strong>Edad:</strong> {p.edad} años
+          </p>
+          {data?.isMinor && (
+            <div style={{
+              marginTop: 8,
+              padding: "8px",
+              backgroundColor: "#f0f9ff",
+              borderRadius: "6px",
+              border: "1px solid #bae6fd"
+            }}>
+              <span style={{ fontSize: "0.75rem", color: "#0369a1", fontWeight: 700, display: "block" }}>
+                RESPONSABLE LEGAL
+              </span>
+              <span style={{ fontSize: "0.85rem", color: "#0c4a6e", fontWeight: 800 }}>
+                {data?.responsibleName || "No registrado"}
+              </span>
+            </div>
+          )}
+          <p style={{ fontSize: "0.82rem", color: "#6b7280", marginTop: 8 }}>
+            <strong>Fecha preclínica:</strong> {formatDate(p.createdAt)}
+          </p>
         </div>
 
         <div style={S.sectionHeader}>
           <h3 style={{ fontSize: '0.95rem', color: '#0f766e', margin: 0 }}>Signos Vitales</h3>
-          <button 
-            style={S.editBtn} 
+          <button
+            style={S.editBtn}
             disabled={savingVitals}
             onClick={() => editVitals ? handleUpdateVitals() : setEditVitals(true)}
           >
@@ -318,68 +357,110 @@ export const ConsultaMedica = () => {
 
         <div style={S.vitalGrid}>
           <div style={S.vitalBox(evalPA)}>
-            <span style={S.vitalLabel}>Presión Arterial</span>
-            {editVitals ? <input style={S.vitalInput} value={vitals.presion} onChange={(e) => setVitals({...vitals, presion: e.target.value})} /> : 
-            <span style={S.vitalValue}>{isVoid(vitals.presion) ? "N/A" : vitals.presion} {evalPA && <span style={S.vitalIndicator(evalPA)}>{evalPA.label}</span>}</span>}
+            <span style={S.vitalLabel}>P. Arterial</span>
+            {editVitals ? (
+              <input style={S.vitalInput} value={vitals.presion} onChange={(e) => setVitals({ ...vitals, presion: e.target.value })} />
+            ) : (
+              <span style={S.vitalValue}>
+                {isVoid(vitals.presion) ? "N/A" : vitals.presion}
+                {evalPA && <span style={S.vitalIndicator(evalPA)}>{evalPA.label}</span>}
+              </span>
+            )}
           </div>
           <div style={S.vitalBox(evalTemp)}>
-            <span style={S.vitalLabel}>Temperatura (°C)</span>
-            {editVitals ? <input style={S.vitalInput} type="number" step="0.1" value={vitals.temperatura} onChange={(e) => setVitals({...vitals, temperatura: e.target.value})} /> : 
-            <span style={S.vitalValue}>{isVoid(vitals.temperatura) ? "N/A" : `${vitals.temperatura}°C`} {evalTemp && <span style={S.vitalIndicator(evalTemp)}>{evalTemp.label}</span>}</span>}
+            <span style={S.vitalLabel}>Temp °C</span>
+            {editVitals ? (
+              <input style={S.vitalInput} type="number" step="0.1" value={vitals.temperatura} onChange={(e) => setVitals({ ...vitals, temperatura: e.target.value })} />
+            ) : (
+              <span style={S.vitalValue}>
+                {isVoid(vitals.temperatura) ? "N/A" : `${vitals.temperatura}°C`}
+                {evalTemp && <span style={S.vitalIndicator(evalTemp)}>{evalTemp.label}</span>}
+              </span>
+            )}
+          </div>
+
+          <div style={S.vitalBox(_evalFC)}>
+            <span style={S.vitalLabel}>F. Cardíaca</span>
+            {editVitals ? (
+              <input style={S.vitalInput} type="number" value={vitals.frecuencia} onChange={(e) => setVitals({ ...vitals, frecuencia: e.target.value })} />
+            ) : (
+              <span style={S.vitalValue}>
+                {isVoid(vitals.frecuencia) ? "N/A" : `${vitals.frecuencia} bpm`}
+                {_evalFC && <span style={S.vitalIndicator(_evalFC)}>{_evalFC.label}</span>}
+              </span>
+            )}
+          </div>
+
+          {/* O2 */}
+          <div style={S.vitalBox(evalO2)}>
+            <span style={S.vitalLabel}>Saturación O₂</span>
+            {editVitals ? (
+              <input style={S.vitalInput} type="number" value={vitals.saturacion} onChange={(e) => setVitals({ ...vitals, saturacion: e.target.value })} />
+            ) : (
+              <span style={S.vitalValue}>
+                {isVoid(vitals.saturacion) ? "N/A" : `${vitals.saturacion}%`}
+                {evalO2 && <span style={S.vitalIndicator(evalO2)}>{evalO2.label}</span>}
+              </span>
+            )}
           </div>
           <div style={S.vitalBox(null)}>
             <span style={S.vitalLabel}>Peso (lb)</span>
-            {editVitals ? <input style={S.vitalInput} type="number" value={vitals.peso} onChange={(e) => setVitals({...vitals, peso: e.target.value})} /> : 
-            <span style={S.vitalValue}>{isVoid(vitals.peso) ? "N/A" : `${vitals.peso} lb`}</span>}
+            {editVitals ? (
+              <input style={S.vitalInput} type="number" value={vitals.peso} onChange={(e) => setVitals({ ...vitals, peso: e.target.value })} />
+            ) : (
+              <span style={S.vitalValue}>{isVoid(vitals.peso) ? "N/A" : `${vitals.peso} lb`}</span>
+            )}
           </div>
           <div style={S.vitalBox(null)}>
             <span style={S.vitalLabel}>Estatura (m)</span>
-            {editVitals ? <input style={S.vitalInput} type="number" step="0.01" value={vitals.altura} onChange={(e) => setVitals({...vitals, altura: e.target.value})} /> : 
-            <span style={S.vitalValue}>{isVoid(vitals.altura) ? "N/A" : `${vitals.altura} m`}</span>}
+            {editVitals ? (
+              <input style={S.vitalInput} type="number" step="0.01" value={vitals.altura} onChange={(e) => setVitals({ ...vitals, altura: e.target.value })} />
+            ) : (
+              <span style={S.vitalValue}>{isVoid(vitals.altura) ? "N/A" : `${vitals.altura} m`}</span>
+            )}
           </div>
         </div>
 
         <div style={S.imcCard}>
-            <span style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151" }}>IMC: {imcData.valor}</span>
-            <div style={{ color: imcData.color, fontWeight: 800, fontSize: "1.1rem", marginTop: 2 }}>{imcData.clase}</div>
+          <span style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151" }}>IMC: {imcData.valor}</span>
+          <div style={{ color: imcData.color, fontWeight: 800, fontSize: "1.1rem", marginTop: 2 }}>{imcData.clase}</div>
         </div>
 
-        <button className="submit-btn" style={{ marginTop: '20px', width: '100%', backgroundColor: "#64748b" }} onClick={() => navigate("/doctor")}>Volver</button>
+        <button className="submit-btn" style={{ marginTop: '20px', width: '100%', backgroundColor: "#64748b" }} onClick={() => navigate("/doctor")}>
+          Volver
+        </button>
       </aside>
 
       <main style={S.main}>
         <div style={S.contentArea}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-             <h2 style={{ margin: 0, color: '#1f2937' }}>Consulta Actual</h2>
-          </div>
-          
+          <h2 style={{ marginBottom: "20px", color: "#1f2937" }}>Consulta Actual</h2>
+
           <div className="form-group" style={{ marginBottom: "15px" }}>
             <label className="form-label">Anamnesis / Motivo</label>
-            <textarea className="form-input" rows="3" value={anamnesis} onChange={(e) => setAnamnesis(e.target.value)} placeholder="Síntomas que presenta el paciente..." />
+            <textarea className="form-input" rows="3" value={anamnesis} onChange={(e) => setAnamnesis(e.target.value)} />
           </div>
+
           <div className="form-group" style={{ marginBottom: "15px" }}>
             <label className="form-label">Examen Físico</label>
-            <textarea className="form-input" rows="3" value={examen} onChange={(e) => setExamen(e.target.value)} placeholder="Hallazgos clínicos..." />
+            <textarea className="form-input" rows="3" value={examen} onChange={(e) => setExamen(e.target.value)} />
           </div>
+
           <div className="form-group" style={{ marginBottom: "15px" }}>
             <label className="form-label">Diagnóstico</label>
-            <textarea className="form-input" rows="2" value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} placeholder="Diagnóstico principal..." />
+            <textarea className="form-input" rows="2" value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} />
           </div>
 
-          {/* NUEVA SECCIÓN: Resultados de Laboratorio */}
-          <div className="form-group" style={{ marginBottom: "25px", borderTop: "1px solid #f3f4f6", paddingTop: "15px" }}>
-            <label className="form-label" style={{ color: "#0d9488" }}>🧬 Resumen de Laboratorio</label>
-            <textarea 
-              className="form-input" 
-              rows="3" 
-              value={resultadosLab} 
-              onChange={(e) => setResultadosLab(e.target.value)} 
-              placeholder="Resume los resultados de los exámenes (ej. Hemoglobina normal, glucosa elevada...)" 
-            />
+          <div className="form-group" style={{ marginTop: "20px" }}>
+            <label className="form-label">🧬 Resultados de Laboratorio</label>
+            <textarea className="form-input" rows="3" value={resultadosLab} onChange={(e) => setResultadosLab(e.target.value)} />
           </div>
 
-          {/* Sección de Medicamentos Recetados */}
-          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px", marginBottom: "20px" }}>
+          <div className="form-group" style={{ marginTop: "20px" }}>
+            <label className="form-label">📝 Observaciones</label>
+            <textarea className="form-input" rows="3" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
+          </div>
+
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px", marginTop: "20px", marginBottom: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
               <h3 style={{ margin: 0, color: '#1f2937', fontSize: '1.2rem' }}>Medicamentos Recetados</h3>
               <button type="button" onClick={agregarMedicamento} style={{ ...S.btnDocumento, padding: "6px 12px", fontSize: "0.85rem" }}>
@@ -476,7 +557,6 @@ export const ConsultaMedica = () => {
               </div>
             ))}
           </div>
-
         </div>
 
         <div style={S.actionBar}>
@@ -487,7 +567,6 @@ export const ConsultaMedica = () => {
                 <button style={S.docMenuItem} onClick={() => handleGenerarDocumento('constancia')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>📄 Constancia Médica</button>
                 <button style={{...S.docMenuItem, borderBottom: 'none'}} onClick={() => handleGenerarDocumento('incapacidad')} onMouseEnter={(e) => e.target.style.background = '#f0fdfa'} onMouseLeave={(e) => e.target.style.background = 'white'}>🛌 Incapacidad</button>
               </div>
-              
               <button 
                 type="button" 
                 style={{...S.btnDocumento, backgroundColor: showDocMenu ? '#f0fdfa' : 'white'}} 
@@ -496,10 +575,8 @@ export const ConsultaMedica = () => {
                 📝 Documentos {showDocMenu ? '▲' : '▼'}
               </button>
             </div>
-
-            {/* NUEVO BOTÓN: Agendar Seguimiento */}
-            <button 
-              type="button" 
+            <button
+              type="button"
               style={{ ...S.btnDocumento, border: "1.5px solid #0ea5e9", color: "#0ea5e9" }}
               onClick={() => setShowAgendarModal(true)}
             >
@@ -513,7 +590,8 @@ export const ConsultaMedica = () => {
         </div>
       </main>
 
-      {/* --- MODAL: AGENDAR CITA DE SEGUIMIENTO (NUEVO) --- */}
+
+      {/* MODAL: SEGUIMIENTO */}
       {showAgendarModal && (
         <div style={S.modalOverlay}>
           <div style={{ ...S.modalContent, maxWidth: "450px" }}>
@@ -524,19 +602,16 @@ export const ConsultaMedica = () => {
             <div style={S.modalBody}>
               <div className="form-group">
                 <label className="form-label">Fecha de Control</label>
-                <input type="date" className="form-input" value={seguimiento.fecha} onChange={(e) => setSeguimiento({...seguimiento, fecha: e.target.value})} />
+                <input type="date" className="form-input" value={seguimiento.fecha} onChange={(e) => setSeguimiento({ ...seguimiento, fecha: e.target.value })} />
               </div>
               <div className="form-group" style={{ marginTop: "15px" }}>
                 <label className="form-label">Hora</label>
-                <input type="time" className="form-input" value={seguimiento.hora} onChange={(e) => setSeguimiento({...seguimiento, hora: e.target.value})} />
+                <input type="time" className="form-input" value={seguimiento.hora} onChange={(e) => setSeguimiento({ ...seguimiento, hora: e.target.value })} />
               </div>
               <div className="form-group" style={{ marginTop: "15px" }}>
                 <label className="form-label">Motivo</label>
-                <input type="text" className="form-input" value={seguimiento.motivo} onChange={(e) => setSeguimiento({...seguimiento, motivo: e.target.value})} />
+                <input type="text" className="form-input" placeholder="Motivo" value={seguimiento.motivo} onChange={(e) => setSeguimiento({ ...seguimiento, motivo: e.target.value })} />
               </div>
-              <p style={{ fontSize: "0.8rem", color: "#6b7280", marginTop: "15px" }}>
-                * La cita se agendará automáticamente al finalizar la consulta actual.
-              </p>
             </div>
             <div style={S.modalFooter}>
               <button className="submit-btn" style={{ margin: 0, backgroundColor: "#0ea5e9" }} onClick={() => setShowAgendarModal(false)}>Confirmar Fecha</button>
@@ -545,7 +620,6 @@ export const ConsultaMedica = () => {
         </div>
       )}
 
-      {/* --- MODAL: HISTORIAL CLÍNICO --- */}
       {showHistorial && (
         <div style={S.modalOverlay}>
           <div style={S.modalContent}>
@@ -556,7 +630,7 @@ export const ConsultaMedica = () => {
               </div>
               <button onClick={() => setShowHistorial(false)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "#6b7280" }}>✖</button>
             </div>
-            
+
             <div style={S.modalBody}>
               {historialMock.length === 0 ? (
                 <p style={{ textAlign: "center", color: "#6b7280" }}>No hay registros previos para este paciente.</p>
@@ -578,11 +652,9 @@ export const ConsultaMedica = () => {
         </div>
       )}
 
-      {/* --- MODALES DE DOCUMENTOS --- */}
       {activeDocModal && (
         <div style={S.modalOverlay}>
           <div style={{ ...S.modalContent, maxWidth: activeDocModal === 'receta' ? '600px' : '750px' }}>
-            
             <div style={S.modalHeader}>
               <div>
                 <h2 style={{ margin: 0, color: "#0f766e", fontSize: "1.4rem" }}>
@@ -595,7 +667,6 @@ export const ConsultaMedica = () => {
             </div>
 
             <div style={S.modalBody}>
-              
               {activeDocModal === 'receta' && (
                 <div>
                   {medicamentos.length === 0 ? (
@@ -649,8 +720,8 @@ export const ConsultaMedica = () => {
             </div>
 
             <div style={S.modalFooter}>
-              <button onClick={() => setActiveDocModal(null)} style={{ padding: "10px 18px", border: "1px solid #d1d5db", borderRadius: "8px", cursor: "pointer" }}>Cancelar</button>
-              <button style={{ padding: "10px 18px", background: "linear-gradient(90deg, #0ea5e9, #22c55e)", border: "none", borderRadius: "8px", color: "white", cursor: "pointer" }}>🖨️ Imprimir PDF</button>
+              <button onClick={() => setActiveDocModal(null)} style={{ padding: "10px 18px", border: "1px solid #d1d5db", borderRadius: "8px", cursor: "pointer", background: "white" }}>Cancelar</button>
+              <button style={{ padding: "10px 18px", background: "linear-gradient(90deg, #0ea5e9, #22c55e)", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", fontWeight: "bold" }}>🖨️ Imprimir PDF</button>
             </div>
           </div>
         </div>
