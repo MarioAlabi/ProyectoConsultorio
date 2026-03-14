@@ -81,7 +81,8 @@ export const preclinicalRecords = mysqlTable("preclinical_records", {
     temperature: decimal("temperature", { precision: 5, scale: 2 }),  
     weight: decimal("weight", { precision: 6, scale: 2 }),             
     height: decimal("height", { precision: 4, scale: 2 }),              
-    heartRate: int("heart_rate"),                                       
+    heartRate: int("heart_rate"),
+    oxygenSaturation: int("oxygen_saturation"),                                       
     bmi: decimal("bmi", { precision: 5, scale: 2 }), 
     status: mysqlEnum("status", ["waiting", "in_consultation", "done", "cancelled"])
       .notNull()

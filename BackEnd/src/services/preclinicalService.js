@@ -48,6 +48,7 @@ export const createPreclinical = async (data, user) => {
     weight: weight,
     height: height,
     heartRate: normalizeNullable(data.heartRate),
+    oxygenSaturation: normalizeNullable(data.oxygenSaturation),
     bmi, 
     status: "waiting", 
   };
@@ -71,6 +72,8 @@ export const getPreclinicalByStatus = async (user) => {
         createdAt: preclinicalRecords.createdAt,
         patientId: patients.id,
         fullName: patients.fullName,
+        responsibleName: patients.responsibleName,
+        isMinor: patients.isMinor,
       })
       .from(preclinicalRecords)
       .leftJoin(patients, eq(preclinicalRecords.patientId, patients.id))
@@ -79,7 +82,7 @@ export const getPreclinicalByStatus = async (user) => {
 
 export const updatePreclinicalStatus = async (id, updateData) => {
     const { 
-        status, bloodPressure, temperature, weight, height, heartRate, bmi 
+        status, bloodPressure, temperature, weight, height, heartRate, oxygenSaturation, bmi 
     } = updateData;
 
     const toUpdate = { updatedAt: new Date() };
@@ -91,6 +94,7 @@ export const updatePreclinicalStatus = async (id, updateData) => {
     if (weight !== undefined) toUpdate.weight = normalizeNullable(weight);
     if (height !== undefined) toUpdate.height = normalizeNullable(height);
     if (heartRate !== undefined) toUpdate.heartRate = normalizeNullable(heartRate);
+    if (oxygenSaturation !== undefined) toUpdate.oxygenSaturation = normalizeNullable(oxygenSaturation);
     if (bmi !== undefined) toUpdate.bmi = normalizeNullable(bmi);
 
     console.log("Intentando guardar en BD:", toUpdate);
@@ -116,13 +120,17 @@ export const getPreclinicalById = async (id) => {
         weight: preclinicalRecords.weight,
         height: preclinicalRecords.height,
         heartRate: preclinicalRecords.heartRate,
+        oxygenSaturation: preclinicalRecords.oxygenSaturation,
         bmi: preclinicalRecords.bmi,
   
         patientId: patients.id,
         fullName: patients.fullName,
         isMinor: patients.isMinor,
+        responsibleName: patients.responsibleName,
+        identityDocument: patients.identityDocument,
         yearOfBirth: patients.yearOfBirth,
         gender: patients.gender,
+        
       })
       .from(preclinicalRecords)
       .leftJoin(patients, eq(preclinicalRecords.patientId, patients.id))
@@ -150,6 +158,7 @@ export const getPreclinicalsByPatientId = async (patientId) => {
         weight: preclinicalRecords.weight,
         height: preclinicalRecords.height,
         heartRate: preclinicalRecords.heartRate,
+        oxygenSaturation: preclinicalRecords.oxygenSaturation,
         bmi: preclinicalRecords.bmi,
       })
       .from(preclinicalRecords)
@@ -157,5 +166,4 @@ export const getPreclinicalsByPatientId = async (patientId) => {
       .orderBy(desc(preclinicalRecords.createdAt));
 
     return records;
-};
-                           
+};                           
