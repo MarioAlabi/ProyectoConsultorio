@@ -63,3 +63,24 @@ export const createMedicalConsultation = async (preclinicalId, data, doctorId) =
     return { consultationId, message: "Consulta guardada exitosamente" };
     });
 };
+export const getConsultationByPreclinicalId = async (preclinicalId) => {
+    const [consultation] = await db
+        .select()
+        .from(medicalConsultations)
+        .where(eq(medicalConsultations.preclinicalId, preclinicalId))
+        .limit(1);
+
+    if (!consultation) {
+        const error = new Error("No se encontró el detalle de la consulta para este registro.");
+        error.status = 404;
+        throw error;
+    }
+    const medications = await db
+        .select()
+        .from(prescribedMedications)
+        .where(eq(prescribedMedications.consultationId, consultation.id));
+    return {
+        ...consultation,
+        receta: medications, 
+    };
+};

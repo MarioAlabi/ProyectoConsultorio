@@ -14,7 +14,7 @@ import { ChangePassword } from './views/shared/ChangePassword';
 import { PreclinicaShared } from './views/shared/PreClinicaShared.jsx';
 import { SalaEspera } from './views/doctor/SalaEspera.jsx';
 import { ConsultaMedica } from './views/doctor/ConsultaMedica';
-
+import { ConsultaDetalleShared } from './views/shared/ConsultaDetalleShared.jsx';
 // 1. IMPORTA LAS VISTAS NUEVAS AQUÍ
 import { AgendaCitas } from './views/shared/AgendaCitas'; 
 // import { AseguradorasShared } from './views/shared/AseguradorasShared'; (Cuando la crees)
@@ -45,7 +45,7 @@ function App() {
             <Route path="/reception/pacientes" element={<PatientsShared />} />
             <Route path="/reception/preclinica" element={<PreclinicaShared />} />
             <Route path="/reception/changePassword" element={<ChangePassword />} />
-            
+            <Route path="/reception/consulta-detalle/:id" element={<ConsultaDetalleShared />} />
             {/* 2. NUEVA RUTA DE AGENDA PARA RECEPCIÓN */}
             <Route path="/reception/agenda" element={<AgendaCitas />} />
           </Route>
@@ -59,7 +59,7 @@ function App() {
             <Route path="/doctor/preclinica" element={<PreclinicaShared />} />
             <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />
             <Route path="/doctor/changePassword" element={<ChangePassword />} />
-
+            <Route path="/doctor/consulta-detalle/:id" element={<ConsultaDetalleShared />} />
             {/* 3. NUEVA RUTA DE AGENDA PARA DOCTOR */}
             <Route path="/doctor/agenda" element={<AgendaCitas />} />
           </Route>

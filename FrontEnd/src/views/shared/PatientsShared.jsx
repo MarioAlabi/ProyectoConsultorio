@@ -344,24 +344,66 @@ export const PatientsShared = () => {
             </div>
 
             {/* Historial de Pre-clínicas */}
-            <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", color: "#374151" }}>Historial de Pre-clínicas ({historialPreclinicas.length})</h3>
-            {loadingHistorial ? <p>Cargando historial...</p> : historialPreclinicas.length === 0 ? (
-              <div style={{ padding: "1rem", textAlign: "center", color: "#6b7280", backgroundColor: "#f9fafb", borderRadius: "8px" }}>Sin registros previos.</div>
+            <h3 style={{ margin: "0 0 12px", fontSize: "0.95rem", color: "#374151" }}>
+              Historial de Visitas ({historialPreclinicas.length})
+            </h3>
+            
+            {loadingHistorial ? (
+              <p style={{ color: "#6b7280" }}>Cargando historial...</p>
+            ) : historialPreclinicas.length === 0 ? (
+              <div style={{ padding: "1rem", textAlign: "center", color: "#6b7280", backgroundColor: "#f9fafb", borderRadius: "8px", border: "1px solid #eee" }}>
+                No hay registros previos para este paciente.
+              </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {historialPreclinicas.map((rec) => {
                   const sc = statusColor(rec.status);
                   const imc = clasificarIMC(rec.bmi);
                   return (
-                    <div key={rec.id} style={{ padding: "12px", borderRadius: "10px", border: "1px solid #e5e7eb" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{formatDate(rec.createdAt)}</span>
-                        <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, backgroundColor: sc.bg, color: sc.color }}>{statusLabel(rec.status)}</span>
+                    <div key={rec.id} style={{ padding: "15px", borderRadius: "10px", border: "1px solid #e5e7eb", backgroundColor: "white" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #e5e7eb", paddingBottom: "10px" }}>
+                        <div>
+                          <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#1f2937", marginRight: "10px" }}>
+                            {formatDate(rec.createdAt)}
+                          </span>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 8px", borderRadius: "999px", backgroundColor: sc.bg, color: sc.color }}>
+                            {statusLabel(rec.status).toUpperCase()}
+                          </span>
+                        </div>
+                        
+                        {/* --- NUEVO BOTÓN: Ver Detalle (Solo si status === 'done') --- */}
+                        {rec.status === "done" && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`${basePath}/consulta-detalle/${rec.id}`)}
+                            style={{
+                              background: "none",
+                              border: "1px solid #0d9488",
+                              color: "#0d9488",
+                              padding: "4px 10px",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: "bold",
+                              cursor: "pointer",
+                              transition: "all 0.2s"
+                            }}
+                            onMouseEnter={(e) => { e.target.style.backgroundColor = "#f0fdfa" }}
+                            onMouseLeave={(e) => { e.target.style.backgroundColor = "transparent" }}
+                          >
+                            📄 Ver Detalle de Consulta
+                          </button>
+                        )}
                       </div>
-                      <p style={{ margin: "0 0 8px", fontWeight: 600, fontSize: "0.9rem" }}>{rec.motivo}</p>
-                      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", fontSize: "0.8rem", color: "#4b5563" }}>
+                      
+                      <p style={{ margin: "0 0 8px", fontSize: "0.9rem", color: "#4b5563" }}>
+                        <strong>Motivo:</strong> {rec.motivo}
+                      </p>
+                      
+                      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", fontSize: "0.8rem", color: "#6b7280", backgroundColor: "#f8fafc", padding: "8px", borderRadius: "6px" }}>
                         {rec.bloodPressure && <span>PA: <strong>{rec.bloodPressure}</strong></span>}
                         {rec.temperature && <span>Temp: <strong>{rec.temperature}°C</strong></span>}
+                        {rec.heartRate && <span>FC: <strong>{rec.heartRate} bpm</strong></span>}
+                        {rec.oxygenSaturation && <span>SpO₂: <strong>{rec.oxygenSaturation}%</strong></span>}
                         {rec.weight && <span>Peso: <strong>{rec.weight} lb</strong></span>}
                         {imc && <span>IMC: <strong style={{ color: imc.color }}>{imc.valor} ({imc.clase})</strong></span>}
                       </div>
@@ -370,10 +412,6 @@ export const PatientsShared = () => {
                 })}
               </div>
             )}
-
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.5rem" }}>
-              <button onClick={() => setMostrarExpediente(false)} className="submit-btn" style={{ width: "auto" }}>Cerrar</button>
-            </div>
           </div>
         </div>
       )}
