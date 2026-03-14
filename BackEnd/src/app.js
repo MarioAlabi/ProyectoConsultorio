@@ -5,7 +5,7 @@ import { auth } from "./config/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import patientRoutes from "./routes/patientRoutes.js";
 import preclinicalRoutes from "./routes/preclinicalRoutes.js";
-
+import consultationRoutes from "./routes/consultationRoutes.js";
 const app = express();
 
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
@@ -23,7 +23,7 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(express.json());
 app.use("/api/patients", patientRoutes);
 app.use("/api/preclinical", preclinicalRoutes);
-
+app.use("/api/consultations", consultationRoutes);
 app.get("/status", (req, res) => {
     res.json({
         status: "ok",

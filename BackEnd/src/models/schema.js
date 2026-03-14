@@ -90,3 +90,42 @@ export const preclinicalRecords = mysqlTable("preclinical_records", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
   });
+
+export const medicalConsultations = mysqlTable("medical_consultations", {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    preclinicalId: varchar("preclinical_id", { length: 36 })
+        .notNull()
+        .references(() => preclinicalRecords.id, { onDelete: "cascade" }),
+    patientId: varchar("patient_id", { length: 36 })
+        .notNull()
+        .references(() => patients.id, { onDelete: "cascade" }),
+    doctorId: varchar("doctor_id", { length: 36 })
+        .notNull()
+        .references(() => users.id, { onDelete: "restrict" }), 
+    anamnesis: text("anamnesis"),
+    physicalExam: text("physical_exam"),
+    diagnosis: text("diagnosis"),
+    labResults: text("lab_results"),
+    observations: text("observations"),
+    documents: varchar("documents", { length: 255 }), 
+
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+export const prescribedMedications = mysqlTable("prescribed_medications", {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    consultationId: varchar("consultation_id", { length: 36 })
+    .notNull()
+    .references(() => medicalConsultations.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 150 }).notNull(),
+    concentration: varchar("concentration", { length: 50 }),
+    concentrationUnit: varchar("concentration_unit", { length: 20 }), 
+    dose: varchar("dose", { length: 50 }),
+    doseUnit: varchar("dose_unit", { length: 50 }), 
+    route: varchar("route", { length: 50 }), 
+    frequency: varchar("frequency", { length: 50 }), 
+    duration: varchar("duration", { length: 50 }), 
+    additionalInstructions: text("additional_instructions"), 
+
+    createdAt: timestamp("created_at").defaultNow(),
+    });

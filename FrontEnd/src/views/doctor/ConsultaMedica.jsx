@@ -77,18 +77,12 @@ export const ConsultaMedica = () => {
   const [resultadosLab, setResultadosLab] = useState(""); 
   const [observaciones, setObservaciones] = useState(""); 
   const [medicamentos, setMedicamentos] = useState([]);
-
-  // Estados de interfaz
   const [editVitals, setEditVitals] = useState(false);
   const [savingVitals, setSavingVitals] = useState(false);
   const [showDocMenu, setShowDocMenu] = useState(false);
   const [showHistorial, setShowHistorial] = useState(false);
   const [showAgendarModal, setShowAgendarModal] = useState(false); 
-  
-  // Estado para programar cita de seguimiento
   const [seguimiento, setSeguimiento] = useState({ fecha: "", hora: "", motivo: "Control de niño sano" });
-
-  // Estados para Modales de Documentos
   const [activeDocModal, setActiveDocModal] = useState(null); 
   const [aiPrompt, setAiPrompt] = useState("");
   const [generatedDocText, setGeneratedDocText] = useState("");
@@ -166,8 +160,6 @@ export const ConsultaMedica = () => {
   const evalPA = useMemo(() => evaluarPresion(vitals.presion), [vitals.presion]);
   const evalTemp = useMemo(() => evaluarTemperatura(vitals.temperatura), [vitals.temperatura]);
   const _evalFC = useMemo(() => evaluarFC(vitals.frecuencia), [vitals.frecuencia]);
-
-  // Helper para enviar a DB
   const toNull = (v) => (v === "" || v === undefined ? null : v);
 
   const handleUpdateVitals = async () => {
@@ -212,7 +204,7 @@ export const ConsultaMedica = () => {
         proximaCita: seguimiento.fecha ? seguimiento : null 
       };
 
-      await api.patch(`/preclinical/${id}/status`, body);
+      await api.post(`/consultations/${id}`, body);
       alert("Consulta finalizada correctamente.");
       navigate("/doctor");
     } catch (e) {
