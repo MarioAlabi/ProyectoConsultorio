@@ -15,9 +15,7 @@ import { PreclinicaShared } from './views/shared/PreClinicaShared.jsx';
 import { SalaEspera } from './views/doctor/SalaEspera.jsx';
 import { ConsultaMedica } from './views/doctor/ConsultaMedica';
 import { ConsultaDetalleShared } from './views/shared/ConsultaDetalleShared.jsx';
-// 1. IMPORTA LAS VISTAS NUEVAS AQUÍ
-import { AgendaCitas } from './views/shared/AgendaCitas'; 
-// import { AseguradorasShared } from './views/shared/AseguradorasShared'; (Cuando la crees)
+import { AgendaCitas } from './views/shared/AgendaCitas';
 
 function App() {
   return (
