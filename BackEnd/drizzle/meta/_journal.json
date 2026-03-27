@@ -22,6 +22,20 @@
       "when": 1772365847802,
       "tag": "0002_silly_spitfire",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1774635899635,
+      "tag": "0003_red_squadron_sinister",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1774637165178,
+      "tag": "0004_previous_silhouette",
+      "breakpoints": true
     }
   ]
 }

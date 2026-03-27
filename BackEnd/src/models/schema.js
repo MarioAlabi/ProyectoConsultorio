@@ -129,3 +129,21 @@ export const prescribedMedications = mysqlTable("prescribed_medications", {
 
     createdAt: timestamp("created_at").defaultNow(),
     });
+
+export const appointments = mysqlTable("appointments", {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    patientId: varchar("patient_id", { length: 36 })
+        .notNull()
+        .references(() => patients.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    time: varchar("time", { length: 10 }).notNull(),
+    reason: text("reason"),
+    status: mysqlEnum("status", ["scheduled", "present", "cancelled", "done"])
+        .notNull()
+        .default("scheduled"),
+    createdByUserId: varchar("created_by_user_id", { length: 36 })
+        .notNull()
+        .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
