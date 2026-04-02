@@ -74,3 +74,21 @@ export const useUpdateAppointmentStatus = () => {
     },
   });
 };
+
+export const useBulkCancelAppointments = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const res = await api.patch("/appointments/bulk-cancel", data);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["preclinical"] });
+      toast.success(data.message || "Citas canceladas exitosamente.");
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Error al cancelar citas.");
+    },
+  });
+};

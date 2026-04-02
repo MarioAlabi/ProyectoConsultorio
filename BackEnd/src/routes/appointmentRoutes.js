@@ -10,6 +10,7 @@ const canRead = [ROLES.ASSISTANT, ROLES.DOCTOR, ROLES.ADMIN];
 
 router.post("/", isAuth, requireRole(canWrite), appointmentController.create);
 router.get("/", isAuth, requireRole(canRead), appointmentController.getByDate);
+router.patch("/bulk-cancel", isAuth, requireRole(canWrite), appointmentController.bulkCancel);
 router.put("/:id", isAuth, requireRole(canWrite), appointmentController.update);
 router.patch("/:id/status", isAuth, requireRole(canWrite), appointmentController.changeStatus);
 

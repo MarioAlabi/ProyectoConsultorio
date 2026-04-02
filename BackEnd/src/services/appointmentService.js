@@ -1,6 +1,6 @@
 import { db } from "../config/db.js";
 import { appointments, patients } from "../models/schema.js";
-import { eq, and, gte, lte, ne } from "drizzle-orm";
+import { eq, and, gte, lte, ne, inArray } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
 // Helper: chequear si ya hay una cita activa en esa fecha+hora (excluyendo un id opcional)
@@ -233,4 +233,35 @@ export const updateAppointment = async (id, data) => {
     await db.update(appointments).set(updateData).where(eq(appointments.id, id));
 
     return { id, date: dateStr, time: newTime };
+};
+
+export const bulkCancelAppointments = async (data) => {
+    const { date, ids } = data;
+
+    if (!date && (!ids || ids.length === 0)) {
+        const error = new Error("Debe proporcionar una fecha o una lista de IDs de citas.");
+        error.status = 400;
+        throw error;
+    }
+
+    let conditions;
+
+    if (ids && ids.length > 0) {
+        conditions = and(
+            inArray(appointments.id, ids),
+            eq(appointments.status, "scheduled")
+        );
+    } else {
+        conditions = and(
+            eq(appointments.date, date),
+            eq(appointments.status, "scheduled")
+        );
+    }
+
+    const result = await db
+        .update(appointments)
+        .set({ status: "cancelled", updatedAt: new Date() })
+        .where(conditions);
+
+    return { cancelledCount: result[0]?.affectedRows || 0 };
 };

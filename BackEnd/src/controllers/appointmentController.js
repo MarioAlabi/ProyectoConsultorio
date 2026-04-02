@@ -47,3 +47,16 @@ export const update = async (req, res, next) => {
         next(error);
     }
 };
+
+export const bulkCancel = async (req, res, next) => {
+    try {
+        const result = await appointmentService.bulkCancelAppointments(req.body);
+        res.status(200).json({
+            success: true,
+            message: `${result.cancelledCount} cita(s) cancelada(s) exitosamente.`,
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+};

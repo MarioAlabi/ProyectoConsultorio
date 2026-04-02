@@ -57,3 +57,15 @@ export const useUpdatePreclinicalStatus = () => {
     },
   });
 };
+
+export const useDoctorDashboard = (date) => {
+  return useQuery({
+    queryKey: ["preclinical", "dashboard", date],
+    queryFn: async () => {
+      const params = date ? `?date=${date}` : "";
+      const res = await api.get(`/preclinical/dashboard${params}`);
+      return res.data?.data || res.data;
+    },
+    refetchInterval: 8000,
+  });
+};
