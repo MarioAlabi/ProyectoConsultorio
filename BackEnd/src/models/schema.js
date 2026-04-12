@@ -130,6 +130,23 @@ export const prescribedMedications = mysqlTable("prescribed_medications", {
     createdAt: timestamp("created_at").defaultNow(),
     });
 
+export const auditLogs = mysqlTable("audit_logs", {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    tableName: varchar("table_name", { length: 50 }).notNull(),
+    recordId: varchar("record_id", { length: 36 }).notNull(),
+    action: mysqlEnum("action", ["CREATE", "UPDATE", "DELETE", "STATUS_CHANGE"]).notNull(),
+    userId: varchar("user_id", { length: 36 })
+        .notNull()
+        .references(() => users.id, { onDelete: "restrict" }),
+    userName: varchar("user_name", { length: 80 }).notNull(),
+    userRole: varchar("user_role", { length: 20 }).notNull(),
+    previousValues: text("previous_values"),
+    newValues: text("new_values"),
+    description: varchar("description", { length: 255 }),
+    ipAddress: varchar("ip_address", { length: 45 }),
+    createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const appointments = mysqlTable("appointments", {
     id: varchar("id", { length: 36 }).primaryKey(),
     patientId: varchar("patient_id", { length: 36 })
