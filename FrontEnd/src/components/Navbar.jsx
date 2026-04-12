@@ -22,6 +22,7 @@ const MENU_CONFIG = {
   [ROLES.ADMIN]: [
     { label: 'Dashboard', path: '/admin' },
     { label: 'Administrar Usuarios', path: '/admin/usuarios' },
+    { label: 'Auditoría', path: '/admin/auditoria' },
     { label: 'Cambiar contraseña', path: '/admin/changePassword'},
   ],
 };

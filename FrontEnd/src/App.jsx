@@ -16,6 +16,7 @@ import { SalaEspera } from './views/doctor/SalaEspera.jsx';
 import { ConsultaMedica } from './views/doctor/ConsultaMedica';
 import { ConsultaDetalleShared } from './views/shared/ConsultaDetalleShared.jsx';
 import { AgendaCitas } from './views/shared/AgendaCitas';
+import { AuditoriaRegistros } from './views/admin/AuditoriaRegistros';
 
 function App() {
   return (
@@ -32,7 +33,7 @@ function App() {
             <Route path="/admin" element={<DashboardAdmin />} />
             <Route path="/admin/usuarios" element={<AdministrarUsuarios />} />
             <Route path="/admin/changePassword" element={<ChangePassword />} />
-            {/* Aquí puedes agregar Auditoría o Configuración luego */}
+            <Route path="/admin/auditoria" element={<AuditoriaRegistros />} />
           </Route>
         </Route>
 
