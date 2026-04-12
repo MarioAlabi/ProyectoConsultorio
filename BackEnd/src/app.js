@@ -7,6 +7,7 @@ import patientRoutes from "./routes/patientRoutes.js";
 import preclinicalRoutes from "./routes/preclinicalRoutes.js";
 import consultationRoutes from "./routes/consultationRoutes.js";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
+import auditRoutes from "./routes/auditRoutes.js";
 const app = express();
 
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
@@ -26,6 +27,7 @@ app.use("/api/patients", patientRoutes);
 app.use("/api/preclinical", preclinicalRoutes);
 app.use("/api/consultations", consultationRoutes);
 app.use("/api/appointments", appointmentRoutes);
+app.use("/api/audit", auditRoutes);
 app.get("/status", (req, res) => {
     res.json({
         status: "ok",
