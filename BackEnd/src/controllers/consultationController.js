@@ -1,4 +1,4 @@
-import { createMedicalConsultation,getConsultationByPreclinicalId } from "../services/consultationService.js";
+import { createMedicalConsultation, getClinicalHistoryByPatientId, getConsultationByPreclinicalId, normalizePrescribedMedications } from "../services/consultationService.js";
 import { logAudit } from "../services/auditService.js";
 
 export const createConsultationController = async (req, res, next) => {
@@ -12,7 +12,7 @@ export const createConsultationController = async (req, res, next) => {
             recordId: result.consultationId,
             action: "CREATE",
             user: req.user,
-            newValues: { preclinicalId, diagnosis: req.body.diagnosis, medicationsCount: req.body.receta?.length || 0 },
+            newValues: { preclinicalId, diagnosis: req.body.diagnosis, medicationsCount: normalizePrescribedMedications(req.body).length },
             description: `Consulta médica creada para pre-clínica ${preclinicalId}`,
             ipAddress: req.ip,
         });
@@ -29,5 +29,17 @@ export const getConsultationController = async (req, res, next) => {
         res.status(200).json({ success: true, data,});
         } catch (error) {
         next(error); 
+    }
+};
+
+export const getClinicalHistoryController = async (req, res, next) => {
+    try {
+        const { patientId } = req.params;
+        const data = await getClinicalHistoryByPatientId(patientId);
+
+        // Este flujo es solo lectura para historial clinico.
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        next(error);
     }
 };

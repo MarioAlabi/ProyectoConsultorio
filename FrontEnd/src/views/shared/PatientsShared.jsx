@@ -3,9 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientSchema } from "../../lib/validations/patientSchema";
-import { usePatients, useCreatePatient, useUpdatePatient, usePatientHistory } from "../../hooks/usePatients";
+import { usePatients, useCreatePatient, useUpdatePatient, usePatientClinicalHistory } from "../../hooks/usePatients";
 import { Modal } from "../../components/Modal";
-import { calcularEdad, formatDate, formatDUI, formatPhone, getStatusBadge } from "../../lib/utils";
+import { ClinicalHistoryTimeline } from "../../components/clinical-history/ClinicalHistoryTimeline";
+import { calcularEdad, formatDUI, formatPhone, getStatusBadge } from "../../lib/utils";
 import "./Shared.css";
 
 export const PatientsShared = () => {
@@ -21,7 +22,7 @@ export const PatientsShared = () => {
   const { data: patients = [], isLoading } = usePatients("");
   const createMutation = useCreatePatient();
   const updateMutation = useUpdatePatient();
-  const { data: historial = [], isLoading: historialLoading } = usePatientHistory(historialPatientId);
+  const { data: historialClinico, isLoading: historialLoading, isError: historialError } = usePatientClinicalHistory(historialPatientId);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(patientSchema),
@@ -83,6 +84,11 @@ export const PatientsShared = () => {
     const basePath = isDoctor ? "/doctor" : "/reception";
     navigate(`${basePath}/preclinica`, { state: { paciente: patient, redirectTo: `${basePath}/pacientes` } });
   };
+
+  const patientSelectedForHistory = useMemo(
+    () => patients.find((patient) => patient.id === historialPatientId) || null,
+    [patients, historialPatientId]
+  );
 
   const S = {
     page: { padding: "2rem", maxWidth: "1200px", margin: "0 auto" },
@@ -175,24 +181,13 @@ export const PatientsShared = () => {
       </Modal>
 
       {/* Modal historial */}
-      <Modal isOpen={!!historialPatientId} onClose={() => setHistorialPatientId(null)} title="Historial de Consultas" size="lg">
-        {historialLoading ? (<p style={{ textAlign: "center", color: "#6b7280", padding: "2rem" }}>Cargando historial...</p>) : historial.length === 0 ? (<p style={{ textAlign: "center", color: "#9ca3af", padding: "2rem" }}>Sin registros previos.</p>) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {historial.map((record) => {
-              const badge = getStatusBadge(record.status);
-              return (
-                <div key={record.id} style={{ padding: "1rem", backgroundColor: "#f9fafb", borderRadius: "0.8rem", borderLeft: "4px solid #0d9488" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                    <strong>{formatDate(record.createdAt)}</strong>
-                    <span style={{ backgroundColor: badge.bg, color: badge.color, padding: "0.15rem 0.5rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 600 }}>{badge.label}</span>
-                  </div>
-                  <p style={{ margin: "0.25rem 0", color: "#4b5563", fontSize: "0.9rem" }}><strong>Motivo:</strong> {record.motivo || "N/A"}</p>
-                  {record.consultationId && (<button className="doc-btn" style={{ marginTop: "0.5rem", color: "#0d9488" }} onClick={() => { const base = isDoctor ? "/doctor" : "/reception"; navigate(`${base}/consulta-detalle/${record.consultationId}`); }}>Ver consulta</button>)}
-                </div>
-              );
-            })}
-          </div>
-        )}
+      <Modal
+        isOpen={!!historialPatientId}
+        onClose={() => setHistorialPatientId(null)}
+        title={`Historial Clinico${patientSelectedForHistory ? ` - ${patientSelectedForHistory.fullName}` : ""}`}
+        size="xl"
+      >
+        <ClinicalHistoryTimeline history={historialClinico} isLoading={historialLoading} isError={historialError} />
       </Modal>
     </div>
   );

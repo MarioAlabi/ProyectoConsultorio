@@ -7,11 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:acceptance": "node test/clinicalHistory.acceptance.test.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@tanstack/react-query": "^5.95.2",
+    "@tanstack/react-query": "^5.99.0",
     "axios": "^1.13.5",
     "better-auth": "^1.4.19",
     "react": "^19.2.0",

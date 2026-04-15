@@ -84,3 +84,16 @@ export const usePatientHistory = (patientId) => {
     enabled: !!patientId,
   });
 };
+
+export const usePatientClinicalHistory = (patientId) => {
+  const hasPatientId = typeof patientId === "string" && patientId.length > 0;
+
+  return useQuery({
+    queryKey: ["consultations", "patient-history", patientId],
+    queryFn: async () => {
+      const res = await api.get(`/consultations/patient/${patientId}/history`);
+      return res.data?.data || { items: [], empty: true };
+    },
+    enabled: hasPatientId,
+  });
+};

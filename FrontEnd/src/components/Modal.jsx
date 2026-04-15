@@ -14,12 +14,13 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
     };
+    const previousOverflow = document.body.style.overflow;
     document.addEventListener("keydown", handleEscape);
     document.body.style.overflow = "hidden";
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
     };
   }, [isOpen, onClose]);
 

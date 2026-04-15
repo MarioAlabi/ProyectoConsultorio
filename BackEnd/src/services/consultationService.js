@@ -1,7 +1,30 @@
 import { db } from "../config/db.js";
-import { medicalConsultations, prescribedMedications, preclinicalRecords } from "../models/schema.js";
-import { eq } from "drizzle-orm";
+import { medicalConsultations, prescribedMedications, preclinicalRecords, users } from "../models/schema.js";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+
+export const normalizePrescribedMedications = (data = {}) => {
+    const source = Array.isArray(data.medicamentos)
+        ? data.medicamentos
+        : Array.isArray(data.receta)
+            ? data.receta
+            : [];
+
+    // Acepta el formato actual del frontend y el formato legacy "receta".
+    return source
+        .map((med) => ({
+            name: med.name || med.nombre || "",
+            concentration: med.concentration || med.concentracion || null,
+            concentrationUnit: med.concentrationUnit || med.unidadConcentracion || null,
+            dose: med.dose || med.dosis || null,
+            doseUnit: med.doseUnit || med.unidadDosis || null,
+            route: med.route || med.via || null,
+            frequency: med.frequency || med.frecuencia || null,
+            duration: med.duration || med.duracion || null,
+            additionalInstructions: med.additionalInstructions || med.indicaciones || null,
+        }))
+        .filter((med) => med.name.trim().length > 0);
+};
 
 export const createMedicalConsultation = async (preclinicalId, data, doctorId) => {
     return await db.transaction(async (tx) => {
@@ -30,19 +53,21 @@ export const createMedicalConsultation = async (preclinicalId, data, doctorId) =
         observations: data.observations || null,
         documents: data.documents || null, 
     });
-    if (data.receta && data.receta.length > 0) {
-        const medsToInsert = data.receta.map((med) => ({
+
+    const medications = normalizePrescribedMedications(data);
+    if (medications.length > 0) {
+        const medsToInsert = medications.map((med) => ({
             id: uuidv4(),
             consultationId: consultationId,
-            name: med.nombre,
-            concentration: med.concentracion || null,
-            concentrationUnit: med.unidadConcentracion || null,
-            dose: med.dosis || null,
-            doseUnit: med.unidadDosis || null,
-            route: med.via || null,
-            frequency: med.frecuencia || null,
-            duration: med.duracion || null,
-            additionalInstructions: med.indicaciones || null,
+            name: med.name.trim(),
+            concentration: med.concentration,
+            concentrationUnit: med.concentrationUnit,
+            dose: med.dose,
+            doseUnit: med.doseUnit,
+            route: med.route,
+            frequency: med.frequency,
+            duration: med.duration,
+            additionalInstructions: med.additionalInstructions,
             }));
         await tx.insert(prescribedMedications).values(medsToInsert);
     }
@@ -82,5 +107,98 @@ export const getConsultationByPreclinicalId = async (preclinicalId) => {
     return {
         ...consultation,
         receta: medications, 
+    };
+};
+
+export const getClinicalHistoryByPatientId = async (patientId) => {
+    const fiveYearsAgo = new Date();
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
+    // Trae las consultas historicas del paciente con su medico responsable.
+    const consultationRows = await db
+        .select({
+            consultationId: medicalConsultations.id,
+            anamnesis: medicalConsultations.anamnesis,
+            physicalExam: medicalConsultations.physicalExam,
+            diagnosis: medicalConsultations.diagnosis,
+            labResults: medicalConsultations.labResults,
+            observations: medicalConsultations.observations,
+            consultationDate: medicalConsultations.createdAt,
+            reason: preclinicalRecords.motivo,
+            status: preclinicalRecords.status,
+            doctorId: medicalConsultations.doctorId,
+            doctorName: users.name,
+        })
+        .from(medicalConsultations)
+        .leftJoin(users, eq(medicalConsultations.doctorId, users.id))
+        .leftJoin(preclinicalRecords, eq(medicalConsultations.preclinicalId, preclinicalRecords.id))
+        .where(
+            and(
+                eq(medicalConsultations.patientId, patientId),
+                gte(medicalConsultations.createdAt, fiveYearsAgo)
+            )
+        )
+        .orderBy(desc(medicalConsultations.createdAt));
+
+    if (consultationRows.length === 0) {
+        return {
+            patientId,
+            rangeYears: 5,
+            empty: true,
+            message: "No se encontro historial clinico para este paciente en los ultimos 5 anos.",
+            items: [],
+        };
+    }
+
+    const consultationIds = consultationRows.map((row) => row.consultationId);
+
+    // Obtiene todos los medicamentos asociados a las consultas del rango.
+    const medicationRows = await db
+        .select({
+            id: prescribedMedications.id,
+            consultationId: prescribedMedications.consultationId,
+            name: prescribedMedications.name,
+            concentration: prescribedMedications.concentration,
+            concentrationUnit: prescribedMedications.concentrationUnit,
+            dose: prescribedMedications.dose,
+            doseUnit: prescribedMedications.doseUnit,
+            route: prescribedMedications.route,
+            frequency: prescribedMedications.frequency,
+            duration: prescribedMedications.duration,
+            additionalInstructions: prescribedMedications.additionalInstructions,
+        })
+        .from(prescribedMedications)
+        .where(inArray(prescribedMedications.consultationId, consultationIds));
+
+    const medicationsByConsultation = new Map();
+    for (const medication of medicationRows) {
+        const current = medicationsByConsultation.get(medication.consultationId) || [];
+        current.push(medication);
+        medicationsByConsultation.set(medication.consultationId, current);
+    }
+
+    // Devuelve solo campos de lectura para evitar reutilizar este flujo como edicion.
+    const items = consultationRows.map((row) => ({
+        consultationId: row.consultationId,
+        anamnesis: row.anamnesis,
+        physicalExam: row.physicalExam,
+        diagnosis: row.diagnosis,
+        labResults: row.labResults,
+        observations: row.observations,
+        consultationDate: row.consultationDate,
+        reason: row.reason,
+        status: row.status,
+        doctor: {
+            id: row.doctorId,
+            name: row.doctorName || "Medico no disponible",
+        },
+        medications: medicationsByConsultation.get(row.consultationId) || [],
+    }));
+
+    return {
+        patientId,
+        rangeYears: 5,
+        empty: false,
+        items,
     };
 };
