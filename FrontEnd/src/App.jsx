@@ -19,6 +19,7 @@ import { AgendaCitas } from './views/shared/AgendaCitas';
 import { AuditoriaRegistros } from './views/admin/AuditoriaRegistros';
 import { Aseguradoras } from './views/doctor/Aseguradoras';
 import { ReporteAseguradoras } from './views/doctor/ReporteAseguradoras';
+import Mantenimiento from './views/admin/Mantenimiento'; 
 
 function App() {
   return (
@@ -36,7 +37,7 @@ function App() {
             <Route path="/admin/usuarios" element={<AdministrarUsuarios />} />
             <Route path="/admin/changePassword" element={<ChangePassword />} />
             <Route path="/admin/auditoria" element={<AuditoriaRegistros />} />
-          </Route>
+            <Route path="/admin/mantenimiento" element={<Mantenimiento />} />          </Route>
         </Route>
 
         {/* --- RUTAS RECEPCIÓN --- */}

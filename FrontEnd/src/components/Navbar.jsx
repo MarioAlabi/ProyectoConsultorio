@@ -25,6 +25,7 @@ const MENU_CONFIG = {
     { label: 'Dashboard', path: '/admin' },
     { label: 'Administrar Usuarios', path: '/admin/usuarios' },
     { label: 'Auditoria', path: '/admin/auditoria' },
+    { label: 'Mantenimiento', path: '/admin/mantenimiento' },
     { label: 'Cambiar contrasena', path: '/admin/changePassword'},
   ],
 };
