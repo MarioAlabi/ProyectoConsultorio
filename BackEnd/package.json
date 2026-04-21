@@ -28,7 +28,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.18.1",
+    "drizzle-kit": "^0.31.10",
     "nodemon": "^3.1.14"
   }
 }

@@ -11,6 +11,7 @@ const TABLE_LABELS = {
     preclinical_records: "Registro Pre-clínico",
     medical_consultations: "Consulta Médica",
     prescribed_medications: "Medicamento Recetado",
+    insurers: "Aseguradora",
     appointments: "Cita",
 };
 

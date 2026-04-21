@@ -21,6 +21,12 @@ test("Escenario: Revision de antecedentes", () => {
         labResults: "Perfil lipidico pendiente.",
         observations: "Mantener tratamiento antihipertensivo y control en 30 dias",
         doctor: { name: "Dra. Morales" },
+        coverage: {
+          type: "insurance",
+          insurerId: "ins-1",
+          insurerName: "Seguros Vida",
+          agreedAmount: 25,
+        },
         medications: [
           {
             id: "med-1",
@@ -38,6 +44,12 @@ test("Escenario: Revision de antecedentes", () => {
         consultationDate: "2025-01-18T08:00:00.000Z",
         diagnosis: "Gastritis cronica",
         doctor: { name: "Dr. Lopez" },
+        coverage: {
+          type: "private",
+          insurerId: null,
+          insurerName: null,
+          agreedAmount: null,
+        },
         medications: [
           {
             id: "med-2",
@@ -71,10 +83,16 @@ test("Escenario: Revision de antecedentes", () => {
   assert.equal(viewModel.items[0].labResults, "Perfil lipidico pendiente.");
   assert.equal(viewModel.items[0].observations, "Mantener tratamiento antihipertensivo y control en 30 dias");
   assert.equal(viewModel.items[0].doctorName, "Dra. Morales");
+  assert.equal(viewModel.items[0].coverageType, "insurance");
+  assert.equal(viewModel.items[0].insurerName, "Seguros Vida");
+  assert.equal(viewModel.items[0].agreedAmount, 25);
   assert.equal(viewModel.items[0].medications[0].name, "Losartan");
 
   assert.equal(viewModel.items[1].diagnosis, "Gastritis cronica");
   assert.equal(viewModel.items[1].doctorName, "Dr. Lopez");
+  assert.equal(viewModel.items[1].coverageType, "private");
+  assert.equal(viewModel.items[1].insurerName, "");
+  assert.equal(viewModel.items[1].agreedAmount, null);
   assert.equal(viewModel.items[1].medications[0].name, "Omeprazol");
 });
 
@@ -82,6 +100,7 @@ test("Escenario: Paciente sin historial clinico", () => {
   const historyResponse = {
     rangeYears: 5,
     empty: true,
+    message: "No se encontro historial clinico para este paciente en los ultimos 5 anos.",
     items: [],
   };
 
@@ -89,6 +108,7 @@ test("Escenario: Paciente sin historial clinico", () => {
 
   assert.equal(viewModel.isEmpty, true);
   assert.equal(viewModel.rangeYears, 5);
+  assert.equal(viewModel.message, "No se encontro historial clinico para este paciente en los ultimos 5 anos.");
   assert.deepEqual(viewModel.items, []);
 });
 

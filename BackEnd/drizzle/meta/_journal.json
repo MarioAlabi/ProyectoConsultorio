@@ -43,6 +43,13 @@
       "when": 1776033737334,
       "tag": "0005_bitter_echo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1776384000000,
+      "tag": "0006_sudden_insurers",
+      "breakpoints": true
     }
   ]
 }

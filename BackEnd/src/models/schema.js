@@ -50,6 +50,16 @@ export const rateLimit = mysqlTable("rate_limit", {
     count: int("count").notNull(),
     lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
+export const insurers = mysqlTable("insurers", {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    companyName: varchar("company_name", { length: 150 }).notNull(),
+    contactName: varchar("contact_name", { length: 100 }).notNull(),
+    phone: varchar("phone", { length: 20 }).notNull(),
+    email: varchar("email", { length: 100 }).notNull(),
+    fixedConsultationAmount: decimal("fixed_consultation_amount", { precision: 10, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
 export const patients = mysqlTable("patients", {
     id: varchar("id", { length: 36 }).primaryKey(),
     fullName: varchar("full_name", { length: 150 }).notNull(),
@@ -63,6 +73,7 @@ export const patients = mysqlTable("patients", {
     responsibleName: varchar("responsible_name", { length: 100 }), 
     personalHistory: varchar("personal_history", { length: 200 }), 
     familyHistory: varchar("family_history", { length: 200 }),
+    insurerId: varchar("insurer_id", { length: 36 }).references(() => insurers.id, { onDelete: "set null" }),
     status: varchar("status", { length: 50 }).default("active"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
@@ -99,9 +110,12 @@ export const medicalConsultations = mysqlTable("medical_consultations", {
     patientId: varchar("patient_id", { length: 36 })
         .notNull()
         .references(() => patients.id, { onDelete: "cascade" }),
+    insurerId: varchar("insurer_id", { length: 36 })
+        .references(() => insurers.id, { onDelete: "set null" }),
     doctorId: varchar("doctor_id", { length: 36 })
         .notNull()
         .references(() => users.id, { onDelete: "restrict" }), 
+    agreedAmount: decimal("agreed_amount", { precision: 10, scale: 2 }),
     anamnesis: text("anamnesis"),
     physicalExam: text("physical_exam"),
     diagnosis: text("diagnosis"),

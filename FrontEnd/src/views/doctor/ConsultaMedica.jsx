@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,10 +6,23 @@ import toast from "react-hot-toast";
 import { consultationSchema } from "../../lib/validations/consultationSchema";
 import { usePreclinicalRecord } from "../../hooks/usePreclinical";
 import { useFinishConsultation } from "../../hooks/useConsultations";
+import { useInsurers } from "../../hooks/useInsurers";
 import { calcularEdad, clasificarIMC } from "../../lib/utils";
 import "../../views/shared/Shared.css";
 
 const toNull = (v) => (v === "" || v === undefined ? null : v);
+const createMedicationDraft = () => ({
+  clientId: crypto.randomUUID(),
+  name: "",
+  concentration: "",
+  concentrationUnit: "mg",
+  dose: "",
+  doseUnit: "tableta(s)",
+  route: "Oral",
+  frequency: "",
+  duration: "",
+  additionalInstructions: "",
+});
 
 export const ConsultaMedica = () => {
   const { id } = useParams();
@@ -17,13 +30,40 @@ export const ConsultaMedica = () => {
 
   const { data, isLoading, isError } = usePreclinicalRecord(id);
   const finishMutation = useFinishConsultation();
+  const { data: insurers = [] } = useInsurers();
 
   const [medicamentos, setMedicamentos] = useState([]);
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, watch, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(consultationSchema),
-    defaultValues: { anamnesis: "", physicalExam: "", diagnosis: "", labResults: "", observations: "" },
+    defaultValues: {
+      anamnesis: "",
+      physicalExam: "",
+      diagnosis: "",
+      labResults: "",
+      observations: "",
+      billingType: "private",
+      insurerId: "",
+      agreedAmount: "",
+    },
   });
+
+  const billingType = watch("billingType");
+  const selectedInsurerId = watch("insurerId");
+  const selectedInsurer = insurers.find((insurer) => insurer.id === selectedInsurerId);
+  const billingTypeField = register("billingType");
+  const insurerField = register("insurerId");
+
+  useEffect(() => {
+    if (billingType !== "insurance") {
+      setValue("agreedAmount", "", { shouldValidate: false });
+      return;
+    }
+
+    if (selectedInsurer) {
+      setValue("agreedAmount", String(selectedInsurer.fixedConsultationAmount ?? ""), { shouldValidate: true });
+    }
+  }, [billingType, selectedInsurer, setValue]);
 
   const bmi = useMemo(() => {
     if (!data?.weight || !data?.height) return null;
@@ -34,21 +74,27 @@ export const ConsultaMedica = () => {
   const imcInfo = clasificarIMC(bmi ? parseFloat(bmi) : null);
 
   const agregarMedicamento = () => {
-    setMedicamentos([...medicamentos, { name: "", concentration: "", concentrationUnit: "mg", dose: "", doseUnit: "tableta(s)", route: "Oral", frequency: "", duration: "", additionalInstructions: "" }]);
+    setMedicamentos((current) => [...current, createMedicationDraft()]);
   };
 
   const updateMed = (idx, field, value) => {
-    const copy = [...medicamentos];
-    copy[idx] = { ...copy[idx], [field]: value };
-    setMedicamentos(copy);
+    setMedicamentos((current) => {
+      const copy = [...current];
+      copy[idx] = { ...copy[idx], [field]: value };
+      return copy;
+    });
   };
 
-  const removeMed = (idx) => setMedicamentos(medicamentos.filter((_, i) => i !== idx));
+  const removeMed = (idx) => setMedicamentos((current) => current.filter((_, i) => i !== idx));
 
   const onSubmit = (formData) => {
     const body = {
       ...formData,
-      medicamentos: medicamentos.filter((m) => m.name.trim()),
+      insurerId: formData.billingType === "insurance" ? formData.insurerId : undefined,
+      agreedAmount: formData.billingType === "insurance" ? formData.agreedAmount : undefined,
+      medicamentos: medicamentos
+        .filter((m) => m.name.trim())
+        .map(({ clientId, ...medication }) => medication),
     };
 
     finishMutation.mutate({ id, data: body }, {
@@ -141,6 +187,89 @@ export const ConsultaMedica = () => {
               </div>
             </div>
 
+            <div style={S.card}>
+              <h2 style={S.sectionTitle}>Cobertura de la consulta</h2>
+              <p style={{ margin: "0 0 1rem", color: "#6b7280", fontSize: "0.95rem" }}>
+                Define si esta atencion sera normal o si viene respaldada por una aseguradora.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: billingType === "insurance" ? "1fr 1fr 1fr" : "1fr", gap: "1rem" }}>
+                <div className="form-group">
+                  <label className="form-label">Tipo de cobertura</label>
+                  <select
+                    className="form-input"
+                    {...billingTypeField}
+                    onChange={(e) => {
+                      billingTypeField.onChange(e);
+                      const nextType = e.target.value;
+                      if (nextType !== "insurance") {
+                        setValue("insurerId", "", { shouldValidate: true });
+                        setValue("agreedAmount", "", { shouldValidate: false });
+                      }
+                    }}
+                    style={{ backgroundColor: "white" }}
+                  >
+                    <option value="private">Normal</option>
+                    <option value="insurance">Aseguradora</option>
+                  </select>
+                </div>
+
+                {billingType === "insurance" && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Aseguradora</label>
+                      <select
+                        className="form-input"
+                        {...insurerField}
+                        onChange={(e) => {
+                          insurerField.onChange(e);
+                          const insurer = insurers.find((item) => item.id === e.target.value);
+                          setValue("agreedAmount", insurer ? String(insurer.fixedConsultationAmount ?? "") : "", { shouldValidate: true });
+                        }}
+                        style={{ backgroundColor: "white" }}
+                      >
+                        <option value="">Seleccione una aseguradora</option>
+                        {insurers.map((insurer) => (
+                          <option key={insurer.id} value={insurer.id}>
+                            {insurer.companyName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.insurerId && <span style={S.errorMsg}>{errors.insurerId.message}</span>}
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Monto que cubre la aseguradora</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        className="form-input"
+                        placeholder="0.00"
+                        {...register("agreedAmount")}
+                      />
+                      {errors.agreedAmount && <span style={S.errorMsg}>{errors.agreedAmount.message}</span>}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {billingType === "insurance" && (
+                insurers.length === 0 ? (
+                  <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: "12px", backgroundColor: "#fff7ed", color: "#9a3412" }}>
+                    No hay aseguradoras registradas. Crea una desde el menu "Aseguradoras" para poder asignarla a esta consulta.
+                  </div>
+                ) : selectedInsurer ? (
+                  <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: "12px", backgroundColor: "#f0fdfa", color: "#115e59" }}>
+                    <strong>Paciente con aseguradora:</strong> {selectedInsurer.companyName}. Se cargo automaticamente el monto sugerido de ${Number(selectedInsurer.fixedConsultationAmount || 0).toFixed(2)} y puedes ajustarlo si hace falta.
+                  </div>
+                ) : (
+                  <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: "12px", backgroundColor: "#f8fafc", color: "#475569" }}>
+                    Selecciona la aseguradora para que se coloque automaticamente el monto cubierto.
+                  </div>
+                )
+              )}
+            </div>
+
             {/* Medicamentos */}
             <div style={S.card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
@@ -152,7 +281,7 @@ export const ConsultaMedica = () => {
                 <p style={{ textAlign: "center", color: "#9ca3af", padding: "1rem" }}>No se han agregado medicamentos.</p>
               ) : (
                 medicamentos.map((med, idx) => (
-                  <div key={`med-${idx}-${med.name}`} style={S.medCard}>
+                  <div key={med.clientId} style={S.medCard}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
                       <strong style={{ color: "#374151" }}>Medicamento #{idx + 1}</strong>
                       <button type="button" onClick={() => removeMed(idx)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.1rem" }}>

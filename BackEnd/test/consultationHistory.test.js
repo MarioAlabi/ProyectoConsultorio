@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { db } from "../src/config/db.js";
 import consultationRouter from "../src/routes/consultationRoutes.js";
-import { createMedicalConsultation, getClinicalHistoryByPatientId, normalizePrescribedMedications } from "../src/services/consultationService.js";
+import { createMedicalConsultation, getClinicalHistoryByPatientId, getInsurerConsultationReport, normalizePrescribedMedications } from "../src/services/consultationService.js";
+import { createInsurer } from "../src/services/insurerService.js";
 
 const createSelectStub = (configs, tracker) => {
     let callIndex = 0;
@@ -203,27 +204,43 @@ test("guarda medicamentos correctamente al registrar una consulta", async (t) =>
         preclinicalUpdate: null,
     };
 
+    let selectCall = 0;
     const tx = {
         select() {
+            selectCall += 1;
             return {
                 from() {
+                    return this;
+                },
+                leftJoin() {
                     return this;
                 },
                 where() {
                     return this;
                 },
                 limit() {
+                    if (selectCall === 1) {
+                        return Promise.resolve([
+                            {
+                                id: "preclinical-1",
+                                patientId: "patient-1",
+                                bloodPressure: "120/80",
+                                temperature: "36.5",
+                                weight: "160",
+                                height: "1.70",
+                                heartRate: 80,
+                                oxygenSaturation: 98,
+                                bmi: "25.0",
+                            },
+                        ]);
+                    }
+
                     return Promise.resolve([
                         {
-                            id: "preclinical-1",
                             patientId: "patient-1",
-                            bloodPressure: "120/80",
-                            temperature: "36.5",
-                            weight: "160",
-                            height: "1.70",
-                            heartRate: 80,
-                            oxygenSaturation: 98,
-                            bmi: "25.0",
+                            insurerId: "insurer-1",
+                            insurerCompanyName: "Seguros Vida",
+                            fixedConsultationAmount: "25.00",
                         },
                     ]);
                 },
@@ -284,6 +301,8 @@ test("guarda medicamentos correctamente al registrar una consulta", async (t) =>
     assert.ok(result.consultationId);
     assert.equal(inserted.consultation.patientId, "patient-1");
     assert.equal(inserted.consultation.doctorId, "doctor-1");
+    assert.equal(inserted.consultation.insurerId, "insurer-1");
+    assert.equal(inserted.consultation.agreedAmount, "25.00");
     assert.equal(inserted.consultation.diagnosis, "Hipertension arterial");
     assert.equal(inserted.medications.length, 1);
     assert.equal(inserted.medications[0].consultationId, result.consultationId);
@@ -427,4 +446,319 @@ test("el flujo historico solo expone operacion GET y no agrega edicion", () => {
     assert.equal(historyLayer.route.methods.put, undefined);
     assert.equal(historyLayer.route.methods.patch, undefined);
     assert.equal(historyLayer.route.methods.delete, undefined);
+});
+
+test("crea aseguradoras con los campos requeridos", async (t) => {
+    const originalInsert = db.insert;
+    t.after(() => {
+        db.insert = originalInsert;
+    });
+
+    let inserted = null;
+    db.insert = () => ({
+        values(values) {
+            inserted = values;
+            return Promise.resolve();
+        },
+    });
+
+    const result = await createInsurer({
+        companyName: "Seguros Vida",
+        contactName: "Ana Lopez",
+        phone: "7777-8888",
+        email: "contacto@segurosvida.com",
+        fixedConsultationAmount: "25",
+    });
+
+    assert.ok(result.id);
+    assert.equal(inserted.companyName, "Seguros Vida");
+    assert.equal(inserted.contactName, "Ana Lopez");
+    assert.equal(inserted.email, "contacto@segurosvida.com");
+    assert.equal(inserted.fixedConsultationAmount, "25.00");
+});
+
+test("valida que la aseguradora tenga correo valido", async () => {
+    await assert.rejects(
+        () => createInsurer({
+            companyName: "Seguros Vida",
+            contactName: "Ana Lopez",
+            phone: "7777-8888",
+            email: "correo-invalido",
+            fixedConsultationAmount: "25.00",
+        }),
+        (error) => {
+            assert.equal(error.status, 400);
+            assert.match(error.message, /correo electronico/i);
+            return true;
+        }
+    );
+});
+
+test("valida que el monto fijo sea mayor a cero", async () => {
+    await assert.rejects(
+        () => createInsurer({
+            companyName: "Seguros Vida",
+            contactName: "Ana Lopez",
+            phone: "7777-8888",
+            email: "contacto@segurosvida.com",
+            fixedConsultationAmount: "0",
+        }),
+        (error) => {
+            assert.equal(error.status, 400);
+            assert.match(error.message, /monto fijo prenegociado/i);
+            return true;
+        }
+    );
+});
+
+test("genera reporte filtrado por aseguradora y rango de fechas", async (t) => {
+    const originalSelect = db.select;
+    t.after(() => {
+        db.select = originalSelect;
+    });
+
+    const tracker = { calls: [] };
+    db.select = createSelectStub(
+        [
+            {
+                rows: [
+                    {
+                        id: "insurer-1",
+                        companyName: "Seguros Vida",
+                        fixedConsultationAmount: "25.00",
+                    },
+                ],
+            },
+            {
+                resolveOn: "orderBy",
+                rows: [
+                    {
+                        consultationId: "consult-1",
+                        consultationDate: new Date("2026-04-05T10:00:00.000Z"),
+                        patientId: "patient-1",
+                        patientName: "Juan Perez",
+                        identityDocument: "12345678-9",
+                        diagnosis: "Hipertension arterial",
+                        agreedAmount: "25.00",
+                    },
+                    {
+                        consultationId: "consult-2",
+                        consultationDate: new Date("2026-04-08T09:15:00.000Z"),
+                        patientId: "patient-2",
+                        patientName: "Maria Lopez",
+                        identityDocument: "98765432-1",
+                        diagnosis: "Gastritis",
+                        agreedAmount: "25.00",
+                    },
+                ],
+            },
+        ],
+        tracker
+    );
+
+    const result = await getInsurerConsultationReport({
+        insurerId: "insurer-1",
+        from: "2026-04-01",
+        to: "2026-04-30",
+    });
+
+    assert.equal(result.insurer.companyName, "Seguros Vida");
+    assert.equal(result.empty, false);
+    assert.equal(result.items.length, 2);
+    assert.equal(result.items[0].patientName, "Juan Perez");
+    assert.equal(result.items[1].identityDocument, "98765432-1");
+    assert.equal(result.summary.totalPatients, 2);
+    assert.equal(result.summary.totalAmount, "50.00");
+    assert.equal(tracker.calls.length, 2);
+});
+
+test("retorna reporte vacio cuando no hay consultas para la aseguradora", async (t) => {
+    const originalSelect = db.select;
+    t.after(() => {
+        db.select = originalSelect;
+    });
+
+    db.select = createSelectStub(
+        [
+            {
+                rows: [
+                    {
+                        id: "insurer-empty",
+                        companyName: "Aseguradora Vacia",
+                        fixedConsultationAmount: "30.00",
+                    },
+                ],
+            },
+            {
+                resolveOn: "orderBy",
+                rows: [],
+            },
+        ],
+        { calls: [] }
+    );
+
+    const result = await getInsurerConsultationReport({
+        insurerId: "insurer-empty",
+        from: "2026-04-01",
+        to: "2026-04-30",
+    });
+
+    assert.equal(result.empty, true);
+    assert.deepEqual(result.items, []);
+    assert.equal(result.summary.totalPatients, 0);
+    assert.equal(result.summary.totalAmount, "0.00");
+});
+
+test("rechaza reporte sin aseguradora", async () => {
+    await assert.rejects(
+        () => getInsurerConsultationReport({
+            insurerId: "",
+            from: "2026-04-01",
+            to: "2026-04-30",
+        }),
+        (error) => {
+            assert.equal(error.status, 400);
+            assert.match(error.message, /aseguradora es obligatoria/i);
+            return true;
+        }
+    );
+});
+
+test("rechaza reporte con rango de fechas invalido", async (t) => {
+    const originalSelect = db.select;
+    t.after(() => {
+        db.select = originalSelect;
+    });
+
+    db.select = createSelectStub(
+        [
+            {
+                rows: [
+                    {
+                        id: "insurer-1",
+                        companyName: "Seguros Vida",
+                        fixedConsultationAmount: "25.00",
+                    },
+                ],
+            },
+        ],
+        { calls: [] }
+    );
+
+    await assert.rejects(
+        () => getInsurerConsultationReport({
+            insurerId: "insurer-1",
+            from: "2026-04-30",
+            to: "2026-04-01",
+        }),
+        (error) => {
+            assert.equal(error.status, 400);
+            assert.match(error.message, /fecha inicial/i);
+            return true;
+        }
+    );
+});
+
+test("regla de negocio: consulta particular se guarda sin aseguradora ni monto", async (t) => {
+    const originalTransaction = db.transaction;
+    t.after(() => {
+        db.transaction = originalTransaction;
+    });
+
+    const inserted = {
+        consultation: null,
+    };
+
+    let selectCall = 0;
+    const tx = {
+        select() {
+            selectCall += 1;
+            return {
+                from() {
+                    return this;
+                },
+                leftJoin() {
+                    return this;
+                },
+                where() {
+                    return this;
+                },
+                limit() {
+                    if (selectCall === 1) {
+                        return Promise.resolve([
+                            {
+                                id: "preclinical-particular",
+                                patientId: "patient-particular",
+                                bloodPressure: "120/80",
+                                temperature: "36.5",
+                                weight: "160",
+                                height: "1.70",
+                                heartRate: 80,
+                                oxygenSaturation: 98,
+                                bmi: "25.0",
+                            },
+                        ]);
+                    }
+
+                    return Promise.resolve([
+                        {
+                            patientId: "patient-particular",
+                            insurerId: null,
+                            insurerCompanyName: null,
+                            fixedConsultationAmount: null,
+                        },
+                    ]);
+                },
+            };
+        },
+        insert() {
+            return {
+                values(values) {
+                    if (!Array.isArray(values)) {
+                        inserted.consultation = values;
+                    }
+                    return Promise.resolve();
+                },
+            };
+        },
+        update() {
+            return {
+                set() {
+                    return {
+                        where() {
+                            return Promise.resolve();
+                        },
+                    };
+                },
+            };
+        },
+    };
+
+    db.transaction = async (callback) => callback(tx);
+
+    await createMedicalConsultation(
+        "preclinical-particular",
+        {
+            anamnesis: "Control general",
+            diagnosis: "Paciente estable",
+            medicamentos: [],
+        },
+        "doctor-1"
+    );
+
+    assert.equal(inserted.consultation.insurerId, null);
+    assert.equal(inserted.consultation.agreedAmount, null);
+});
+
+test("expone la ruta de reporte por aseguradora como solo lectura", () => {
+    const reportLayer = consultationRouter.stack.find(
+        (layer) => layer.route?.path === "/reports/by-insurer"
+    );
+
+    assert.ok(reportLayer, "La ruta de reporte por aseguradora debe existir.");
+    assert.equal(reportLayer.route.methods.get, true);
+    assert.equal(reportLayer.route.methods.post, undefined);
+    assert.equal(reportLayer.route.methods.put, undefined);
+    assert.equal(reportLayer.route.methods.patch, undefined);
+    assert.equal(reportLayer.route.methods.delete, undefined);
 });

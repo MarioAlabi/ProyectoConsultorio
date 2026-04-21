@@ -17,6 +17,8 @@ import { ConsultaMedica } from './views/doctor/ConsultaMedica';
 import { ConsultaDetalleShared } from './views/shared/ConsultaDetalleShared.jsx';
 import { AgendaCitas } from './views/shared/AgendaCitas';
 import { AuditoriaRegistros } from './views/admin/AuditoriaRegistros';
+import { Aseguradoras } from './views/doctor/Aseguradoras';
+import { ReporteAseguradoras } from './views/doctor/ReporteAseguradoras';
 
 function App() {
   return (
@@ -57,6 +59,8 @@ function App() {
             <Route path="/doctor/pacientes" element={<PatientsShared />} />
             <Route path="/doctor/preclinica" element={<PreclinicaShared />} />
             <Route path="/doctor/consulta/:id" element={<ConsultaMedica />} />
+            <Route path="/doctor/aseguradoras" element={<Aseguradoras />} />
+            <Route path="/doctor/reportes/aseguradoras" element={<ReporteAseguradoras />} />
             <Route path="/doctor/changePassword" element={<ChangePassword />} />
             <Route path="/doctor/consulta-detalle/:id" element={<ConsultaDetalleShared />} />
             {/* 3. NUEVA RUTA DE AGENDA PARA DOCTOR */}

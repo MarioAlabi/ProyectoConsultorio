@@ -10,20 +10,22 @@ const MENU_CONFIG = {
     { label: 'Lista de Espera', path: '/doctor' },
     { label: 'Agenda', path: '/doctor/agenda' },
     { label: 'Listado de Pacientes', path: '/doctor/pacientes' },
-    { label: 'Cambiar contraseña', path: '/doctor/changePassword' },
+    { label: 'Aseguradoras', path: '/doctor/aseguradoras' },
+    { label: 'Reporte Aseguradoras', path: '/doctor/reportes/aseguradoras' },
+    { label: 'Cambiar contrasena', path: '/doctor/changePassword' },
   ],
   [ROLES.ASSISTANT]: [
     { label: 'Dashboard', path: '/reception' },
     { label: 'Agenda', path: '/reception/agenda' },
     { label: 'Pacientes', path: '/reception/pacientes' },
     { label: 'Pre-clinica', path: '/reception/preclinica' },
-    { label:'Cambiar contraseña', path:'/reception/changePassword' }
+    { label: 'Cambiar contrasena', path: '/reception/changePassword' }
   ],
   [ROLES.ADMIN]: [
     { label: 'Dashboard', path: '/admin' },
     { label: 'Administrar Usuarios', path: '/admin/usuarios' },
-    { label: 'Auditoría', path: '/admin/auditoria' },
-    { label: 'Cambiar contraseña', path: '/admin/changePassword'},
+    { label: 'Auditoria', path: '/admin/auditoria' },
+    { label: 'Cambiar contrasena', path: '/admin/changePassword'},
   ],
 };
 

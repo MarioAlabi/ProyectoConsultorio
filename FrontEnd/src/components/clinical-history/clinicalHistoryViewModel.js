@@ -4,6 +4,7 @@ export const getClinicalHistoryViewModel = (history) => {
   return {
     isEmpty: !!history?.empty || items.length === 0,
     rangeYears: history?.rangeYears || 5,
+    message: history?.message || "",
     items: items.map((item) => ({
       consultationId: item.consultationId,
       consultationDate: item.consultationDate,
@@ -15,6 +16,9 @@ export const getClinicalHistoryViewModel = (history) => {
       reason: item.reason || "",
       status: item.status || "",
       doctorName: item.doctor?.name || "No disponible",
+      coverageType: item.coverage?.type || "private",
+      insurerName: item.coverage?.insurerName || "",
+      agreedAmount: item.coverage?.agreedAmount ?? null,
       medications: Array.isArray(item.medications) ? item.medications : [],
     })),
   };

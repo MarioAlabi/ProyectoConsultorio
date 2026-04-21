@@ -48,6 +48,13 @@ export const ConsultaDetalleShared = () => {
 
       <div style={S.card}>
         <h2 style={S.sectionTitle}>Notas Adicionales</h2>
+        <div style={{ marginBottom: "16px" }}>
+          <span style={S.label}>Cobertura</span>
+          <div style={S.textValue}>
+            {consulta.insurer?.companyName || "Particular"}
+            {consulta.agreedAmount ? ` | Monto aplicado: $${Number(consulta.agreedAmount).toFixed(2)}` : ""}
+          </div>
+        </div>
         <div style={{ marginBottom: "16px" }}><span style={S.label}>Resultados de Laboratorio</span><div style={S.textValue}>{consulta.labResults || "Sin resultados reportados."}</div></div>
         <div style={{ marginBottom: "16px" }}><span style={S.label}>Observaciones Medicas</span><div style={S.textValue}>{consulta.observations || "Ninguna observacion adicional."}</div></div>
       </div>

@@ -4,6 +4,13 @@ import { getClinicalHistoryViewModel } from "./clinicalHistoryViewModel";
 export const ClinicalHistoryTimeline = ({ history, isLoading, isError = false }) => {
   const viewModel = getClinicalHistoryViewModel(history);
   const items = viewModel.items;
+  const formatMoney = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+      return "No registrado";
+    }
+
+    return `$${Number(value).toFixed(2)}`;
+  };
 
   const S = {
     wrapper: { display: "flex", flexDirection: "column", gap: "1rem" },
@@ -133,6 +140,22 @@ export const ClinicalHistoryTimeline = ({ history, isLoading, isError = false })
       color: "#92400e",
       lineHeight: 1.5,
     },
+    coverageGrid: {
+      marginTop: "1rem",
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+      gap: "0.85rem",
+    },
+    coverageCard: {
+      margin: 0,
+      padding: "0.8rem",
+      backgroundColor: "#f0f9ff",
+      border: "1px solid #bae6fd",
+      borderRadius: "0.8rem",
+      color: "#0f172a",
+      fontSize: "0.88rem",
+      lineHeight: 1.5,
+    },
     clinicalGrid: {
       marginTop: "1rem",
       display: "grid",
@@ -213,7 +236,8 @@ export const ClinicalHistoryTimeline = ({ history, isLoading, isError = false })
           </div>
           <strong style={S.emptyTitle}>Aun no hay historial clinico para este paciente.</strong>
           <p style={S.emptyText}>
-            Cuando se registren consultas medicas previas, aqui podras ver sus diagnosticos, recetas y medico responsable.
+            {viewModel.message ||
+              "Cuando se registren consultas medicas previas, aqui podras ver sus diagnosticos, recetas y medico responsable."}
           </p>
         </div>
       ) : (
@@ -250,6 +274,27 @@ export const ClinicalHistoryTimeline = ({ history, isLoading, isError = false })
                     <div>
                       <span style={S.sectionLabel}>Diagnostico</span>
                       <p style={S.diagnosis}>{item.diagnosis || "No se registro diagnostico en esta consulta."}</p>
+                    </div>
+
+                    <div style={S.coverageGrid}>
+                      <div>
+                        <span style={S.sectionLabel}>Tipo de atencion</span>
+                        <p style={S.coverageCard}>
+                          {item.coverageType === "insurance" ? "Aseguradora" : "Particular"}
+                        </p>
+                      </div>
+                      {item.coverageType === "insurance" ? (
+                        <>
+                          <div>
+                            <span style={S.sectionLabel}>Aseguradora</span>
+                            <p style={S.coverageCard}>{item.insurerName || "No disponible"}</p>
+                          </div>
+                          <div>
+                            <span style={S.sectionLabel}>Monto cubierto</span>
+                            <p style={S.coverageCard}>{formatMoney(item.agreedAmount)}</p>
+                          </div>
+                        </>
+                      ) : null}
                     </div>
 
                     {(item.observations || item.anamnesis || item.physicalExam || item.labResults) ? (
