@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import { backupDB, restoreDB } from '../controllers/mantenimiento.controller.js';
-import { isAdmin } from '../middleware/auth.middleware.js'; // Tu middleware de seguridad
+import { backupDB, restoreDB } from '../controllers/mantenimientocontroller.js';
 
 const router = Router();
 
-router.get('/backup', isAdmin, backupDB);
-router.post('/restore', isAdmin, restoreDB);
+router.get('/backup', backupDB);
+router.post('/restore', restoreDB);
 
 export default router;

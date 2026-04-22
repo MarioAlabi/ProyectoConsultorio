@@ -1,5 +1,6 @@
 import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
+import fileUpload from "express-fileupload";
 import express from "express";
 import { auth } from "./config/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -9,6 +10,8 @@ import consultationRoutes from "./routes/consultationRoutes.js";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import insurerRoutes from "./routes/insurerRoutes.js";
+import mantenimientoRoutes from './routes/mantenimientoroutes.js';
+
 const app = express();
 
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
@@ -22,6 +25,12 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+
+app.use(fileUpload({
+    createParentPath: true
+}));
+
+
 app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(express.json());
 app.use("/api/patients", patientRoutes);
@@ -30,6 +39,7 @@ app.use("/api/consultations", consultationRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/insurers", insurerRoutes);
+app.use('/api/admin', mantenimientoRoutes);
 app.get("/status", (req, res) => {
     res.json({
         status: "ok",

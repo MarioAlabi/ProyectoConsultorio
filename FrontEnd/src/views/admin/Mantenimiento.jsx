@@ -46,23 +46,22 @@ const Mantenimiento = () => {
 
     setIsRestoring(true);
     
-    // Descomentar cuando se implemente la petición real
-    // const formData = new FormData();
-    // formData.append("file", selectedFile);
+    const formData = new FormData();
+    formData.append("file", selectedFile);
 
     try {
       // Aquí iría tu fetch al backend para subir el archivo
-      // const response = await fetch(`${API_URL}/api/admin/restore`, {
-      //   method: 'POST',
-      //   body: formData,
-      //   headers: { Authorization: `Bearer ${tuToken}` } // Si aplica
-      // });
+       const response = await fetch(`${API_URL}/api/admin/restore`, {
+         method: 'POST',
+         body: formData,
+         credentials: 'include'
+       });
       
-      // if (response.ok) {
+       if (response.ok) {
       toast.success("Base de datos restaurada con éxito.");
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = ""; // Limpiar el input visualmente
-      // }
+       }
     } catch (error) {
       console.error("Error restaurando base de datos:", error);
       toast.error("Error al restaurar la base de datos.");
