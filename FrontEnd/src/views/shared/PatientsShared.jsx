@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +34,18 @@ export const PatientsShared = () => {
   });
 
   const esMenor = watch("isMinor");
+  const fechaNacimiento = watch("dateOfBirth");
+  useEffect(() => {
+    if (fechaNacimiento) {
+      const edad = calcularEdad(fechaNacimiento);
+
+      if (edad < 18) {
+        setValue("isMinor", true, { shouldValidate: true });
+      } else {
+        setValue("isMinor", false, { shouldValidate: true });
+      }
+    }
+  }, [fechaNacimiento, setValue]);
 
   const filtered = useMemo(() => {
     if (!search) return patients;
@@ -73,8 +85,15 @@ export const PatientsShared = () => {
   };
 
   const onSubmit = (data) => {
+    if (!data.isMinor) {
+      data.responsibleName = null;
+    }
+
     if (editingPatient) {
-      updateMutation.mutate({ id: editingPatient.id, data }, { onSuccess: () => { setShowModal(false); setEditingPatient(null); } });
+      updateMutation.mutate(
+        { id: editingPatient.id, data },
+        { onSuccess: () => { setShowModal(false); setEditingPatient(null); } }
+      );
     } else {
       createMutation.mutate(data, { onSuccess: () => setShowModal(false) });
     }
@@ -137,11 +156,18 @@ export const PatientsShared = () => {
                 const badge = getStatusBadge(p.status);
                 return (
                   <tr key={p.id}>
-                    <td style={{ ...S.td, fontWeight: 500 }}>{p.fullName}{p.isMinor ? <span style={{ fontSize: "0.75rem", color: "#f59e0b", marginLeft: "6px" }}>(Menor)</span> : null}</td>
+                    <td style={{ ...S.td, fontWeight: 500 }}>
+                      {p.fullName}
+                      {p.isMinor ? <span style={{ fontSize: "0.75rem", color: "#f59e0b", marginLeft: "6px" }}>(Menor)</span> : null}
+                    </td>
                     <td style={{ ...S.td, color: "#6b7280" }}>{p.fileNumber}</td>
                     <td style={{ ...S.td, color: "#6b7280" }}>{p.identityDocument}</td>
-                    <td style={S.td}>{edad} anios</td>
-                    <td style={S.td}><span style={{ backgroundColor: badge.bg, color: badge.color, padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.8rem", fontWeight: 600 }}>{badge.label}</span></td>
+                    <td style={S.td}>{edad} años</td>
+                    <td style={S.td}>
+                      <span style={{ backgroundColor: badge.bg, color: badge.color, padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.8rem", fontWeight: 600 }}>
+                        {badge.label}
+                      </span>
+                    </td>
                     <td style={S.td}>
                       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         <button onClick={() => openEdit(p)} className="doc-btn" style={{ color: "#0ea5e9" }}>Editar</button>
@@ -157,30 +183,94 @@ export const PatientsShared = () => {
         )}
       </div>
 
-      {/* Modal crear/editar paciente */}
       <Modal isOpen={showModal} onClose={() => { setShowModal(false); setEditingPatient(null); }} title={editingPatient ? "Editar Paciente" : "Nuevo Paciente"} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="login-form">
+
           <div style={S.gridForm}>
-            <div className="form-group"><label className="form-label">Nombre Completo *</label><input type="text" className="form-input" {...register("fullName")} />{errors.fullName && <span style={S.errorMsg}>{errors.fullName.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Fecha de Nacimiento *</label><input type="date" className="form-input" {...register("dateOfBirth")} />{errors.dateOfBirth && <span style={S.errorMsg}>{errors.dateOfBirth.message}</span>}</div>
-            <div className="form-group"><label className="form-label">DUI *</label><input type="text" className="form-input" placeholder="12345678-9" {...register("identityDocument")} onChange={(e) => setValue("identityDocument", formatDUI(e.target.value), { shouldValidate: true })} />{errors.identityDocument && <span style={S.errorMsg}>{errors.identityDocument.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Genero *</label><select className="form-input" {...register("gender")} style={{ backgroundColor: "white" }}><option value="male">Masculino</option><option value="female">Femenino</option></select>{errors.gender && <span style={S.errorMsg}>{errors.gender.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Telefono</label><input type="text" className="form-input" placeholder="0000-0000" {...register("phone")} onChange={(e) => setValue("phone", formatPhone(e.target.value))} /></div>
-            <div className="form-group"><label className="form-label">Direccion</label><input type="text" className="form-input" {...register("address")} /></div>
+            <div className="form-group">
+              <label className="form-label">Nombre Completo *</label>
+              <input type="text" className="form-input" {...register("fullName")} />
+              {errors.fullName && <span style={S.errorMsg}>{errors.fullName.message}</span>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Fecha de Nacimiento *</label>
+              <input type="date" className="form-input" {...register("dateOfBirth")} />
+              {errors.dateOfBirth && <span style={S.errorMsg}>{errors.dateOfBirth.message}</span>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                {esMenor ? "DUI del Responsable *" : "DUI *"}
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="12345678-9"
+                {...register("identityDocument")}
+                onChange={(e) =>
+                  setValue("identityDocument", formatDUI(e.target.value), { shouldValidate: true })
+                }
+              />
+              {errors.identityDocument && <span style={S.errorMsg}>{errors.identityDocument.message}</span>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Genero *</label>
+              <select className="form-input" {...register("gender")} style={{ backgroundColor: "white" }}>
+                <option value="male">Masculino</option>
+                <option value="female">Femenino</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Telefono</label>
+              <input type="text" className="form-input" placeholder="0000-0000" {...register("phone")}
+                onChange={(e) => setValue("phone", formatPhone(e.target.value))} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Direccion</label>
+              <input type="text" className="form-input" {...register("address")} />
+            </div>
           </div>
+
           <div className="form-group" style={{ marginTop: "1rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}><input type="checkbox" {...register("isMinor")} /><span className="form-label" style={{ margin: 0 }}>Paciente es menor de edad</span></label>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+              <input type="checkbox" {...register("isMinor")} />
+              <span className="form-label" style={{ margin: 0 }}>Paciente es menor de edad</span>
+            </label>
           </div>
-          {esMenor && (<div className="form-group"><label className="form-label">Nombre del Responsable *</label><input type="text" className="form-input" {...register("responsibleName")} />{errors.responsibleName && <span style={S.errorMsg}>{errors.responsibleName.message}</span>}</div>)}
+
+          {esMenor && (
+            <div className="form-group">
+              <label className="form-label">Nombre del Responsable *</label>
+              <input type="text" className="form-input" {...register("responsibleName")} />
+              {errors.responsibleName && <span style={S.errorMsg}>{errors.responsibleName.message}</span>}
+            </div>
+          )}
+
           <div style={{ ...S.gridForm, marginTop: "0.5rem" }}>
-            <div className="form-group"><label className="form-label">Antecedentes Personales</label><textarea className="form-input" rows={2} {...register("personalHistory")} /></div>
-            <div className="form-group"><label className="form-label">Antecedentes Familiares</label><textarea className="form-input" rows={2} {...register("familyHistory")} /></div>
+            <div className="form-group">
+              <label className="form-label">Antecedentes Personales</label>
+              <textarea className="form-input" rows={2} {...register("personalHistory")} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Antecedentes Familiares</label>
+              <textarea className="form-input" rows={2} {...register("familyHistory")} />
+            </div>
           </div>
-          <button type="submit" className="submit-btn" disabled={createMutation.isPending || updateMutation.isPending}>{(createMutation.isPending || updateMutation.isPending) ? "Guardando..." : editingPatient ? "Guardar Cambios" : "Registrar Paciente"}</button>
+
+          <button type="submit" className="submit-btn" disabled={createMutation.isPending || updateMutation.isPending}>
+            {(createMutation.isPending || updateMutation.isPending)
+              ? "Guardando..."
+              : editingPatient ? "Guardar Cambios" : "Registrar Paciente"}
+          </button>
+
         </form>
       </Modal>
 
-      {/* Modal historial */}
       <Modal
         isOpen={!!historialPatientId}
         onClose={() => setHistorialPatientId(null)}

@@ -111,7 +111,7 @@ export const PreclinicaShared = () => {
             <div style={S.patientCard}>
               <div>
                 <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>{paciente.fullName}</div>
-                <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>Exp: {paciente.fileNumber} | DUI: {paciente.identityDocument} | Edad: {calcularEdad(paciente.yearOfBirth)} anios</div>
+                <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>Exp: {paciente.fileNumber} | DUI: {paciente.identityDocument} | Edad: {calcularEdad(paciente.yearOfBirth)} años</div>
               </div>
               <button type="button" onClick={() => { setPaciente(null); setValue("patientId", ""); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.2rem" }}>
                 <i className="ri-close-circle-line"></i>
