@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, text, datetime, boolean, int, bigint, uniqueIndex, date, mysqlEnum, timestamp, decimal  } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, text, datetime, boolean, int, bigint,longtext, uniqueIndex, date, mysqlEnum, timestamp, decimal  } from "drizzle-orm/mysql-core";
 export const users = mysqlTable("users", {
     id: varchar("id", { length: 36 }).primaryKey(),
     name: varchar("name", { length: 80 }).notNull(),
@@ -176,5 +176,11 @@ export const appointments = mysqlTable("appointments", {
         .notNull()
         .references(() => users.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+export const clinicSettings = mysqlTable("clinic_settings", {
+    id: int("id").primaryKey(), 
+    clinicName: varchar("clinic_name", { length: 255 }).notNull(),
+    logoUrl: longtext("logo_url"), 
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
