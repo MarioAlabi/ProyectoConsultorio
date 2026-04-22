@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientSchema } from "../../lib/validations/patientSchema";
-import { usePatients, useCreatePatient, useUpdatePatient, usePatientClinicalHistory } from "../../hooks/usePatients";
+import { usePatients, useCreatePatient, useUpdatePatient, useUpdatePatientStatus, usePatientClinicalHistory } from "../../hooks/usePatients";
 import { Modal } from "../../components/Modal";
 import { ClinicalHistoryTimeline } from "../../components/clinical-history/ClinicalHistoryTimeline";
 import { calcularEdad, formatDUI, formatPhone, getStatusBadge } from "../../lib/utils";
@@ -15,13 +15,18 @@ export const PatientsShared = () => {
   const isDoctor = location.pathname.startsWith("/doctor");
 
   const [search, setSearch] = useState("");
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
+  
   const [showModal, setShowModal] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
   const [historialPatientId, setHistorialPatientId] = useState(null);
 
+  const [statusModal, setStatusModal] = useState({ isOpen: false, patient: null, newStatus: "" });
+
   const { data: patients = [], isLoading } = usePatients("");
   const createMutation = useCreatePatient();
   const updateMutation = useUpdatePatient();
+  const updateStatusMutation = useUpdatePatientStatus();
   const { data: historialClinico, isLoading: historialLoading, isError: historialError } = usePatientClinicalHistory(historialPatientId);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
@@ -35,27 +40,34 @@ export const PatientsShared = () => {
 
   const esMenor = watch("isMinor");
   const fechaNacimiento = watch("dateOfBirth");
+  const edadActual = fechaNacimiento ? calcularEdad(fechaNacimiento) : 0;
+  const isAdult = fechaNacimiento && edadActual >= 18;
   useEffect(() => {
     if (fechaNacimiento) {
-      const edad = calcularEdad(fechaNacimiento);
-
-      if (edad < 18) {
+      if (edadActual < 18) {
         setValue("isMinor", true, { shouldValidate: true });
       } else {
         setValue("isMinor", false, { shouldValidate: true });
       }
     }
-  }, [fechaNacimiento, setValue]);
+  }, [fechaNacimiento, edadActual, setValue]);
 
   const filtered = useMemo(() => {
-    if (!search) return patients;
+    let list = patients;
+
+    if (!mostrarInactivos) {
+      list = list.filter((p) => p.status === "active");
+    }
+
+    if (!search) return list;
+
     const q = search.toLowerCase();
-    return patients.filter((p) =>
+    return list.filter((p) =>
       p.fullName?.toLowerCase().includes(q) ||
       p.identityDocument?.includes(q) ||
       p.fileNumber?.toLowerCase().includes(q)
     );
-  }, [patients, search]);
+  }, [patients, search, mostrarInactivos]);
 
   const openCreate = () => {
     setEditingPatient(null);
@@ -99,6 +111,22 @@ export const PatientsShared = () => {
     }
   };
 
+  const openStatusModal = (patient) => {
+    setStatusModal({ isOpen: true, patient, newStatus: patient.status || "active" });
+  };
+
+  const handleStatusSave = () => {
+    if (statusModal.newStatus === "deceased") {
+      const confirmed = window.confirm(` ADVERTENCIA:\n\n¿Está seguro que desea marcar a ${statusModal.patient.fullName} como "Fallecido"?\n\nEsta acción lo ocultará de las búsquedas principales.`);
+      if (!confirmed) return;
+    }
+
+    updateStatusMutation.mutate(
+      { id: statusModal.patient.id, status: statusModal.newStatus },
+      { onSuccess: () => setStatusModal({ isOpen: false, patient: null, newStatus: "" }) }
+    );
+  };
+
   const goToPreclinica = (patient) => {
     const basePath = isDoctor ? "/doctor" : "/reception";
     navigate(`${basePath}/preclinica`, { state: { paciente: patient, redirectTo: `${basePath}/pacientes` } });
@@ -125,9 +153,21 @@ export const PatientsShared = () => {
       <div style={S.header}>
         <div>
           <h1 style={{ color: "#1f2937", margin: 0 }}>Pacientes</h1>
-          <p style={{ color: "#6b7280", margin: "0.3rem 0 0" }}>Gestion de expedientes clinicos</p>
+          <p style={{ color: "#6b7280", margin: "0.3rem 0 0" }}>Gestión de expedientes clínicos</p>
         </div>
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+        
+        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Toggle para mostrar/ocultar inactivos */}
+          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.95rem", color: "#4b5563", userSelect: "none" }}>
+            <input 
+              type="checkbox" 
+              checked={mostrarInactivos} 
+              onChange={(e) => setMostrarInactivos(e.target.checked)} 
+              style={{ width: "16px", height: "16px", accentColor: "#0d9488" }} 
+            />
+            Mostrar Archivados
+          </label>
+
           <input type="text" className="form-input" placeholder="Buscar por nombre, DUI o expediente..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: "280px" }} />
           <button onClick={openCreate} className="submit-btn" style={{ margin: 0, padding: "0.75rem 1.5rem", whiteSpace: "nowrap" }}>+ Nuevo Paciente</button>
         </div>
@@ -146,14 +186,14 @@ export const PatientsShared = () => {
                 <th style={S.th}>Expediente</th>
                 <th style={S.th}>DUI</th>
                 <th style={S.th}>Edad</th>
-                <th style={S.th}>Estado</th>
+                <th style={S.th}>Estado</th> 
                 <th style={S.th}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((p) => {
                 const edad = calcularEdad(p.yearOfBirth);
-                const badge = getStatusBadge(p.status);
+                const badge = getStatusBadge(p.status || "active"); // Salvaguarda visual
                 return (
                   <tr key={p.id}>
                     <td style={{ ...S.td, fontWeight: 500 }}>
@@ -171,8 +211,13 @@ export const PatientsShared = () => {
                     <td style={S.td}>
                       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         <button onClick={() => openEdit(p)} className="doc-btn" style={{ color: "#0ea5e9" }}>Editar</button>
+                        <button onClick={() => openStatusModal(p)} className="doc-btn" style={{ color: "#f59e0b" }}>Estado</button>
                         <button onClick={() => setHistorialPatientId(p.id)} className="doc-btn">Historial</button>
-                        <button onClick={() => goToPreclinica(p)} className="doc-btn" style={{ color: "#0d9488" }}>Pre-clinica</button>
+                        
+                        {/* Ocultamos botón de pre-clínica si está inactivo o fallecido para evitar agendar citas por error (Escenario 1) */}
+                        {p.status === "active" && (
+                          <button onClick={() => goToPreclinica(p)} className="doc-btn" style={{ color: "#0d9488" }}>Pre-clínica</button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -216,7 +261,7 @@ export const PatientsShared = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Genero *</label>
+              <label className="form-label">Género *</label>
               <select className="form-input" {...register("gender")} style={{ backgroundColor: "white" }}>
                 <option value="male">Masculino</option>
                 <option value="female">Femenino</option>
@@ -224,21 +269,27 @@ export const PatientsShared = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Telefono</label>
+              <label className="form-label">Teléfono</label>
               <input type="text" className="form-input" placeholder="0000-0000" {...register("phone")}
                 onChange={(e) => setValue("phone", formatPhone(e.target.value))} />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Direccion</label>
+              <label className="form-label">Dirección</label>
               <input type="text" className="form-input" {...register("address")} />
             </div>
           </div>
 
           <div className="form-group" style={{ marginTop: "1rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-              <input type="checkbox" {...register("isMinor")} />
-              <span className="form-label" style={{ margin: 0 }}>Paciente es menor de edad</span>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: isAdult ? "not-allowed" : "pointer", opacity: isAdult ? 0.6 : 1 }}>
+              <input 
+                type="checkbox" 
+                {...register("isMinor")} 
+                disabled={isAdult} // Se bloquea si tiene 18 años o más
+              />
+              <span className="form-label" style={{ margin: 0 }}>
+                Paciente es menor de edad {isAdult && <span style={{ color: "#ef4444", fontSize: "0.8rem", marginLeft: "5px" }}>(Bloqueado por fecha de nacimiento.)</span>}
+              </span>
             </label>
           </div>
 
@@ -270,11 +321,45 @@ export const PatientsShared = () => {
 
         </form>
       </Modal>
+      <Modal
+        isOpen={statusModal.isOpen}
+        onClose={() => setStatusModal({ isOpen: false, patient: null, newStatus: "" })}
+        title="Archivo y Estado del Paciente"
+        size="sm"
+      >
+        {statusModal.patient && (
+          <div className="login-form">
+            <p style={{ color: "#4b5563", fontSize: "0.9rem", marginBottom: "1rem" }}>
+              Modificar estado de <strong>{statusModal.patient.fullName}</strong>.
+            </p>
+            <div className="form-group">
+              <label className="form-label">Estado Actual</label>
+              <select
+                className="form-input"
+                value={statusModal.newStatus}
+                onChange={(e) => setStatusModal(prev => ({ ...prev, newStatus: e.target.value }))}
+                style={{ backgroundColor: "white" }}
+              >
+                <option value="active">Activo</option>
+                <option value="inactive">Inactivo</option>
+                <option value="deceased">Fallecido</option>
+              </select>
+            </div>
+            <button 
+              onClick={handleStatusSave} 
+              className="submit-btn" 
+              disabled={updateStatusMutation.isPending || statusModal.newStatus === statusModal.patient.status}
+            >
+              {updateStatusMutation.isPending ? "Actualizando..." : "Guardar Estado"}
+            </button>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         isOpen={!!historialPatientId}
         onClose={() => setHistorialPatientId(null)}
-        title={`Historial Clinico${patientSelectedForHistory ? ` - ${patientSelectedForHistory.fullName}` : ""}`}
+        title={`Historial Clínico${patientSelectedForHistory ? ` - ${patientSelectedForHistory.fullName}` : ""}`}
         size="xl"
       >
         <ClinicalHistoryTimeline history={historialClinico} isLoading={historialLoading} isError={historialError} />
