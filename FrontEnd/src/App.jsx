@@ -20,7 +20,7 @@ import { AuditoriaRegistros } from './views/admin/AuditoriaRegistros';
 import { Aseguradoras } from './views/doctor/Aseguradoras';
 import { ReporteAseguradoras } from './views/doctor/ReporteAseguradoras';
 import Mantenimiento from './views/admin/Mantenimiento'; 
-
+import { ConfiguracionClinica } from './views/admin/ConfiguracionClinica';
 function App() {
   return (
     <BrowserRouter>
@@ -37,7 +37,9 @@ function App() {
             <Route path="/admin/usuarios" element={<AdministrarUsuarios />} />
             <Route path="/admin/changePassword" element={<ChangePassword />} />
             <Route path="/admin/auditoria" element={<AuditoriaRegistros />} />
-            <Route path="/admin/mantenimiento" element={<Mantenimiento />} />          </Route>
+            <Route path="/admin/mantenimiento" element={<Mantenimiento />} />
+            <Route path="/admin/configuracion" element={<ConfiguracionClinica />} />
+          </Route>
         </Route>
 
         {/* --- RUTAS RECEPCIÓN --- */}

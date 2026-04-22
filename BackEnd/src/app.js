@@ -11,7 +11,7 @@ import appointmentRoutes from "./routes/appointmentRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
 import insurerRoutes from "./routes/insurerRoutes.js";
 import mantenimientoRoutes from './routes/mantenimientoroutes.js';
-
+import settingsRoutes from "./routes/settingsRoutes.js";
 const app = express();
 
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
@@ -25,14 +25,14 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(fileUpload({
     createParentPath: true
 }));
 
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
-app.use(express.json());
 app.use("/api/patients", patientRoutes);
 app.use("/api/preclinical", preclinicalRoutes);
 app.use("/api/consultations", consultationRoutes);
@@ -40,6 +40,7 @@ app.use("/api/appointments", appointmentRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/insurers", insurerRoutes);
 app.use('/api/admin', mantenimientoRoutes);
+app.use("/api/settings", settingsRoutes);
 app.get("/status", (req, res) => {
     res.json({
         status: "ok",

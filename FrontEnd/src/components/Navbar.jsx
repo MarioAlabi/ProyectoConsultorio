@@ -2,7 +2,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { LogoutButton } from './LogoutButton';
 import { authClient } from '../lib/auth-client';
 import { ROLES } from '../lib/constants/roles';
-import logoClinica from '../assets/logo.png';
+import { useSettings } from '../hooks/useSettings';
+
 import './Navbar.css';
 
 const MENU_CONFIG = {
@@ -24,6 +25,7 @@ const MENU_CONFIG = {
   [ROLES.ADMIN]: [
     { label: 'Dashboard', path: '/admin' },
     { label: 'Administrar Usuarios', path: '/admin/usuarios' },
+    { label: 'Configuración', path: '/admin/configuracion' },
     { label: 'Auditoria', path: '/admin/auditoria' },
     { label: 'Mantenimiento', path: '/admin/mantenimiento' },
     { label: 'Cambiar contrasena', path: '/admin/changePassword'},
@@ -33,6 +35,7 @@ const MENU_CONFIG = {
 export const Navbar = () => {
   const location = useLocation();
   const { data: session } = authClient.useSession();
+  const { data: settings, isLoading } = useSettings();
 
   const role = session?.user?.role ?? '';
   const userName = session?.user?.name ?? 'Usuario';
@@ -40,8 +43,28 @@ export const Navbar = () => {
 
   return (
     <nav className="navbar-container">
-      <div className="navbar-brand">
-        <img src={logoClinica} alt="Clinica Esperanza de Vida" className="navbar-logo" />
+      <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {settings?.logoUrl ? (
+          <img 
+            src={settings.logoUrl} 
+            alt="Logo Clínica" 
+            className="navbar-logo" 
+            style={{ height: '40px', width: 'auto', objectFit: 'contain' }} 
+          />
+        ) : (
+          <div style={{ 
+            height: '40px', width: '40px', backgroundColor: '#0d9488', 
+            borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontWeight: 'bold' 
+          }}>
+            {settings?.clinicName?.charAt(0) || 'C'}
+          </div>
+        )}
+        
+        {!isLoading && settings?.clinicName && (
+          <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1f2937' }}>
+            {settings.clinicName}
+          </span>
+        )}
       </div>
 
       <ul className="navbar-links">

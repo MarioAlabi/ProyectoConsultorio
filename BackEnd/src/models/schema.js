@@ -181,6 +181,7 @@ export const appointments = mysqlTable("appointments", {
 export const clinicSettings = mysqlTable("clinic_settings", {
     id: int("id").primaryKey(), 
     clinicName: varchar("clinic_name", { length: 255 }).notNull(),
+    address: varchar("address", { length: 100 }),
     logoUrl: longtext("logo_url"), 
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
