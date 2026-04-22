@@ -69,3 +69,29 @@ export const useDoctorDashboard = (date) => {
     refetchInterval: 8000,
   });
 };
+export const useUpdatePreclinical = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }) => {
+      const res = await api.patch(`/preclinical/${id}/status`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["preclinical"] });
+      toast.success("Registro pre-clínico actualizado correctamente.");
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Error al actualizar registro.");
+    },
+  });
+};
+export const usePreclinicalByPatient = (patientId) => {
+  return useQuery({
+    queryKey: ["preclinical", "patient", patientId],
+    queryFn: async () => {
+      const res = await api.get(`/preclinical/patient/${patientId}`);
+      return res.data?.data || [];
+    },
+    enabled: !!patientId, 
+  });
+};

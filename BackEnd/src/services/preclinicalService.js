@@ -12,11 +12,7 @@ const normalizeNullable = (value) => {
 };
 
 export const createPreclinical = async (data, user) => {
-  if (!data?.motivo || String(data.motivo).trim().length === 0) {
-    const error = new Error("El motivo de atención es obligatorio.");
-    error.status = 400;
-    throw error;
-  }
+  
 
   if (!data?.patientId) {
     const error = new Error("patientId es obligatorio.");
