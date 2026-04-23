@@ -1080,6 +1080,7 @@ export const ConsultaMedica = () => {
         doctor={session?.user}
         patient={patientProfile}
         diagnosis={watch("diagnosis")}
+        motivo={data?.motivo}
       />
     </div>
   );

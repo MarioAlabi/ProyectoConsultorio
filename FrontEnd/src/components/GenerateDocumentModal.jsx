@@ -50,6 +50,7 @@ export const GenerateDocumentModal = ({
   doctor,
   patient,
   diagnosis,
+  motivo,
 }) => {
   const { data: templates = [], isLoading } = useDocumentTemplates({ type });
   const generateMutation = useGenerateDocument();
@@ -84,9 +85,10 @@ export const GenerateDocumentModal = ({
       "clinica.nombre": clinicSettings?.clinicName || "",
       "clinica.direccion": clinicSettings?.address || "",
       "consulta.diagnostico": diagnosis || "",
+      "consulta.motivo": motivo || "",
       "fecha.hoy": today,
     };
-  }, [patient, patientName, doctor, clinicSettings, diagnosis]);
+  }, [patient, patientName, doctor, clinicSettings, diagnosis, motivo]);
 
   const extraFields = useMemo(() => {
     if (!selectedTemplate?.placeholders) return [];
@@ -160,12 +162,20 @@ export const GenerateDocumentModal = ({
       return toast.error(`Complete los campos: ${missing.join(", ")}`);
     }
 
+    const payloadExtras = { ...extras };
+    if (diagnosis && !payloadExtras["consulta.diagnostico"]) {
+      payloadExtras["consulta.diagnostico"] = diagnosis;
+    }
+    if (motivo && !payloadExtras["consulta.motivo"]) {
+      payloadExtras["consulta.motivo"] = motivo;
+    }
+
     generateMutation.mutate(
       {
         templateId: selectedTemplate.id,
         patientId,
         consultationId: consultationId || null,
-        extras,
+        extras: payloadExtras,
       },
       {
         onSuccess: (doc) => {
