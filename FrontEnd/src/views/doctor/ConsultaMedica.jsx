@@ -16,6 +16,12 @@ import { Modal } from "../../components/Modal";
 import { ClinicalHistoryTimeline } from "../../components/clinical-history/ClinicalHistoryTimeline";
 import { GenerateDocumentModal } from "../../components/GenerateDocumentModal";
 import { PrescriptionPreviewModal } from "../../components/PrescriptionPreviewModal";
+import {
+  useSuggestIcd10,
+  useDraftAnamnesis,
+  useCheckPrescription,
+  useExtractHistory,
+} from "../../hooks/useAIClinical";
 import { calcularEdad, clasificarIMC } from "../../lib/utils";
 
 const toNull = (v) => (v === "" || v === undefined ? null : v);
@@ -157,6 +163,17 @@ export const ConsultaMedica = () => {
 
   const [prescriptionPreview, setPrescriptionPreview] = useState({ open: false, html: "" });
   const [docModal, setDocModal] = useState({ open: false, type: null });
+
+  // Estado de integraciones IA.
+  const [icd10Suggestion, setIcd10Suggestion] = useState(null);
+  const [diagnosisCode, setDiagnosisCode] = useState(null); // { code, name } confirmado por el médico
+  const [rxSafetyCheck, setRxSafetyCheck] = useState(null);
+
+  const suggestIcd10Mutation = useSuggestIcd10();
+  const draftAnamnesisMutation = useDraftAnamnesis();
+  const checkPrescriptionMutation = useCheckPrescription();
+  const extractHistoryMutation = useExtractHistory();
+  const [structuredHistory, setStructuredHistory] = useState(null);
 
   const { register, watch, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(consultationSchema),
@@ -375,6 +392,9 @@ export const ConsultaMedica = () => {
       bmi: bmi ? String(bmi) : null,
       insurerId: formData.billingType === "insurance" ? formData.insurerId : undefined,
       agreedAmount: formData.billingType === "insurance" ? formData.agreedAmount : undefined,
+      // Código CIE-10 confirmado por el médico (HU-07 + analítica).
+      diagnosisCode: diagnosisCode?.code || null,
+      diagnosisCodeName: diagnosisCode?.name || null,
       medicamentos: medicamentosPreparados,
     };
 
@@ -579,39 +599,108 @@ export const ConsultaMedica = () => {
                 }}
               >
                 <strong style={{ fontSize: "0.9rem", color: "var(--fg-primary)" }}>Antecedentes</strong>
-                {!isEditingAntecedents ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingAntecedents(true)}
-                    style={{
-                      color: "var(--brand)",
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      fontSize: "0.85rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Editar
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSaveAntecedents}
-                    disabled={updatePatientMutation.isPending}
-                    style={{
-                      color: "var(--accent-forest)",
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      fontSize: "0.85rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {updatePatientMutation.isPending ? "Guardando…" : "Guardar"}
-                  </button>
-                )}
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  {!isEditingAntecedents && (tempPersonalHistory || tempFamilyHistory) && (
+                    <button
+                      type="button"
+                      disabled={extractHistoryMutation.isPending}
+                      onClick={() => {
+                        const combined = [tempPersonalHistory, tempFamilyHistory].filter(Boolean).join(". ");
+                        extractHistoryMutation.mutate(combined, {
+                          onSuccess: (result) => {
+                            setStructuredHistory(result);
+                            toast.success("Antecedentes estructurados.");
+                          },
+                        });
+                      }}
+                      style={{
+                        color: "var(--accent-plum)",
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      <i className="ri-sparkling-2-line"></i>{" "}
+                      {extractHistoryMutation.isPending ? "Analizando…" : "Estructurar IA"}
+                    </button>
+                  )}
+                  {!isEditingAntecedents ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingAntecedents(true)}
+                      style={{
+                        color: "var(--brand)",
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Editar
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSaveAntecedents}
+                      disabled={updatePatientMutation.isPending}
+                      style={{
+                        color: "var(--accent-forest)",
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {updatePatientMutation.isPending ? "Guardando…" : "Guardar"}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {structuredHistory && !isEditingAntecedents && (
+                <div
+                  style={{
+                    marginBottom: "0.75rem",
+                    padding: "0.65rem 0.8rem",
+                    background: "var(--accent-plum-soft)",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "0.8rem",
+                    color: "var(--fg-primary)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.3rem",
+                  }}
+                >
+                  {structuredHistory.allergies?.length > 0 && (
+                    <div>
+                      <strong style={{ color: "var(--accent-coral)" }}>Alergias:</strong>{" "}
+                      {structuredHistory.allergies.join(", ")}
+                    </div>
+                  )}
+                  {structuredHistory.chronicConditions?.length > 0 && (
+                    <div>
+                      <strong style={{ color: "var(--accent-ochre)" }}>Crónicas:</strong>{" "}
+                      {structuredHistory.chronicConditions.join(", ")}
+                    </div>
+                  )}
+                  {structuredHistory.surgeries?.length > 0 && (
+                    <div>
+                      <strong>Cirugías:</strong>{" "}
+                      {structuredHistory.surgeries.map((s) => `${s.name}${s.year ? ` (${s.year})` : ""}`).join(", ")}
+                    </div>
+                  )}
+                  {structuredHistory.currentMedications?.length > 0 && (
+                    <div>
+                      <strong>Medicación actual:</strong>{" "}
+                      {structuredHistory.currentMedications.join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {isEditingAntecedents ? (
                 <>
@@ -654,19 +743,192 @@ export const ConsultaMedica = () => {
               <h2 className="card-heading">Consulta médica</h2>
               <div style={{ display: "grid", gap: "1rem", marginTop: "0.75rem" }}>
                 <div className="form-group">
-                  <label className="form-label">Anamnesis / historia de enfermedad actual *</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label className="form-label">Anamnesis / historia de enfermedad actual *</label>
+                    <button
+                      type="button"
+                      className="btn btn-ai btn-sm"
+                      disabled={draftAnamnesisMutation.isPending}
+                      onClick={() => {
+                        draftAnamnesisMutation.mutate(
+                          {
+                            motivo: data?.motivo,
+                            edad,
+                            genero: isMale ? "male" : "female",
+                            signosVitales: {
+                              bloodPressure: currentBp,
+                              temperature: currentTemp,
+                              heartRate: currentHr,
+                              oxygenSaturation: currentO2,
+                              weight: currentWeight,
+                              height: currentHeight,
+                              bmi,
+                            },
+                            antecedentes: {
+                              personal: tempPersonalHistory,
+                              familiares: tempFamilyHistory,
+                            },
+                          },
+                          {
+                            onSuccess: (result) => {
+                              const existing = watch("anamnesis") || "";
+                              const newText = existing.trim()
+                                ? `${existing}\n\n[Borrador IA]\n${result.draft}`
+                                : result.draft;
+                              setValue("anamnesis", newText, { shouldValidate: true });
+                              toast.success("Borrador de anamnesis generado. Revisa y edita.");
+                            },
+                          }
+                        );
+                      }}
+                    >
+                      <i className="ri-sparkling-2-line"></i>
+                      {draftAnamnesisMutation.isPending ? "Generando…" : "Borrador con IA"}
+                    </button>
+                  </div>
                   <textarea className="form-input" rows={4} {...register("anamnesis")} />
                   {errors.anamnesis && <span className="field-error">{errors.anamnesis.message}</span>}
+                  {draftAnamnesisMutation.data?.suggestedQuestions?.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: "0.5rem",
+                        padding: "0.6rem 0.8rem",
+                        background: "var(--accent-plum-soft)",
+                        borderRadius: "var(--radius-md)",
+                        fontSize: "0.82rem",
+                        color: "var(--accent-plum)",
+                      }}
+                    >
+                      <strong>Preguntas sugeridas:</strong>
+                      <ul style={{ margin: "0.3rem 0 0 1rem", padding: 0 }}>
+                        {draftAnamnesisMutation.data.suggestedQuestions.map((q, i) => (
+                          <li key={i}>{q}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
+
                 <div className="form-group">
                   <label className="form-label">Examen físico</label>
                   <textarea className="form-input" rows={3} {...register("physicalExam")} />
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Diagnóstico *</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label className="form-label">Diagnóstico *</label>
+                    <button
+                      type="button"
+                      className="btn btn-ai btn-sm"
+                      disabled={suggestIcd10Mutation.isPending}
+                      onClick={() => {
+                        const dxText = watch("diagnosis");
+                        if (!dxText || dxText.trim().length < 2) {
+                          toast.error("Escribe primero el diagnóstico.");
+                          return;
+                        }
+                        suggestIcd10Mutation.mutate(dxText, {
+                          onSuccess: (result) => {
+                            setIcd10Suggestion(result);
+                            toast.success("Sugerencia CIE-10 lista.");
+                          },
+                        });
+                      }}
+                    >
+                      <i className="ri-sparkling-2-line"></i>
+                      {suggestIcd10Mutation.isPending ? "Analizando…" : "Sugerir CIE-10"}
+                    </button>
+                  </div>
                   <textarea className="form-input" rows={2} {...register("diagnosis")} />
                   {errors.diagnosis && <span className="field-error">{errors.diagnosis.message}</span>}
+
+                  {icd10Suggestion && (
+                    <div
+                      style={{
+                        marginTop: "0.6rem",
+                        padding: "0.75rem 0.9rem",
+                        background: diagnosisCode?.code === icd10Suggestion.code
+                          ? "var(--accent-forest-soft)"
+                          : "var(--accent-plum-soft)",
+                        borderRadius: "var(--radius-md)",
+                        border: `1px solid ${diagnosisCode?.code === icd10Suggestion.code ? "var(--accent-forest)" : "var(--accent-plum-soft)"}`,
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+                        <div>
+                          <div style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-muted)" }}>
+                            Sugerencia CIE-10 · confianza {(icd10Suggestion.confidence * 100).toFixed(0)}%
+                          </div>
+                          <div style={{ marginTop: "0.25rem", fontWeight: 600, color: "var(--fg-primary)" }}>
+                            <span style={{ fontFamily: "var(--font-mono)" }}>{icd10Suggestion.code}</span>
+                            {" — "}
+                            {icd10Suggestion.canonicalName}
+                          </div>
+                          {icd10Suggestion.alternatives?.length > 0 && (
+                            <div style={{ marginTop: "0.4rem", fontSize: "0.8rem", color: "var(--fg-muted)" }}>
+                              Alternativas: {icd10Suggestion.alternatives.map((a) => `${a.code} ${a.canonicalName}`).join(" · ")}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+                          {diagnosisCode?.code === icd10Suggestion.code ? (
+                            <span className="badge badge-success badge-dot">Aceptada</span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                onClick={() => {
+                                  setDiagnosisCode({ code: icd10Suggestion.code, name: icd10Suggestion.canonicalName });
+                                  toast.success(`Código ${icd10Suggestion.code} aceptado.`);
+                                }}
+                              >
+                                <i className="ri-check-line"></i> Aceptar
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setIcd10Suggestion(null)}
+                              >
+                                Descartar
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {diagnosisCode && !icd10Suggestion && (
+                    <div
+                      style={{
+                        marginTop: "0.5rem",
+                        padding: "0.5rem 0.75rem",
+                        background: "var(--accent-forest-soft)",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "0.82rem",
+                        color: "var(--accent-forest)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <span>
+                        <strong style={{ fontFamily: "var(--font-mono)" }}>{diagnosisCode.code}</strong>
+                        {" — "}{diagnosisCode.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDiagnosisCode(null)}
+                        style={{ background: "none", border: "none", color: "var(--accent-forest)", cursor: "pointer" }}
+                        aria-label="Quitar código"
+                      >
+                        <i className="ri-close-line"></i>
+                      </button>
+                    </div>
+                  )}
                 </div>
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                   <div className="form-group">
                     <label className="form-label">Resultados de laboratorio</label>
@@ -765,6 +1027,38 @@ export const ConsultaMedica = () => {
                   <button type="button" onClick={() => openDocumentModal("incapacidad")} className="btn btn-secondary btn-sm">
                     <i className="ri-health-book-line"></i> Incapacidad
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-ai btn-sm"
+                    disabled={checkPrescriptionMutation.isPending || medicamentos.length === 0}
+                    onClick={() => {
+                      checkPrescriptionMutation.mutate(
+                        {
+                          medications: medicamentos,
+                          patient: {
+                            age: edad,
+                            gender: isMale ? "male" : "female",
+                            isMinor: !!patientProfile?.isMinor,
+                            personalHistory: tempPersonalHistory,
+                            familyHistory: tempFamilyHistory,
+                          },
+                        },
+                        {
+                          onSuccess: (result) => {
+                            setRxSafetyCheck(result);
+                            if (result.allClear) {
+                              toast.success("Receta revisada: sin alertas.");
+                            } else {
+                              toast(`Receta revisada: ${result.warnings.length} alerta(s).`, { icon: "⚠️" });
+                            }
+                          },
+                        }
+                      );
+                    }}
+                  >
+                    <i className="ri-sparkling-2-line"></i>
+                    {checkPrescriptionMutation.isPending ? "Revisando…" : "Revisar con IA"}
+                  </button>
                   <button type="button" onClick={handlePreviewPrescription} className="btn btn-secondary btn-sm">
                     <i className="ri-eye-line"></i> Previsualizar
                   </button>
@@ -773,6 +1067,56 @@ export const ConsultaMedica = () => {
                   </button>
                 </div>
               </div>
+
+              {rxSafetyCheck && (
+                <div
+                  style={{
+                    marginBottom: "1rem",
+                    padding: "0.9rem 1.1rem",
+                    borderRadius: "var(--radius-md)",
+                    background: rxSafetyCheck.allClear ? "var(--accent-forest-soft)" : "var(--accent-coral-soft)",
+                    border: `1px solid ${rxSafetyCheck.allClear ? "var(--accent-forest)" : "var(--accent-coral)"}`,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: rxSafetyCheck.warnings?.length ? "0.5rem" : 0 }}>
+                    <strong style={{ color: rxSafetyCheck.allClear ? "var(--accent-forest)" : "var(--accent-coral)" }}>
+                      <i className={rxSafetyCheck.allClear ? "ri-shield-check-line" : "ri-alert-line"}></i>{" "}
+                      {rxSafetyCheck.allClear
+                        ? "IA: no detectó alertas en esta receta"
+                        : `IA detectó ${rxSafetyCheck.warnings.length} alerta(s)`}
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => setRxSafetyCheck(null)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-muted)" }}
+                      aria-label="Cerrar alerta"
+                    >
+                      <i className="ri-close-line"></i>
+                    </button>
+                  </div>
+                  {rxSafetyCheck.warnings?.map((w, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        marginTop: "0.4rem",
+                        padding: "0.5rem 0.7rem",
+                        background: "var(--bg-surface)",
+                        borderRadius: "var(--radius-sm)",
+                        borderLeft: `3px solid ${
+                          w.severity === "high" ? "var(--accent-coral)"
+                            : w.severity === "medium" ? "var(--accent-ochre)"
+                            : "var(--accent-slate)"
+                        }`,
+                        fontSize: "0.88rem",
+                        color: "var(--fg-primary)",
+                      }}
+                    >
+                      {w.medication && <strong>{w.medication}: </strong>}
+                      {w.message}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {medicamentos.length === 0 ? (
                 <div
@@ -1001,7 +1345,12 @@ export const ConsultaMedica = () => {
         title={`Historial clínico — ${patientName}`}
         size="xl"
       >
-        <ClinicalHistoryTimeline history={historialClinico} isLoading={historialLoading} isError={historialError} />
+        <ClinicalHistoryTimeline
+          history={historialClinico}
+          isLoading={historialLoading}
+          isError={historialError}
+          patientId={patientId}
+        />
       </Modal>
 
       <PrescriptionPreviewModal

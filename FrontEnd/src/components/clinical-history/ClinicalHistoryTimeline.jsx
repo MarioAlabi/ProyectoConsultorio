@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatDateTime, getStatusBadge } from "../../lib/utils";
 import { getClinicalHistoryViewModel } from "./clinicalHistoryViewModel";
+import { usePatientAISummary } from "../../hooks/useAIClinical";
 
 const S = {
   wrapper: { display: "flex", flexDirection: "column", gap: "1rem" },
@@ -259,7 +260,7 @@ const S = {
   },
 };
 
-export const ClinicalHistoryTimeline = ({ history, isLoading, isError = false }) => {
+export const ClinicalHistoryTimeline = ({ history, isLoading, isError = false, patientId = null }) => {
   const viewModel = getClinicalHistoryViewModel(history);
   const items = viewModel.items;
 
@@ -293,6 +294,9 @@ export const ClinicalHistoryTimeline = ({ history, isLoading, isError = false })
     setExpandedItems(new Set());
   };
 
+  const [showAISummary, setShowAISummary] = useState(false);
+  const aiSummary = usePatientAISummary(patientId, showAISummary);
+
   if (isLoading) return <p style={S.loading}>Cargando historial clínico…</p>;
   if (isError) return <div style={S.error}>No se pudo cargar el historial clínico.</div>;
 
@@ -303,8 +307,96 @@ export const ClinicalHistoryTimeline = ({ history, isLoading, isError = false })
           <h3 style={S.introTitle}>Historial clínico</h3>
           <p style={S.introText}>Consultas previas en los últimos {viewModel.rangeYears} años.</p>
         </div>
-        <span className="badge badge-brand">Solo lectura</span>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {patientId && !viewModel.isEmpty && (
+            <button
+              type="button"
+              className="btn btn-ai btn-sm"
+              onClick={() => setShowAISummary(true)}
+              disabled={aiSummary.isFetching}
+            >
+              <i className="ri-sparkling-2-line"></i>
+              {aiSummary.isFetching ? "Generando…" : "Resumen IA"}
+            </button>
+          )}
+          <span className="badge badge-brand">Solo lectura</span>
+        </div>
       </div>
+
+      {showAISummary && aiSummary.data && (
+        <div
+          style={{
+            padding: "1rem 1.15rem",
+            background: "var(--accent-plum-soft)",
+            border: "1px solid var(--accent-plum)",
+            borderRadius: "var(--radius-lg)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--accent-plum)",
+                  marginBottom: "0.4rem",
+                }}
+              >
+                <i className="ri-sparkling-2-line"></i> Resumen generado por IA
+              </div>
+              <p style={{ margin: 0, color: "var(--fg-primary)", lineHeight: 1.55 }}>
+                {aiSummary.data.summary}
+              </p>
+              {aiSummary.data.flags?.length > 0 && (
+                <div style={{ marginTop: "0.8rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  {aiSummary.data.flags.map((f, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        padding: "0.45rem 0.7rem",
+                        background: "var(--bg-surface)",
+                        borderRadius: "var(--radius-sm)",
+                        borderLeft: `3px solid ${
+                          f.severity === "critical" ? "var(--accent-coral)"
+                            : f.severity === "warning" ? "var(--accent-ochre)"
+                            : "var(--accent-slate)"
+                        }`,
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      {f.message}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAISummary(false)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-muted)" }}
+              aria-label="Cerrar resumen"
+            >
+              <i className="ri-close-line"></i>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showAISummary && aiSummary.isError && (
+        <div
+          style={{
+            padding: "0.8rem 1rem",
+            background: "var(--accent-coral-soft)",
+            borderRadius: "var(--radius-md)",
+            color: "var(--accent-coral)",
+            fontSize: "0.88rem",
+          }}
+        >
+          No se pudo generar el resumen IA. Intenta de nuevo.
+        </div>
+      )}
 
       {!viewModel.isEmpty && items.length > 1 && (
         <div style={S.controlsWrap}>

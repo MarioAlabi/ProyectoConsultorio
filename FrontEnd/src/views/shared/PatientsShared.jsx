@@ -494,7 +494,12 @@ export const PatientsShared = () => {
         title={`Historial Clínico${patientSelectedForHistory ? ` - ${patientSelectedForHistory.fullName}` : ""}`}
         size="xl"
       >
-        <ClinicalHistoryTimeline history={historialClinico} isLoading={historialLoading} isError={historialError} />
+        <ClinicalHistoryTimeline
+          history={historialClinico}
+          isLoading={historialLoading}
+          isError={historialError}
+          patientId={historialPatientId}
+        />
       </Modal>
     </div>
   );
