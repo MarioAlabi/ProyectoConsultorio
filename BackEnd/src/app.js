@@ -13,6 +13,9 @@ import insurerRoutes from "./routes/insurerRoutes.js";
 import mantenimientoRoutes from './routes/mantenimientoroutes.js';
 import settingsRoutes from "./routes/settingsRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
+import documentTemplateRoutes from "./routes/documentTemplateRoutes.js";
+import generatedDocumentRoutes from "./routes/generatedDocumentRoutes.js";
+
 const app = express();
 
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
@@ -43,6 +46,8 @@ app.use("/api/insurers", insurerRoutes);
 app.use('/api/admin', mantenimientoRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/document-templates", documentTemplateRoutes);
+app.use("/api/generated-documents", generatedDocumentRoutes);
 
 app.get("/status", (req, res) => {
     res.json({

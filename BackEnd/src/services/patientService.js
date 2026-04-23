@@ -41,7 +41,8 @@ export const registerPatient = async (data) => {
         isMinor: data.isMinor ? 1 : 0,
         responsibleName: data.isMinor ? data.responsibleName : null,
         personalHistory: data.personalHistory || null,
-        familyHistory: data.familyHistory || null, 
+        familyHistory: data.familyHistory || null,
+        insurerId: data.insurerId && String(data.insurerId).trim().length > 0 ? data.insurerId : null,
         status: "active"
     });
     return { id: newId, fileNumber };
@@ -103,6 +104,11 @@ export const updatePatient = async (id, updateData) => {
         responsibleName: isMinor ? (updateData.responsibleName || currentPatient.responsibleName) : null,
         updatedAt: new Date()
     };
+    // Normaliza insurerId: cadena vacía -> null (desvincular aseguradora).
+    if (updateData.insurerId !== undefined) {
+        const trimmed = typeof updateData.insurerId === "string" ? updateData.insurerId.trim() : updateData.insurerId;
+        finalUpdate.insurerId = trimmed && trimmed.length > 0 ? trimmed : null;
+    }
     delete finalUpdate.dateOfBirth;
     await db.update(patients)
         .set(finalUpdate)

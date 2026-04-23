@@ -5,8 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import { authClient } from "../../lib/auth-client";
 import { changePasswordSchema } from "../../lib/validations/userSchema";
-import logoClinica from "../../assets/logo.png";
-import "./Shared.css";
 
 export const ChangePassword = () => {
   const navigate = useNavigate();
@@ -26,35 +24,89 @@ export const ChangePassword = () => {
         revokeOtherSessions: true,
       });
       if (error) {
-        setError("root", { message: error.message || "Error al actualizar contrasena." });
-        toast.error(error.message || "Error al actualizar contrasena.");
+        setError("root", { message: error.message || "Error al actualizar la contraseña." });
+        toast.error(error.message || "Error al actualizar la contraseña.");
         return;
       }
       setSuccess(true);
-      toast.success("Contrasena actualizada correctamente.");
-      setTimeout(() => navigate(-1), 3000);
+      toast.success("Contraseña actualizada correctamente.");
+      setTimeout(() => navigate(-1), 2200);
     });
   };
 
   return (
-    <div className="landing-container" style={{ minHeight: "calc(100vh - 80px)" }}>
-      <div className="landing-card" style={{ maxWidth: "450px", width: "90%", padding: "2.5rem", gap: "1.2rem", boxSizing: "border-box", marginTop: "2rem" }}>
-        <img src={logoClinica} alt="Logo" className="landing-logo" style={{ width: "130px", height: "auto" }} />
-        <div style={{ textAlign: "center", width: "100%" }}>
-          <h2 className="landing-title" style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>{success ? "Exito" : "Seguridad"}</h2>
-          <p className="landing-description" style={{ fontSize: "0.95rem" }}>{success ? "Tu contrasena ha sido actualizada correctamente." : "Ingresa tus datos para actualizar tu clave de acceso."}</p>
+    <div className="page" style={{ maxWidth: "560px" }}>
+      <header className="page-header">
+        <div className="page-header__title">
+          <span className="page-header__eyebrow">Seguridad</span>
+          <h1 className="page-header__heading">
+            {success ? "Contraseña actualizada" : "Cambiar contraseña"}
+          </h1>
+          <p className="page-header__sub">
+            {success
+              ? "Tu contraseña fue actualizada correctamente. Serás redirigido en unos segundos."
+              : "Actualiza tu contraseña para mantener tu cuenta segura. Las demás sesiones activas se cerrarán automáticamente."}
+          </p>
         </div>
-        {!success && (
-          <form className="login-form" onSubmit={handleSubmit(onSubmit)} style={{ width: "100%" }}>
-            <div className="form-group"><label className="form-label">Contrasena Actual</label><input type="password" className="form-input" placeholder="........" {...register("currentPassword")} />{errors.currentPassword && <span style={{ color: "#ef4444", fontSize: "0.85rem" }}>{errors.currentPassword.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Nueva Contrasena</label><input type="password" className="form-input" placeholder="Minimo 6 caracteres" {...register("newPassword")} />{errors.newPassword && <span style={{ color: "#ef4444", fontSize: "0.85rem" }}>{errors.newPassword.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Confirmar Nueva Contrasena</label><input type="password" className="form-input" placeholder="........" {...register("confirmPassword")} />{errors.confirmPassword && <span style={{ color: "#ef4444", fontSize: "0.85rem" }}>{errors.confirmPassword.message}</span>}</div>
-            {errors.root && <div style={{ color: "#ef4444", fontSize: "0.85rem", fontWeight: "bold", textAlign: "center" }}>{errors.root.message}</div>}
-            <button type="submit" className="submit-btn" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1, marginTop: "1rem" }}>{isPending ? "Cambiando..." : "Actualizar Contrasena"}</button>
-          </form>
-        )}
-        <button onClick={() => navigate(-1)} className="forgot-password" style={{ fontSize: "0.85rem", background: "none", border: "none", cursor: "pointer", color: "#666", marginTop: "10px" }}>Cancelar y volver</button>
-      </div>
+      </header>
+
+      {!success && (
+        <form onSubmit={handleSubmit(onSubmit)} className="card-elevated" style={{ padding: "1.75rem" }}>
+          <div style={{ display: "grid", gap: "1.1rem" }}>
+            <div className="form-group">
+              <label className="form-label">Contraseña actual</label>
+              <input
+                type="password"
+                className="form-input"
+                placeholder="••••••••"
+                autoComplete="current-password"
+                {...register("currentPassword")}
+              />
+              {errors.currentPassword && <span className="field-error">{errors.currentPassword.message}</span>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Nueva contraseña</label>
+              <input
+                type="password"
+                className="form-input"
+                placeholder="Mínimo 6 caracteres"
+                autoComplete="new-password"
+                {...register("newPassword")}
+              />
+              {errors.newPassword && <span className="field-error">{errors.newPassword.message}</span>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Confirmar nueva contraseña</label>
+              <input
+                type="password"
+                className="form-input"
+                placeholder="••••••••"
+                autoComplete="new-password"
+                {...register("confirmPassword")}
+              />
+              {errors.confirmPassword && <span className="field-error">{errors.confirmPassword.message}</span>}
+            </div>
+
+            {errors.root && (
+              <div className="form-banner form-banner--error">
+                <i className="ri-error-warning-line"></i>
+                <span>{errors.root.message}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+              <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary">
+                Cancelar
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={isPending}>
+                {isPending ? "Cambiando…" : "Actualizar contraseña"}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
     </div>
   );
 };

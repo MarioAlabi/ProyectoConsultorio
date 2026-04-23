@@ -19,96 +19,223 @@ export const DashboardRecepcion = () => {
   const citasPresentes = citasHoy.filter((c) => c.status === "present").length;
   const ultimos5 = patients.slice(0, 5);
 
+  // Pacientes ya en la cola clínica del doctor (pre-clínica tomada).
+  // Se usa para decidir si "Llegó" ya tiene un siguiente paso o la recepción
+  // debe todavía pasar al paciente a la toma de signos vitales.
+  const patientsInClinicalQueue = new Set(
+    waitingList
+      .filter((w) => w.status === "waiting" || w.status === "in_consultation")
+      .map((w) => w.patientId)
+  );
+
   const loading = loadingPats || loadingWait || loadingCitas;
 
   const cambiarEstado = (id, nuevoEstado) => {
     statusMutation.mutate({ id, status: nuevoEstado });
   };
 
+  /**
+   * Envía al paciente de la cita hacia la toma de signos vitales (pre-clínica).
+   * Se reusa el mismo state-shape que la tabla de "Últimos pacientes" para que
+   * PreClinicaShared.jsx pueda pre-seleccionar al paciente sin búsqueda.
+   */
+  const irAPreclinica = (cita) => {
+    if (!cita?.patientId) return;
+    navigate("/reception/preclinica", {
+      state: {
+        paciente: {
+          id: cita.patientId,
+          fullName: cita.patientName,
+          patientName: cita.patientName,
+          fileNumber: cita.patientFileNumber || "",
+        },
+        redirectTo: "/reception",
+      },
+    });
+  };
+
+  const fechaLegible = new Date(hoy + "T12:00:00").toLocaleDateString("es-SV", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+
   return (
-    <div style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
-      <header style={{ marginBottom: "2.5rem" }}>
-        <h1 style={{ color: "#1f2937", fontSize: "2rem", margin: 0 }}>Recepcion y Admision</h1>
-        <p style={{ color: "#6b7280", marginTop: "0.5rem" }}>Panel de control de la Clinica Esperanza de Vida.</p>
+    <div className="page">
+      <header className="page-header">
+        <div className="page-header__title">
+          <span className="page-header__eyebrow">Recepción y admisión</span>
+          <h1 className="page-header__heading">Panel de recepción</h1>
+          <p className="page-header__sub">{fechaLegible}</p>
+        </div>
+        <div className="page-header__actions">
+          <button onClick={() => navigate("/reception/preclinica")} className="btn btn-secondary">
+            <i className="ri-heart-pulse-line"></i> Nueva pre-clínica
+          </button>
+          <button onClick={() => navigate("/reception/pacientes")} className="btn btn-primary">
+            <i className="ri-user-add-line"></i> Nuevo paciente
+          </button>
+        </div>
       </header>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem", marginBottom: "2.5rem" }}>
-        <StatCard title="Pacientes Totales" value={loading ? "..." : patients.length} sub="Registrados en el sistema" color="#0d9488" />
-        <StatCard title="Nuevos Hoy" value={loading ? "..." : nuevosHoy} sub="Ingresos del dia" color="#0ea5e9" />
-        <StatCard title="Citas Hoy" value={loading ? "..." : citasHoy.length} sub={`${citasProgramadas} programadas, ${citasPresentes} presentes`} color="#8b5cf6" />
-        <StatCard title="Pendientes Pre-clinica" value={loading ? "..." : pendientes} sub="En espera para consulta" color="#f59e0b" />
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: "1rem",
+          marginBottom: "2rem",
+        }}
+      >
+        <StatCard
+          icon="ri-group-line"
+          label="Pacientes totales"
+          value={loading ? "…" : patients.length}
+          meta="Registrados en el sistema"
+          accent="brand"
+        />
+        <StatCard
+          icon="ri-user-add-line"
+          label="Nuevos hoy"
+          value={loading ? "…" : nuevosHoy}
+          meta="Ingresos del día"
+          accent="slate"
+        />
+        <StatCard
+          icon="ri-calendar-check-line"
+          label="Citas de hoy"
+          value={loading ? "…" : citasHoy.length}
+          meta={`${citasProgramadas} programadas · ${citasPresentes} presentes`}
+          accent="plum"
+        />
+        <StatCard
+          icon="ri-heart-pulse-line"
+          label="Pre-clínica pendiente"
+          value={loading ? "…" : pendientes}
+          meta="En espera de consulta"
+          accent="ochre"
+        />
       </div>
 
-      {/* Acciones rapidas */}
-      <div style={{ marginBottom: "2.5rem" }}>
-        <h3 style={{ color: "#374151", marginBottom: "1rem" }}>Acciones Rapidas</h3>
-        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-          <ActionBtn label="Gestionar Expedientes" icon="ri-folder-line" onClick={() => navigate("/reception/pacientes")} />
-          <ActionBtn label="Ir a Pre-clinica" icon="ri-stethoscope-line" color="#0ea5e9" onClick={() => navigate("/reception/preclinica", { state: { redirectTo: "/reception" } })} />
-          <ActionBtn label="Ver Agenda Completa" icon="ri-calendar-line" color="#8b5cf6" onClick={() => navigate("/reception/agenda")} />
+      {/* Acciones rápidas */}
+      <section style={{ marginBottom: "2rem" }}>
+        <h2 className="section-divider">Acciones rápidas</h2>
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <QuickAction
+            icon="ri-folder-3-line"
+            title="Expedientes"
+            description="Gestionar pacientes"
+            onClick={() => navigate("/reception/pacientes")}
+          />
+          <QuickAction
+            icon="ri-heart-pulse-line"
+            title="Pre-clínica"
+            description="Tomar signos vitales"
+            onClick={() => navigate("/reception/preclinica", { state: { redirectTo: "/reception" } })}
+          />
+          <QuickAction
+            icon="ri-calendar-line"
+            title="Agenda"
+            description="Ver calendario completo"
+            onClick={() => navigate("/reception/agenda")}
+          />
         </div>
-      </div>
+      </section>
 
-      {/* Citas de Hoy */}
-      <div style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "1rem", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", marginBottom: "2rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.2rem" }}>
-          <h3 style={{ color: "#8b5cf6", margin: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <i className="ri-calendar-check-line"></i> Citas de Hoy
-          </h3>
-          <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>{hoy}</span>
-        </div>
+      {/* Citas de hoy */}
+      <section className="card-elevated" style={{ padding: 0, marginBottom: "1.5rem" }}>
+        <header
+          style={{
+            padding: "1.2rem 1.75rem",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}
+        >
+          <div>
+            <h2 className="card-heading" style={{ marginBottom: 0 }}>Citas de hoy</h2>
+            <p className="text-muted" style={{ fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
+              {loadingCitas ? "Cargando…" : `${citasHoy.length} ${citasHoy.length === 1 ? "cita" : "citas"} programadas`}
+            </p>
+          </div>
+          <span className="badge badge-plum">{hoy}</span>
+        </header>
 
         {loadingCitas ? (
-          <p style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>Cargando citas...</p>
+          <p style={{ textAlign: "center", padding: "2.5rem", color: "var(--fg-muted)" }}>Cargando citas…</p>
         ) : citasHoy.length === 0 ? (
-          <p style={{ textAlign: "center", padding: "2rem", color: "#9ca3af" }}>No hay citas programadas para hoy.</p>
+          <div style={{ padding: "2.5rem", textAlign: "center", color: "var(--fg-muted)" }}>
+            <i className="ri-calendar-close-line" style={{ fontSize: "1.8rem", opacity: 0.5, display: "block", marginBottom: "0.4rem" }}></i>
+            No hay citas programadas para hoy.
+          </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <table className="data-table">
               <thead>
-                <tr style={{ borderBottom: "1px solid #e5e7eb", color: "#6b7280", fontSize: "0.85rem" }}>
-                  <th style={{ padding: "0.8rem 1rem" }}>Hora</th>
-                  <th style={{ padding: "0.8rem 1rem" }}>Paciente</th>
-                  <th style={{ padding: "0.8rem 1rem" }}>Motivo</th>
-                  <th style={{ padding: "0.8rem 1rem" }}>Estado</th>
-                  <th style={{ padding: "0.8rem 1rem", textAlign: "right" }}>Accion</th>
+                <tr>
+                  <th style={{ width: "90px" }}>Hora</th>
+                  <th>Paciente</th>
+                  <th>Motivo</th>
+                  <th>Estado</th>
+                  <th style={{ textAlign: "right" }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {citasHoy.map((c) => {
                   const badge = getStatusBadge(c.status);
                   return (
-                    <tr key={c.id} style={{ borderBottom: "1px solid #f9fafb", opacity: c.status === "cancelled" ? 0.5 : 1 }}>
-                      <td style={{ padding: "0.8rem 1rem", fontWeight: 700, color: "#1f2937", fontSize: "1rem" }}>{c.time}</td>
-                      <td style={{ padding: "0.8rem 1rem", fontWeight: 500 }}>{c.patientName || "Paciente"}</td>
-                      <td style={{ padding: "0.8rem 1rem", color: "#6b7280", fontSize: "0.9rem" }}>{c.reason || "No especificado"}</td>
-                      <td style={{ padding: "0.8rem 1rem" }}>
-                        <span style={{ backgroundColor: badge.bg, color: badge.color, padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.78rem", fontWeight: 600 }}>
+                    <tr key={c.id} style={{ opacity: c.status === "cancelled" ? 0.5 : 1 }}>
+                      <td style={{ fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--fg-primary)" }}>{c.time}</td>
+                      <td style={{ fontWeight: 500, color: "var(--fg-primary)" }}>{c.patientName || "Paciente"}</td>
+                      <td style={{ fontSize: "0.88rem" }}>{c.reason || "No especificado"}</td>
+                      <td>
+                        <span
+                          className="badge"
+                          style={{ background: badge.bg, color: badge.color, border: "none" }}
+                        >
                           {badge.label}
                         </span>
                       </td>
-                      <td style={{ padding: "0.8rem 1rem", textAlign: "right" }}>
+                      <td style={{ textAlign: "right" }}>
                         {c.status === "scheduled" && (
-                          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                            <button onClick={() => cambiarEstado(c.id, "present")} className="doc-btn" style={{ color: "#0d9488", fontWeight: 600 }}>
-                              <i className="ri-check-line"></i> Llego
+                          <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
+                            <button onClick={() => cambiarEstado(c.id, "present")} className="btn btn-primary btn-sm">
+                              <i className="ri-check-line"></i> Llegó
                             </button>
-                            <button onClick={() => cambiarEstado(c.id, "cancelled")} className="doc-btn" style={{ color: "#ef4444" }}>
+                            <button onClick={() => cambiarEstado(c.id, "cancelled")} className="btn btn-danger btn-sm">
                               Cancelar
                             </button>
                           </div>
                         )}
                         {c.status === "present" && (
-                          <span style={{ color: "#166534", fontWeight: 600, fontSize: "0.85rem" }}>
-                            <i className="ri-user-received-line"></i> En recepcion
-                          </span>
+                          <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end", alignItems: "center" }}>
+                            {patientsInClinicalQueue.has(c.patientId) ? (
+                              <span
+                                className="badge badge-success"
+                                title="El paciente ya está en la cola del doctor"
+                              >
+                                <i className="ri-user-received-line"></i> En sala de espera
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => irAPreclinica(c)}
+                                className="btn btn-primary btn-sm"
+                                title="Pasar a la toma de signos vitales para habilitar la atención del doctor"
+                              >
+                                <i className="ri-heart-pulse-line"></i> Tomar signos
+                              </button>
+                            )}
+                          </div>
                         )}
                         {c.status === "done" && (
-                          <span style={{ color: "#6b7280", fontSize: "0.85rem" }}>Atendido</span>
+                          <span style={{ color: "var(--fg-muted)", fontSize: "0.85rem" }}>Atendido</span>
                         )}
                         {c.status === "cancelled" && (
-                          <span style={{ color: "#9ca3af", fontSize: "0.85rem", textDecoration: "line-through" }}>Cancelada</span>
+                          <span style={{ color: "var(--fg-subtle)", fontSize: "0.85rem", textDecoration: "line-through" }}>
+                            Cancelada
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -118,51 +245,129 @@ export const DashboardRecepcion = () => {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Ultimos pacientes */}
-      <div style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "1rem", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
-        <h3 style={{ color: "#0d9488", marginBottom: "1.2rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <i className="ri-group-line"></i> Ultimos Pacientes Registrados
-        </h3>
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid #e5e7eb", color: "#6b7280", fontSize: "0.9rem" }}>
-              <th style={{ padding: "1rem" }}>Paciente</th>
-              <th style={{ padding: "1rem" }}>Expediente</th>
-              <th style={{ padding: "1rem" }}>Tipo</th>
-              <th style={{ padding: "1rem", textAlign: "right" }}>Accion</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ultimos5.map((p) => (
-              <tr key={p.id} style={{ borderBottom: "1px solid #f9fafb" }}>
-                <td style={{ padding: "1rem", fontWeight: "500" }}>{p.fullName}</td>
-                <td style={{ padding: "1rem", color: "#6b7280" }}>{p.fileNumber}</td>
-                <td style={{ padding: "1rem" }}><span style={{ fontSize: "0.75rem", padding: "0.2rem 0.6rem", borderRadius: "1rem", backgroundColor: p.isMinor ? "#fef3c7" : "#dcfce7", color: p.isMinor ? "#92400e" : "#166534" }}>{p.isMinor ? "Menor" : "Adulto"}</span></td>
-                <td style={{ padding: "1rem", textAlign: "right" }}>
-                  <button onClick={() => navigate("/reception/preclinica", { state: { paciente: p, redirectTo: "/reception" } })} style={{ background: "none", border: "none", color: "#0ea5e9", cursor: "pointer", fontWeight: "bold" }}>Tomar Signos</button>
-                </td>
+      {/* Últimos pacientes */}
+      <section className="card-elevated" style={{ padding: 0 }}>
+        <header
+          style={{
+            padding: "1.2rem 1.75rem",
+            borderBottom: "1px solid var(--border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h2 className="card-heading" style={{ marginBottom: 0 }}>
+            Últimos pacientes registrados
+          </h2>
+          <button onClick={() => navigate("/reception/pacientes")} className="btn btn-ghost btn-sm">
+            Ver todos <i className="ri-arrow-right-line"></i>
+          </button>
+        </header>
+
+        <div style={{ overflowX: "auto" }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Expediente</th>
+                <th>Tipo</th>
+                <th style={{ textAlign: "right" }}>Acción</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {!loading && ultimos5.length === 0 && <p style={{ textAlign: "center", padding: "2rem", color: "#9ca3af" }}>No hay pacientes registrados.</p>}
-      </div>
+            </thead>
+            <tbody>
+              {ultimos5.map((p) => (
+                <tr key={p.id}>
+                  <td style={{ fontWeight: 600, color: "var(--fg-primary)" }}>{p.fullName}</td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--fg-muted)" }}>{p.fileNumber}</td>
+                  <td>
+                    <span className={`badge ${p.isMinor ? "badge-warning" : "badge-success"}`}>
+                      {p.isMinor ? "Menor" : "Adulto"}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button
+                      onClick={() => navigate("/reception/preclinica", { state: { paciente: p, redirectTo: "/reception" } })}
+                      className="btn btn-ghost btn-sm"
+                    >
+                      <i className="ri-heart-pulse-line"></i> Tomar signos
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!loading && ultimos5.length === 0 && (
+            <p style={{ textAlign: "center", padding: "2rem", color: "var(--fg-subtle)" }}>No hay pacientes registrados.</p>
+          )}
+        </div>
+      </section>
     </div>
   );
 };
 
-const StatCard = ({ title, value, sub, color }) => (
-  <div style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "1rem", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", borderLeft: `4px solid ${color}` }}>
-    <h3 style={{ color: "#6b7280", fontSize: "0.9rem", margin: "0 0 0.5rem 0", fontWeight: 500 }}>{title}</h3>
-    <p style={{ fontSize: "2.2rem", fontWeight: 800, margin: 0, color: "#111827" }}>{value}</p>
-    <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>{sub}</span>
+const StatCard = ({ icon, label, value, meta, accent = "brand" }) => (
+  <div className={`stat-card stat-card--${accent}`}>
+    <span className="stat-card__accent" />
+    <div className="stat-card__label">
+      {icon && <i className={icon}></i>}
+      <span>{label}</span>
+    </div>
+    <div className="stat-card__value">{value}</div>
+    {meta && <div className="stat-card__meta">{meta}</div>}
   </div>
 );
 
-const ActionBtn = ({ label, icon, onClick, color = "#0d9488" }) => (
-  <button onClick={onClick} style={{ backgroundColor: color, color: "white", border: "none", padding: "1rem 1.5rem", borderRadius: "0.8rem", fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px" }}>
-    <i className={icon}></i> {label}
+const QuickAction = ({ icon, title, description, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "0.9rem",
+      padding: "1rem 1.25rem",
+      background: "var(--bg-surface)",
+      border: "1px solid var(--border-subtle)",
+      borderRadius: "var(--radius-lg)",
+      color: "var(--fg-primary)",
+      cursor: "pointer",
+      transition: "all 200ms var(--ease-smooth)",
+      textAlign: "left",
+      minWidth: "220px",
+      flex: "1 1 220px",
+      font: "inherit",
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.borderColor = "var(--brand)";
+      e.currentTarget.style.transform = "translateY(-2px)";
+      e.currentTarget.style.boxShadow = "var(--shadow-md)";
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.borderColor = "var(--border-subtle)";
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.boxShadow = "none";
+    }}
+  >
+    <div
+      style={{
+        width: 42,
+        height: 42,
+        borderRadius: "var(--radius-md)",
+        background: "var(--brand-soft)",
+        color: "var(--brand)",
+        display: "grid",
+        placeItems: "center",
+        fontSize: "1.15rem",
+        flexShrink: 0,
+      }}
+    >
+      <i className={icon}></i>
+    </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+      <span style={{ fontWeight: 600, fontSize: "0.92rem", color: "var(--fg-primary)" }}>{title}</span>
+      <span style={{ fontSize: "0.78rem", color: "var(--fg-muted)" }}>{description}</span>
+    </div>
   </button>
 );

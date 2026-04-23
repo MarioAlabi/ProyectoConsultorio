@@ -1,56 +1,283 @@
-.navbar-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: #ffffff;
-  padding: 0.5rem 2rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border-bottom: 2px solid #0d9488; /* Detalle aqua en el borde inferior */
-  position: sticky;
+/* =========================================================================
+   Sidebar lateral vertical (reemplaza el navbar horizontal legacy)
+   ========================================================================= */
+
+.sidebar {
+  position: fixed;
   top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.1rem 1.25rem;
   z-index: 50;
 }
 
-.navbar-brand .navbar-logo {
-  height: 50px;
-  width: auto;
+.sidebar::before {
+  /* vertical ornamental rail */
+  content: "";
+  position: absolute;
+  top: 1.5rem;
+  bottom: 1.25rem;
+  left: 0;
+  width: 3px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--sage-200) 30%,
+    var(--sage-400) 60%,
+    transparent 100%
+  );
+  opacity: 0.5;
 }
 
-.navbar-links {
-  display: flex;
-  gap: 2rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.nav-item {
-  text-decoration: none;
-  color: #4b5563;
-  font-weight: 600;
-  font-size: 1rem;
-  padding: 0.5rem 0;
-  transition: color 0.2s;
-}
-
-.nav-item:hover, .nav-item.active {
-  color: #0d9488;
-  border-bottom: 2px solid #0d9488;
-}
-
-.navbar-user {
+.sidebar__brand {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
+  padding: 0.5rem 0.3rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 1rem;
 }
-
-.user-greeting {
+.sidebar__brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--sage-700);
+  color: var(--fg-on-brand);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
   font-weight: 600;
-  color: #374151;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sidebar__brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: white;
+}
+.sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.sidebar__brand-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.02rem;
+  color: var(--fg-primary);
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar__brand-tag {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  font-weight: 500;
 }
 
-/* Ajustamos un poco el botón de Logout para que encaje mejor en el nav */
-.navbar-logout {
-  padding: 0.5rem 1rem;
+/* Sección "Menú" con eyebrow */
+.sidebar__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  padding: 0.5rem 0.8rem 0.6rem;
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-md);
+  color: var(--fg-secondary);
+  font-weight: 500;
   font-size: 0.9rem;
+  text-decoration: none;
+  transition: background-color var(--t-fast) var(--ease-smooth),
+              color var(--t-fast) var(--ease-smooth);
+  letter-spacing: -0.005em;
+}
+.sidebar__link i {
+  font-size: 1.05rem;
+  color: var(--fg-muted);
+  flex-shrink: 0;
+  transition: color var(--t-fast) var(--ease-smooth);
+}
+.sidebar__link:hover {
+  background: var(--bg-surface-alt);
+  color: var(--fg-primary);
+}
+.sidebar__link:hover i {
+  color: var(--fg-secondary);
+}
+.sidebar__link.is-active {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.sidebar__link.is-active i {
+  color: var(--brand);
+}
+.sidebar__link.is-active::before {
+  content: "";
+  position: absolute;
+  left: -1.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--brand);
+  border-radius: var(--radius-full);
+}
+
+.sidebar__footer {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.9rem;
+  margin-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
+}
+.sidebar__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--sage-700);
+  color: var(--fg-on-brand);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.sidebar__user-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.sidebar__user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar__user-role {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  font-weight: 500;
+}
+
+/* Contenedor principal con margen izquierdo para el sidebar */
+.app-shell {
+  min-height: 100vh;
+  padding-left: var(--sidebar-width);
+  background: var(--bg-canvas);
+  position: relative;
+}
+
+.app-shell::before {
+  /* Tenue textura de papel en el canvas */
+  content: "";
+  position: fixed;
+  inset: 0 0 0 var(--sidebar-width);
+  pointer-events: none;
+  background-image:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(74, 134, 110, 0.04) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 90% 85%,
+      rgba(192, 138, 62, 0.035) 0%,
+      transparent 50%
+    );
+  z-index: 0;
+}
+
+.app-shell > main { position: relative; z-index: 1; }
+
+/* =========================================================================
+   Fallback para el Navbar horizontal legacy (si algún sitio aún lo usa)
+   ========================================================================= */
+
+.navbar-container {
+  display: none;
+}
+
+/* =========================================================================
+   Responsive mobile (≤ 900px): sidebar colapsa a topbar horizontal
+   ========================================================================= */
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 1rem 1rem 0.9rem;
+    flex-direction: column;
+  }
+  .sidebar::before { display: none; }
+  .sidebar__nav {
+    flex-direction: row;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.5rem;
+    gap: 0.35rem;
+  }
+  .sidebar__link {
+    flex-shrink: 0;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.82rem;
+  }
+  .sidebar__link.is-active::before { display: none; }
+  .sidebar__eyebrow { display: none; }
+  .sidebar__footer { flex-direction: row; align-items: center; }
+  .app-shell { padding-left: 0; }
+  .app-shell::before { inset: 0; }
 }

@@ -6,8 +6,18 @@ export const ProtectedRoute = ({ allowedRoles }) => {
 
   if (isPending) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#6b7280' }}>
-        Cargando...
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          color: 'var(--fg-muted)',
+          fontFamily: 'var(--font-body)',
+          background: 'var(--bg-canvas)',
+        }}
+      >
+        Cargando…
       </div>
     );
   }

@@ -1,31 +1,32 @@
 import { MONTH_NAMES } from "./calendarUtils";
 
-const S = {
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" },
-  title: { fontSize: "1.5rem", fontWeight: 800, color: "#1f2937", margin: 0 },
-  controls: { display: "flex", alignItems: "center", gap: "0.5rem" },
-  navGroup: { display: "inline-flex" },
-  navBtn: (pos) => ({
-    display: "inline-flex", alignItems: "center", justifyContent: "center",
-    border: "1px solid #e5e7eb", backgroundColor: "white", padding: "0.5rem 0.75rem",
-    fontSize: "0.875rem", fontWeight: 600, color: "#1f2937", cursor: "pointer",
-    borderRadius: pos === "left" ? "8px 0 0 8px" : pos === "right" ? "0 8px 8px 0" : "0",
-    marginLeft: pos !== "left" ? "-1px" : "0",
-  }),
-  todayBtn: {
-    display: "inline-flex", alignItems: "center", justifyContent: "center",
-    border: "1px solid #e5e7eb", backgroundColor: "#f9fafb", padding: "0.5rem 0.75rem",
-    fontSize: "0.875rem", fontWeight: 600, color: "#1f2937", cursor: "pointer", borderRadius: "8px",
-  },
-  viewBtn: (active) => ({
-    display: "inline-flex", alignItems: "center", justifyContent: "center",
-    border: "1px solid #e5e7eb", padding: "0.5rem 0.75rem",
-    fontSize: "0.875rem", fontWeight: 600, cursor: "pointer",
-    backgroundColor: active ? "#f0fdfa" : "white",
-    color: active ? "#0d9488" : "#1f2937",
-    borderColor: active ? "#0d9488" : "#e5e7eb",
-  }),
+const segmentedGroup = {
+  display: "inline-flex",
+  borderRadius: "var(--radius-md)",
+  overflow: "hidden",
+  border: "1px solid var(--border-default)",
 };
+
+const navBtn = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "none",
+  background: "var(--bg-surface)",
+  padding: "0.45rem 0.8rem",
+  fontSize: "0.9rem",
+  fontWeight: 600,
+  color: "var(--fg-secondary)",
+  cursor: "pointer",
+  transition: "background var(--t-fast), color var(--t-fast)",
+};
+
+const viewBtn = (active) => ({
+  ...navBtn,
+  padding: "0.45rem 1rem",
+  background: active ? "var(--brand)" : "var(--bg-surface)",
+  color: active ? "var(--fg-on-brand)" : "var(--fg-secondary)",
+});
 
 export const CalendarHeader = ({ currentDate, view, onPrev, onNext, onToday, onViewChange }) => {
   const month = currentDate.getMonth();
@@ -37,22 +38,76 @@ export const CalendarHeader = ({ currentDate, view, onPrev, onNext, onToday, onV
   }
 
   return (
-    <div style={S.header}>
-      <h2 style={S.title}>{titleText}</h2>
-      <div style={S.controls}>
-        <div style={S.navGroup}>
-          <button type="button" onClick={onPrev} style={S.navBtn("left")} aria-label="Anterior">
-            <i className="ri-arrow-left-s-line" style={{ fontSize: "1.2rem" }}></i>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingBottom: "1rem",
+        flexWrap: "wrap",
+        gap: "0.75rem",
+      }}
+    >
+      <h2
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "1.5rem",
+          fontWeight: 700,
+          letterSpacing: "-0.03em",
+          color: "var(--fg-primary)",
+          margin: 0,
+          textTransform: "capitalize",
+        }}
+      >
+        {titleText}
+      </h2>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div style={segmentedGroup}>
+          <button
+            type="button"
+            onClick={onPrev}
+            style={navBtn}
+            aria-label="Anterior"
+          >
+            <i className="ri-arrow-left-s-line" style={{ fontSize: "1.1rem" }}></i>
           </button>
-          <button type="button" onClick={onNext} style={S.navBtn("right")} aria-label="Siguiente">
-            <i className="ri-arrow-right-s-line" style={{ fontSize: "1.2rem" }}></i>
+          <button
+            type="button"
+            onClick={onNext}
+            style={{ ...navBtn, borderLeft: "1px solid var(--border-default)" }}
+            aria-label="Siguiente"
+          >
+            <i className="ri-arrow-right-s-line" style={{ fontSize: "1.1rem" }}></i>
           </button>
         </div>
-        <button type="button" onClick={onToday} style={S.todayBtn}>Hoy</button>
-        <div style={S.navGroup}>
-          <button type="button" onClick={() => onViewChange("month")} style={{ ...S.viewBtn(view === "month"), borderRadius: "8px 0 0 8px" }}>Mes</button>
-          <button type="button" onClick={() => onViewChange("week")} style={{ ...S.viewBtn(view === "week"), marginLeft: "-1px" }}>Semana</button>
-          <button type="button" onClick={() => onViewChange("day")} style={{ ...S.viewBtn(view === "day"), borderRadius: "0 8px 8px 0", marginLeft: "-1px" }}>Dia</button>
+
+        <button type="button" onClick={onToday} className="btn btn-secondary btn-sm">
+          Hoy
+        </button>
+
+        <div style={segmentedGroup} role="group" aria-label="Vista del calendario">
+          {[
+            { k: "month", label: "Mes" },
+            { k: "week", label: "Semana" },
+            { k: "day", label: "Día" },
+          ].map((opt, i) => {
+            const active = view === opt.k;
+            return (
+              <button
+                key={opt.k}
+                type="button"
+                onClick={() => onViewChange(opt.k)}
+                aria-pressed={active}
+                style={{
+                  ...viewBtn(active),
+                  borderLeft: i > 0 ? "1px solid var(--border-default)" : "none",
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

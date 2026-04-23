@@ -6,9 +6,11 @@
   "main": "src/config/index.js",
   "scripts": {
     "test": "node test/consultationHistory.test.js",
+    "test:e2e": "node test/e2e.test.js",
     "start": "node src/config/index.js",
     "dev": "nodemon src/config/index.js",
     "seed": "node src/seed.js",
+    "seed:templates": "node src/seedTemplates.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

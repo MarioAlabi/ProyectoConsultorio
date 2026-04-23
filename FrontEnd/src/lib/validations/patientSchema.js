@@ -13,6 +13,7 @@ export const patientSchema = z.object({
   responsibleName: z.string().optional(),
   personalHistory: z.string().optional(),
   familyHistory: z.string().optional(),
+  insurerId: z.string().optional().or(z.literal("")),
 }).refine(
   (data) => !data.isMinor || (data.responsibleName && data.responsibleName.trim().length > 0),
   { message: "El nombre del responsable es obligatorio para menores.", path: ["responsibleName"] }

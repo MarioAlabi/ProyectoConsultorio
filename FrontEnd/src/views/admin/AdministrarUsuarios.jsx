@@ -6,7 +6,6 @@ import { authClient } from "../../lib/auth-client";
 import { ROLES } from "../../lib/constants/roles";
 import { createUserSchema, editUserSchema } from "../../lib/validations/userSchema";
 import { Modal } from "../../components/Modal";
-import "../../views/shared/Shared.css";
 
 const ROLE_LABELS = {
   [ROLES.DOCTOR]: "Médico",
@@ -202,129 +201,231 @@ export const AdministrarUsuarios = () => {
   const currentUserId = currentSession.data?.user?.id;
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-        <div>
-          <h1 style={{ color: "#1f2937", margin: 0 }}>Administrar Usuarios</h1>
-          <p style={{ color: "#4b5563", margin: "0.5rem 0 0 0" }}>Gestión administrativa de los empleados de la clínica.</p>
+    <div className="page">
+      <header className="page-header">
+        <div className="page-header__title">
+          <span className="page-header__eyebrow">Gestión del personal</span>
+          <h1 className="page-header__heading">Administrar usuarios</h1>
+          <p className="page-header__sub">
+            Empleados de la clínica, roles, credenciales y estado.
+          </p>
         </div>
-        <button onClick={handleOpenNew} className="submit-btn" style={{ margin: 0, padding: "0.75rem 1.5rem" }} disabled={isPending}>+ Nuevo Empleado</button>
-      </div>
+        <div className="page-header__actions">
+          <button onClick={handleOpenNew} className="btn btn-primary" disabled={isPending}>
+            <i className="ri-user-add-line"></i> Nuevo empleado
+          </button>
+        </div>
+      </header>
 
-      <div style={{ backgroundColor: "white", borderRadius: "1rem", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-          <thead style={{ backgroundColor: "#f9fafb" }}>
-            <tr style={{ color: "#4b5563", fontSize: "0.9rem" }}>
-              <th style={{ padding: "1.2rem 1.5rem" }}>Nombre / DUI</th>
-              <th style={{ padding: "1.2rem 1.5rem" }}>Contacto</th>
-              <th style={{ padding: "1.2rem 1.5rem" }}>Rol / JV</th>
-              <th style={{ padding: "1.2rem 1.5rem" }}>Estado</th>
-              <th style={{ padding: "1.2rem 1.5rem", textAlign: "right" }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuarios.map((user) => {
-              const isActive = !user.banned;
-              return (
-                <tr key={user.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <td style={{ padding: "1.2rem 1.5rem" }}>
-                    <div style={{ fontWeight: 600 }}>{user.name}</div>
-                    <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>DUI: {user.dui || "N/A"}</div>
-                  </td>
-                  <td style={{ padding: "1.2rem 1.5rem" }}>
-                    <div style={{ fontSize: "0.9rem" }}>{user.email}</div>
-                    <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>Tel: {user.phone || "---"}</div>
-                  </td>
-                  <td style={{ padding: "1.2rem 1.5rem", color: "#6b7280" }}>
-                    <div>{ROLE_LABELS[user.role] ?? user.role}</div>
-                    {user.role === ROLES.DOCTOR && user.jvpm && <div style={{ fontSize: "0.8rem" }}>JVPM: {user.jvpm}</div>}
-                    {user.isNurse && user.jvpe && <div style={{ fontSize: "0.8rem" }}>JVPE: {user.jvpe}</div>}
-                  </td>
-                  <td style={{ padding: "1.2rem 1.5rem" }}>
-                    <span style={{ backgroundColor: isActive ? "#dcfce7" : "#fee2e2", color: isActive ? "#166534" : "#991b1b", padding: "0.25rem 0.75rem", borderRadius: "999px", fontSize: "0.85rem" }}>{isActive ? "Activo" : "Inactivo"}</span>
-                  </td>
-                  <td style={{ padding: "1.2rem 1.5rem", textAlign: "right" }}>
-                    <button onClick={() => handleEdit(user)} className="doc-btn" style={{ marginRight: "0.5rem" }}>Editar</button>
-                    {user.id !== currentUserId && (
-                        <button onClick={() => handleToggleBan(user)} style={{ color: isActive ? "#ef4444" : "#10b981", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.85rem" }}>
-                            {isActive ? "Desactivar" : "Activar"}
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ overflowX: "auto" }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Empleado</th>
+                <th>Contacto</th>
+                <th>Rol / JV</th>
+                <th>Estado</th>
+                <th style={{ textAlign: "right" }}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usuarios.map((user) => {
+                const isActive = !user.banned;
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <div style={{ fontWeight: 600, color: "var(--fg-primary)" }}>{user.name}</div>
+                      <div style={{ fontSize: "0.78rem", color: "var(--fg-muted)", fontFamily: "var(--font-mono)" }}>
+                        DUI: {user.dui || "—"}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ fontSize: "0.88rem", fontFamily: "var(--font-mono)", color: "var(--fg-secondary)" }}>
+                        {user.email}
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "var(--fg-muted)" }}>Tel: {user.phone || "—"}</div>
+                    </td>
+                    <td>
+                      <div>{ROLE_LABELS[user.role] ?? user.role}</div>
+                      {user.role === ROLES.DOCTOR && user.jvpm && (
+                        <div style={{ fontSize: "0.78rem", color: "var(--fg-muted)" }}>JVPM: {user.jvpm}</div>
+                      )}
+                      {user.isNurse && user.jvpe && (
+                        <div style={{ fontSize: "0.78rem", color: "var(--fg-muted)" }}>JVPE: {user.jvpe}</div>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`badge ${isActive ? "badge-success" : "badge-danger"} badge-dot`}>
+                        {isActive ? "Activo" : "Inhabilitado"}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <div style={{ display: "inline-flex", gap: "0.35rem", justifyContent: "flex-end" }}>
+                        <button onClick={() => handleEdit(user)} className="btn btn-ghost btn-sm">
+                          <i className="ri-edit-2-line"></i> Editar
                         </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                        {user.id !== currentUserId && (
+                          <button
+                            onClick={() => handleToggleBan(user)}
+                            className={`btn btn-sm ${isActive ? "btn-danger" : "btn-secondary"}`}
+                          >
+                            {isActive ? "Desactivar" : "Activar"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <Modal isOpen={showForm} onClose={() => { setShowForm(false); setEditingUser(null); setShowPassword(false); }} title={editingUser ? "Editar Empleado" : "Registrar Nuevo Empleado"} size="lg">
-        <form onSubmit={handleSubmit(onSubmit)} className="login-form">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-            <div className="form-group"><label className="form-label">Nombre Completo *</label><input type="text" className="form-input" {...register("name")} />{errors.name && <span style={{ color: "#ef4444", fontSize: "0.8rem" }}>{errors.name.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Correo Electrónico *</label><input type="email" className="form-input" {...register("email")} />{errors.email && <span style={{ color: "#ef4444", fontSize: "0.8rem" }}>{errors.email.message}</span>}</div>
-            
-            {/* --- CONTRASEÑA CON BOTÓN DE MOSTRAR/OCULTAR --- */}
-            <div className="form-group">
-                <label className="form-label">{editingUser ? "Nueva Contraseña" : "Contraseña *"}</label>
+      <Modal
+        isOpen={showForm}
+        onClose={() => { setShowForm(false); setEditingUser(null); setShowPassword(false); }}
+        title={editingUser ? "Editar empleado" : "Registrar nuevo empleado"}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div style={{ display: "grid", gap: "1.1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.1rem" }}>
+              <div className="form-group">
+                <label className="form-label">Nombre completo *</label>
+                <input type="text" className="form-input" {...register("name")} />
+                {errors.name && <span className="field-error">{errors.name.message}</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Correo electrónico *</label>
+                <input type="email" className="form-input" {...register("email")} />
+                {errors.email && <span className="field-error">{errors.email.message}</span>}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{editingUser ? "Nueva contraseña" : "Contraseña *"}</label>
                 <div style={{ position: "relative" }}>
-                    <input 
-                        type={showPassword ? "text" : "password"} 
-                        className="form-input" 
-                        style={{ paddingRight: "2.5rem" }} // Deja espacio para el botón
-                        placeholder={editingUser ? "Dejar vacío para no cambiar" : "Mín. 6 caracteres"} 
-                        {...register("password")} 
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tabIndex="-1" // Evita que se enfoque con Tab cuando se está escribiendo
-                        style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#6b7280", padding: 0, display: "flex", alignItems: "center" }}
-                    >
-                        {showPassword ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                        ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        )}
-                    </button>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="form-input"
+                    style={{ paddingRight: "2.5rem", width: "100%" }}
+                    placeholder={editingUser ? "Dejar vacío para no cambiar" : "Mín. 6 caracteres"}
+                    {...register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex="-1"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    style={{
+                      position: "absolute",
+                      right: "0.75rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--fg-muted)",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <i className={showPassword ? "ri-eye-off-line" : "ri-eye-line"} style={{ fontSize: "1.05rem" }}></i>
+                  </button>
                 </div>
-                {errors.password && <span style={{ color: "#ef4444", fontSize: "0.8rem" }}>{errors.password.message}</span>}
+                {errors.password && <span className="field-error">{errors.password.message}</span>}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Rol del sistema *</label>
+                <select className="form-input" {...register("role")}>
+                  {Object.entries(ROLE_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">DUI *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="00000000-0"
+                  {...register("dui", { onChange: (e) => (e.target.value = formatDui(e.target.value)) })}
+                />
+                {errors.dui && <span className="field-error">{errors.dui.message}</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Teléfono *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="0000-0000"
+                  {...register("phone", { onChange: (e) => (e.target.value = formatPhone(e.target.value)) })}
+                />
+                {errors.phone && <span className="field-error">{errors.phone.message}</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Fecha de contratación *</label>
+                <input type="date" className="form-input" {...register("hiringDate")} />
+                {errors.hiringDate && <span className="field-error">{errors.hiringDate.message}</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Dirección (opcional)</label>
+                <input type="text" className="form-input" {...register("address")} />
+              </div>
             </div>
 
-            <div className="form-group"><label className="form-label">Rol del Sistema *</label><select className="form-input" {...register("role")} style={{ backgroundColor: "white" }}>{Object.entries(ROLE_LABELS).map(([val, label]) => (<option key={val} value={val}>{label}</option>))}</select></div>
-
-            <div className="form-group"><label className="form-label">DUI (00000000-0) *</label><input type="text" className="form-input" placeholder="00000000-0" {...register("dui", { onChange: (e) => e.target.value = formatDui(e.target.value) })} />{errors.dui && <span style={{ color: "#ef4444", fontSize: "0.8rem" }}>{errors.dui.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Teléfono *</label><input type="text" className="form-input" placeholder="0000-0000" {...register("phone", { onChange: (e) => e.target.value = formatPhone(e.target.value) })} />{errors.phone && <span style={{ color: "#ef4444", fontSize: "0.8rem" }}>{errors.phone.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Fecha de Contratación *</label><input type="date" className="form-input" {...register("hiringDate")} />{errors.hiringDate && <span style={{ color: "#ef4444", fontSize: "0.8rem" }}>{errors.hiringDate.message}</span>}</div>
-            <div className="form-group"><label className="form-label">Dirección (Opcional)</label><input type="text" className="form-input" {...register("address")} /></div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginTop: "1rem" }}>
-            {selectedRole === ROLES.DOCTOR && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.1rem" }}>
+              {selectedRole === ROLES.DOCTOR && (
                 <div className="form-group">
-                    <label className="form-label">Número de JVPM *</label>
-                    <input type="text" className="form-input" placeholder="Ej. 12345" {...register("jvpm")} />
-                    {errors.jvpm && <span style={{ color: "#ef4444", fontSize: "0.8rem" }}>{errors.jvpm.message}</span>}
+                  <label className="form-label">Número de JVPM *</label>
+                  <input type="text" className="form-input" placeholder="Ej. 12345" {...register("jvpm")} />
+                  {errors.jvpm && <span className="field-error">{errors.jvpm.message}</span>}
                 </div>
-            )}
-            {selectedRole === ROLES.ASSISTANT && (
+              )}
+              {selectedRole === ROLES.ASSISTANT && (
                 <>
-                    <div className="form-group" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "1.5rem" }}>
-                        <input type="checkbox" {...register("isNurse")} id="nurseCheck" style={{ cursor: "pointer", width: "1.2rem", height: "1.2rem" }} />
-                        <label htmlFor="nurseCheck" className="form-label" style={{ marginBottom: 0, cursor: "pointer" }}>¿Es Enfermera/o?</label>
+                  <div
+                    className="form-group"
+                    style={{ display: "flex", alignItems: "center", gap: "0.5rem", alignSelf: "end" }}
+                  >
+                    <input
+                      type="checkbox"
+                      {...register("isNurse")}
+                      id="nurseCheck"
+                      style={{ cursor: "pointer", width: "1.1rem", height: "1.1rem", accentColor: "var(--brand)" }}
+                    />
+                    <label htmlFor="nurseCheck" className="form-label" style={{ marginBottom: 0, cursor: "pointer" }}>
+                      ¿Es enfermera/o?
+                    </label>
+                  </div>
+                  {isNurseChecked && (
+                    <div className="form-group">
+                      <label className="form-label">Número de JVPE *</label>
+                      <input type="text" className="form-input" placeholder="Ej. 12345" {...register("jvpe")} />
+                      {errors.jvpe && <span className="field-error">{errors.jvpe.message}</span>}
                     </div>
-                    {isNurseChecked && (
-                        <div className="form-group">
-                            <label className="form-label">Número de JVPE *</label>
-                            <input type="text" className="form-input" placeholder="Ej. 12345" {...register("jvpe")} />
-                            {errors.jvpe && <span style={{ color: "#ef4444", fontSize: "0.8rem" }}>{errors.jvpe.message}</span>}
-                        </div>
-                    )}
+                  )}
                 </>
-            )}
-          </div>
+              )}
+            </div>
 
-          <button type="submit" className="submit-btn" disabled={isPending} style={{ marginTop: "1.5rem" }}>{isPending ? "Procesando..." : editingUser ? "Actualizar Empleado" : "Registrar Empleado"}</button>
+            <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end", marginTop: "0.3rem" }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => { setShowForm(false); setEditingUser(null); setShowPassword(false); }}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={isPending}>
+                {isPending ? "Procesando…" : editingUser ? "Actualizar empleado" : "Registrar empleado"}
+              </button>
+            </div>
+          </div>
         </form>
       </Modal>
     </div>

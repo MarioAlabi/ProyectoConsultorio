@@ -5,8 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import { authClient } from "../../lib/auth-client";
 import { forgotPasswordSchema } from "../../lib/validations/userSchema";
-import logoClinica from "../../assets/logo.png";
-import "./Shared.css";
+import "./Login.css";
 
 export const ForgotPassword = () => {
   const [sent, setSent] = useState(false);
@@ -33,27 +32,87 @@ export const ForgotPassword = () => {
   };
 
   return (
-    <div className="landing-container">
-      <div className="landing-card" style={{ maxWidth: "450px", width: "90%", padding: "3rem", gap: "1.5rem", boxSizing: "border-box" }}>
-        <img src={logoClinica} alt="Logo" className="landing-logo" style={{ width: "160px", height: "auto" }} />
-        <div style={{ textAlign: "center", width: "100%" }}>
-          <h2 className="landing-title" style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>Recuperar Contrasena</h2>
-          <p className="landing-description" style={{ fontSize: "1rem" }}>
-            {sent ? "Revisa tu bandeja de entrada. Si el correo existe, recibiras un enlace para restablecer tu contrasena." : "Ingresa tu correo electronico y te enviaremos un enlace."}
+    <div className="auth-screen">
+      <div className="auth-screen__ornament auth-screen__ornament--1" aria-hidden="true" />
+      <div className="auth-screen__ornament auth-screen__ornament--2" aria-hidden="true" />
+
+      <article
+        className="card-elevated"
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: "460px",
+          width: "100%",
+          padding: "2.5rem 2.25rem",
+          animation: "slideUp 380ms var(--ease-smooth)",
+        }}
+      >
+        <header style={{ textAlign: "center", marginBottom: "1.75rem" }}>
+          <span className="eyebrow">Recuperación</span>
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "1.9rem",
+              fontWeight: 700,
+              letterSpacing: "-0.03em",
+              color: "var(--fg-primary)",
+              margin: "0.45rem 0 0.6rem",
+            }}
+          >
+            Recuperar contraseña
+          </h1>
+          <p style={{ color: "var(--fg-secondary)", fontSize: "0.95rem", margin: 0 }}>
+            {sent
+              ? "Revisa tu bandeja de entrada. Si el correo existe, recibirás un enlace para restablecer tu contraseña."
+              : "Ingresa tu correo electrónico y te enviaremos un enlace."}
           </p>
-        </div>
+        </header>
+
         {!sent && (
-          <form className="login-form" onSubmit={handleSubmit(onSubmit)} style={{ width: "100%" }}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="email">Correo Electronico</label>
-              <input type="email" id="email" className="form-input" placeholder="ej. doctor@ejemplo.com" {...register("email")} />
-              {errors.email && <span style={{ color: "#ef4444", fontSize: "0.85rem" }}>{errors.email.message}</span>}
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div style={{ display: "grid", gap: "1.1rem" }}>
+              <div className="form-group">
+                <label className="form-label" htmlFor="email">
+                  Correo electrónico
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  className="form-input"
+                  placeholder="ej. doctor@ejemplo.com"
+                  {...register("email")}
+                />
+                {errors.email && <span className="field-error">{errors.email.message}</span>}
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg"
+                disabled={isPending}
+                style={{ width: "100%" }}
+              >
+                {isPending ? "Enviando…" : "Enviar enlace"}
+              </button>
             </div>
-            <button type="submit" className="submit-btn" disabled={isPending} style={{ opacity: isPending ? 0.7 : 1 }}>{isPending ? "Enviando..." : "Enviar enlace"}</button>
           </form>
         )}
-        <Link to="/login" className="forgot-password" style={{ fontSize: "0.9rem", textAlign: "center" }}>Volver al inicio de sesion</Link>
-      </div>
+
+        <div
+          style={{
+            marginTop: "1.75rem",
+            textAlign: "center",
+            paddingTop: "1.25rem",
+            borderTop: "1px solid var(--border-subtle)",
+          }}
+        >
+          <Link
+            to="/login"
+            style={{ color: "var(--brand)", fontSize: "0.9rem", fontWeight: 500 }}
+          >
+            ← Volver al inicio de sesión
+          </Link>
+        </div>
+      </article>
     </div>
   );
 };

@@ -17,11 +17,11 @@ const ACTION_LABELS = {
   STATUS_CHANGE: "Cambio de Estado",
 };
 
-const ACTION_COLORS = {
-  CREATE: { bg: "#dcfce7", color: "#166534" },
-  UPDATE: { bg: "#dbeafe", color: "#1e40af" },
-  DELETE: { bg: "#fee2e2", color: "#991b1b" },
-  STATUS_CHANGE: { bg: "#fef3c7", color: "#92400e" },
+const ACTION_CLASS = {
+  CREATE: "badge-success",
+  UPDATE: "badge-info",
+  DELETE: "badge-danger",
+  STATUS_CHANGE: "badge-warning",
 };
 
 const ROLE_LABELS = {
@@ -62,68 +62,58 @@ export const AuditoriaRegistros = () => {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-        <h1 style={{ color: "#1f2937", margin: 0 }}>
-          Auditoría de Registros
-        </h1>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          style={{
-            ...S.searchBtn,
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem",
-            opacity: isFetching ? 0.6 : 1,
-            cursor: isFetching ? "default" : "pointer",
-          }}
-        >
-          <i className={`ri-refresh-line${isFetching ? " ri-spin" : ""}`} style={{ fontSize: "1rem" }} />
-          {isFetching ? "Actualizando..." : "Refrescar"}
-        </button>
-      </div>
-      <p style={{ color: "#4b5563", marginBottom: "2rem" }}>
-        Historial de cambios en expedientes médicos. Los registros no pueden ser
-        editados ni eliminados.
-      </p>
+    <div className="page">
+      <header className="page-header">
+        <div className="page-header__title">
+          <span className="page-header__eyebrow">Trazabilidad</span>
+          <h1 className="page-header__heading">Auditoría de registros</h1>
+          <p className="page-header__sub">
+            Historial inmutable de cambios en expedientes médicos. Los registros no pueden ser editados ni eliminados.
+          </p>
+        </div>
+        <div className="page-header__actions">
+          <button onClick={() => refetch()} disabled={isFetching} className="btn btn-secondary">
+            <i className={`ri-refresh-line${isFetching ? " ri-spin" : ""}`}></i>
+            {isFetching ? "Actualizando…" : "Refrescar"}
+          </button>
+        </div>
+      </header>
 
       {/* Filtros */}
       <div
+        className="card"
         style={{
-          backgroundColor: "white",
-          padding: "1.5rem",
-          borderRadius: "1rem",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
-          marginBottom: "1.5rem",
+          padding: "1.2rem",
+          marginBottom: "1.25rem",
           display: "flex",
           flexWrap: "wrap",
           gap: "1rem",
           alignItems: "flex-end",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-          <label style={S.filterLabel}>Buscar</label>
+        <div className="form-group" style={{ flex: "2 1 280px", minWidth: "260px" }}>
+          <label className="form-label">Buscar</label>
           <form onSubmit={handleSearch} style={{ display: "flex", gap: "0.5rem" }}>
             <input
               type="text"
-              placeholder="Usuario o descripción..."
+              className="form-input"
+              placeholder="Usuario o descripción…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              style={S.input}
+              style={{ flex: 1 }}
             />
-            <button type="submit" style={S.searchBtn}>
+            <button type="submit" className="btn btn-primary btn-sm">
               Buscar
             </button>
           </form>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-          <label style={S.filterLabel}>Entidad</label>
+        <div className="form-group" style={{ minWidth: "150px" }}>
+          <label className="form-label">Entidad</label>
           <select
+            className="form-input"
             value={filters.tableName}
             onChange={(e) => handleFilterChange("tableName", e.target.value)}
-            style={S.select}
           >
             <option value="">Todas</option>
             {Object.entries(TABLE_LABELS).map(([key, label]) => (
@@ -134,12 +124,12 @@ export const AuditoriaRegistros = () => {
           </select>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-          <label style={S.filterLabel}>Acción</label>
+        <div className="form-group" style={{ minWidth: "150px" }}>
+          <label className="form-label">Acción</label>
           <select
+            className="form-input"
             value={filters.action}
             onChange={(e) => handleFilterChange("action", e.target.value)}
-            style={S.select}
           >
             <option value="">Todas</option>
             {Object.entries(ACTION_LABELS).map(([key, label]) => (
@@ -150,23 +140,23 @@ export const AuditoriaRegistros = () => {
           </select>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-          <label style={S.filterLabel}>Desde</label>
+        <div className="form-group" style={{ minWidth: "150px" }}>
+          <label className="form-label">Desde</label>
           <input
             type="date"
+            className="form-input"
             value={filters.from}
             onChange={(e) => handleFilterChange("from", e.target.value)}
-            style={S.input}
           />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-          <label style={S.filterLabel}>Hasta</label>
+        <div className="form-group" style={{ minWidth: "150px" }}>
+          <label className="form-label">Hasta</label>
           <input
             type="date"
+            className="form-input"
             value={filters.to}
             onChange={(e) => handleFilterChange("to", e.target.value)}
-            style={S.input}
           />
         </div>
 
@@ -176,101 +166,86 @@ export const AuditoriaRegistros = () => {
               setFilters({ tableName: "", action: "", search: "", from: "", to: "", page: 1, limit: 15 });
               setSearchInput("");
             }}
-            style={S.clearBtn}
+            className="btn btn-ghost btn-sm"
           >
-            Limpiar filtros
+            Limpiar
           </button>
         )}
       </div>
 
-      {/* Contador */}
-      <div style={{ marginBottom: "1rem", color: "#6b7280", fontSize: "0.875rem" }}>
+      <div className="text-muted" style={{ marginBottom: "0.8rem", fontSize: "0.85rem" }}>
         {pagination.total} registro{pagination.total !== 1 ? "s" : ""} encontrado{pagination.total !== 1 ? "s" : ""}
       </div>
 
-      {/* Tabla */}
-      <div
-        style={{
-          backgroundColor: "white",
-          borderRadius: "1rem",
-          boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-          overflow: "hidden",
-        }}
-      >
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         {isLoading ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>
-            Cargando registros de auditoría...
+          <div style={{ padding: "3rem", textAlign: "center", color: "var(--fg-muted)" }}>
+            Cargando registros de auditoría…
           </div>
         ) : isError ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#ef4444" }}>
+          <div style={{ padding: "3rem", textAlign: "center", color: "var(--accent-coral)" }}>
             Error al cargar los registros. Intente de nuevo.
           </div>
         ) : logs.length === 0 ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>
+          <div style={{ padding: "3rem", textAlign: "center", color: "var(--fg-muted)" }}>
+            <i className="ri-inbox-line" style={{ fontSize: "1.8rem", opacity: 0.5, display: "block", marginBottom: "0.4rem" }}></i>
             No se encontraron registros de auditoría.
           </div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid #e5e7eb", color: "#4b5563", fontSize: "0.85rem" }}>
-                <th style={S.th}>Fecha y Hora</th>
-                <th style={S.th}>Usuario</th>
-                <th style={S.th}>Rol</th>
-                <th style={S.th}>Acción</th>
-                <th style={S.th}>Entidad</th>
-                <th style={S.th}>Descripción</th>
-                <th style={S.th}>Detalle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <LogRow
-                  key={log.id}
-                  log={log}
-                  expanded={expandedRow === log.id}
-                  onToggle={() => toggleExpand(log.id)}
-                />
-              ))}
-            </tbody>
-          </table>
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha y hora</th>
+                  <th>Usuario</th>
+                  <th>Rol</th>
+                  <th>Acción</th>
+                  <th>Entidad</th>
+                  <th>Descripción</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log) => (
+                  <LogRow
+                    key={log.id}
+                    log={log}
+                    expanded={expandedRow === log.id}
+                    onToggle={() => toggleExpand(log.id)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Paginación */}
       {pagination.totalPages > 1 && (
         <div
           style={{
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            gap: "0.5rem",
+            gap: "0.6rem",
             marginTop: "1.5rem",
           }}
         >
           <button
             onClick={() => setFilters((p) => ({ ...p, page: p.page - 1 }))}
             disabled={pagination.page <= 1}
-            style={{
-              ...S.pageBtn,
-              opacity: pagination.page <= 1 ? 0.4 : 1,
-              cursor: pagination.page <= 1 ? "default" : "pointer",
-            }}
+            className="btn btn-secondary btn-sm"
           >
-            Anterior
+            <i className="ri-arrow-left-s-line"></i> Anterior
           </button>
-          <span style={{ color: "#4b5563", fontSize: "0.875rem" }}>
+          <span className="text-muted" style={{ fontSize: "0.85rem" }}>
             Página {pagination.page} de {pagination.totalPages}
           </span>
           <button
             onClick={() => setFilters((p) => ({ ...p, page: p.page + 1 }))}
             disabled={pagination.page >= pagination.totalPages}
-            style={{
-              ...S.pageBtn,
-              opacity: pagination.page >= pagination.totalPages ? 0.4 : 1,
-              cursor: pagination.page >= pagination.totalPages ? "default" : "pointer",
-            }}
+            className="btn btn-secondary btn-sm"
           >
-            Siguiente
+            Siguiente <i className="ri-arrow-right-s-line"></i>
           </button>
         </div>
       )}
@@ -279,7 +254,7 @@ export const AuditoriaRegistros = () => {
 };
 
 const LogRow = ({ log, expanded, onToggle }) => {
-  const actionStyle = ACTION_COLORS[log.action] || { bg: "#f3f4f6", color: "#6b7280" };
+  const actionClass = ACTION_CLASS[log.action] || "";
 
   const previousValues = useMemo(() => {
     if (!log.previousValues) return null;
@@ -293,45 +268,25 @@ const LogRow = ({ log, expanded, onToggle }) => {
 
   return (
     <>
-      <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
-        <td style={S.td}>
-          <span style={{ fontSize: "0.82rem", color: "#374151" }}>
-            {formatDateTime(log.createdAt)}
-          </span>
+      <tr>
+        <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--fg-secondary)", whiteSpace: "nowrap" }}>
+          {formatDateTime(log.createdAt)}
         </td>
-        <td style={{ ...S.td, fontWeight: 500, color: "#1f2937" }}>
-          {log.userName}
+        <td style={{ fontWeight: 500, color: "var(--fg-primary)" }}>{log.userName}</td>
+        <td style={{ fontSize: "0.82rem", color: "var(--fg-muted)" }}>
+          {ROLE_LABELS[log.userRole] || log.userRole}
         </td>
-        <td style={S.td}>
-          <span style={{ color: "#6b7280", fontSize: "0.82rem" }}>
-            {ROLE_LABELS[log.userRole] || log.userRole}
-          </span>
+        <td>
+          <span className={`badge ${actionClass}`}>{ACTION_LABELS[log.action] || log.action}</span>
         </td>
-        <td style={S.td}>
+        <td>
+          <span className="badge">{TABLE_LABELS[log.tableName] || log.tableName}</span>
+        </td>
+        <td style={{ maxWidth: "320px" }}>
           <span
             style={{
-              backgroundColor: actionStyle.bg,
-              color: actionStyle.color,
-              padding: "0.2rem 0.6rem",
-              borderRadius: "999px",
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {ACTION_LABELS[log.action] || log.action}
-          </span>
-        </td>
-        <td style={S.td}>
-          <span style={{ color: "#374151", fontSize: "0.85rem" }}>
-            {TABLE_LABELS[log.tableName] || log.tableName}
-          </span>
-        </td>
-        <td style={{ ...S.td, maxWidth: "280px" }}>
-          <span
-            style={{
-              color: "#4b5563",
-              fontSize: "0.82rem",
+              color: "var(--fg-secondary)",
+              fontSize: "0.85rem",
               display: "block",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -342,9 +297,9 @@ const LogRow = ({ log, expanded, onToggle }) => {
             {log.description}
           </span>
         </td>
-        <td style={S.td}>
+        <td style={{ textAlign: "right" }}>
           {(previousValues || newValues) && (
-            <button onClick={onToggle} style={S.detailBtn}>
+            <button onClick={onToggle} className="btn btn-ghost btn-sm">
               {expanded ? "Ocultar" : "Ver"}
             </button>
           )}
@@ -352,24 +307,53 @@ const LogRow = ({ log, expanded, onToggle }) => {
       </tr>
       {expanded && (previousValues || newValues) && (
         <tr>
-          <td colSpan={7} style={{ padding: "0" }}>
-            <div style={S.expandedContainer}>
-              <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+          <td colSpan={7} style={{ padding: 0 }}>
+            <div
+              style={{
+                padding: "1.1rem 1.5rem",
+                background: "var(--bg-surface-alt)",
+                borderTop: "1px solid var(--border-subtle)",
+                borderBottom: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
                 {previousValues && (
-                  <div style={{ flex: 1, minWidth: "250px" }}>
-                    <h4 style={S.expandedTitle}>Valores Anteriores</h4>
+                  <div style={{ flex: 1, minWidth: "260px" }}>
+                    <h4
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: "var(--accent-coral)",
+                        margin: "0 0 0.5rem",
+                      }}
+                    >
+                      Valores anteriores
+                    </h4>
                     <JsonDisplay data={previousValues} />
                   </div>
                 )}
                 {newValues && (
-                  <div style={{ flex: 1, minWidth: "250px" }}>
-                    <h4 style={{ ...S.expandedTitle, color: "#166534" }}>Valores Nuevos</h4>
+                  <div style={{ flex: 1, minWidth: "260px" }}>
+                    <h4
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: "var(--accent-forest)",
+                        margin: "0 0 0.5rem",
+                      }}
+                    >
+                      Valores nuevos
+                    </h4>
                     <JsonDisplay data={newValues} />
                   </div>
                 )}
               </div>
               {log.ipAddress && (
-                <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "#9ca3af" }}>
+                <div style={{ marginTop: "0.75rem", fontSize: "0.75rem", color: "var(--fg-subtle)", fontFamily: "var(--font-mono)" }}>
                   IP: {log.ipAddress}
                 </div>
               )}
@@ -419,7 +403,14 @@ const JsonDisplay = ({ data }) => {
   if (!data || typeof data !== "object") return null;
 
   return (
-    <div style={S.jsonContainer}>
+    <div
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "var(--radius-md)",
+        padding: "0.75rem 1rem",
+      }}
+    >
       {Object.entries(data).map(([key, value]) => {
         if (value === null || value === undefined) return null;
         const label = FIELD_LABELS[key] || key;
@@ -431,125 +422,25 @@ const JsonDisplay = ({ data }) => {
             : String(value);
 
         return (
-          <div key={key} style={S.jsonRow}>
-            <span style={S.jsonKey}>{label}:</span>
-            <span style={S.jsonValue}>{displayValue}</span>
+          <div
+            key={key}
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              padding: "0.3rem 0",
+              borderBottom: "1px solid var(--border-subtle)",
+              fontSize: "0.82rem",
+            }}
+          >
+            <span style={{ color: "var(--fg-muted)", fontWeight: 500, minWidth: "140px", flexShrink: 0 }}>
+              {label}:
+            </span>
+            <span style={{ color: "var(--fg-primary)", wordBreak: "break-word", fontFamily: "var(--font-mono)" }}>
+              {displayValue}
+            </span>
           </div>
         );
       })}
     </div>
   );
-};
-
-/* Estilos inline (consistentes con DashboardAdmin) */
-const S = {
-  filterLabel: {
-    fontSize: "0.8rem",
-    fontWeight: 600,
-    color: "#4b5563",
-  },
-  input: {
-    padding: "0.55rem 0.75rem",
-    border: "1.5px solid #d1d5db",
-    borderRadius: "0.5rem",
-    fontSize: "0.875rem",
-    outline: "none",
-    minWidth: "160px",
-  },
-  select: {
-    padding: "0.55rem 0.75rem",
-    border: "1.5px solid #d1d5db",
-    borderRadius: "0.5rem",
-    fontSize: "0.875rem",
-    outline: "none",
-    backgroundColor: "white",
-    minWidth: "130px",
-  },
-  searchBtn: {
-    backgroundColor: "#0d9488",
-    color: "white",
-    padding: "0.55rem 1rem",
-    border: "none",
-    borderRadius: "0.5rem",
-    fontSize: "0.875rem",
-    fontWeight: 600,
-    cursor: "pointer",
-  },
-  clearBtn: {
-    padding: "0.55rem 1rem",
-    border: "1.5px solid #d1d5db",
-    borderRadius: "0.5rem",
-    fontSize: "0.82rem",
-    fontWeight: 500,
-    color: "#6b7280",
-    backgroundColor: "white",
-    cursor: "pointer",
-  },
-  th: {
-    padding: "0.85rem 1rem",
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-  },
-  td: {
-    padding: "0.75rem 1rem",
-    color: "#374151",
-    fontSize: "0.875rem",
-    verticalAlign: "top",
-  },
-  detailBtn: {
-    padding: "0.25rem 0.65rem",
-    fontSize: "0.78rem",
-    fontWeight: 600,
-    border: "1px solid #d1d5db",
-    borderRadius: "0.4rem",
-    backgroundColor: "#f9fafb",
-    color: "#374151",
-    cursor: "pointer",
-  },
-  pageBtn: {
-    padding: "0.5rem 1rem",
-    fontSize: "0.85rem",
-    fontWeight: 500,
-    border: "1.5px solid #d1d5db",
-    borderRadius: "0.5rem",
-    backgroundColor: "white",
-    color: "#374151",
-    cursor: "pointer",
-  },
-  expandedContainer: {
-    padding: "1rem 2rem 1.25rem",
-    backgroundColor: "#f9fafb",
-    borderTop: "1px solid #e5e7eb",
-    borderBottom: "1px solid #e5e7eb",
-  },
-  expandedTitle: {
-    fontSize: "0.82rem",
-    fontWeight: 600,
-    color: "#991b1b",
-    marginBottom: "0.5rem",
-    marginTop: 0,
-  },
-  jsonContainer: {
-    backgroundColor: "white",
-    border: "1px solid #e5e7eb",
-    borderRadius: "0.5rem",
-    padding: "0.75rem 1rem",
-  },
-  jsonRow: {
-    display: "flex",
-    gap: "0.5rem",
-    padding: "0.25rem 0",
-    borderBottom: "1px solid #f3f4f6",
-    fontSize: "0.8rem",
-  },
-  jsonKey: {
-    color: "#6b7280",
-    fontWeight: 500,
-    minWidth: "140px",
-    flexShrink: 0,
-  },
-  jsonValue: {
-    color: "#1f2937",
-    wordBreak: "break-word",
-  },
 };

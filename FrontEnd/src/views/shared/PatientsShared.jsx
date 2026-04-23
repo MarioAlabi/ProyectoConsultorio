@@ -4,10 +4,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { patientSchema } from "../../lib/validations/patientSchema";
 import { usePatients, useCreatePatient, useUpdatePatient, useUpdatePatientStatus, usePatientClinicalHistory } from "../../hooks/usePatients";
+import { useInsurers } from "../../hooks/useInsurers";
 import { Modal } from "../../components/Modal";
 import { ClinicalHistoryTimeline } from "../../components/clinical-history/ClinicalHistoryTimeline";
 import { calcularEdad, formatDUI, formatPhone, getStatusBadge } from "../../lib/utils";
-import "./Shared.css";
 
 export const PatientsShared = () => {
   const navigate = useNavigate();
@@ -24,6 +24,7 @@ export const PatientsShared = () => {
   const [statusModal, setStatusModal] = useState({ isOpen: false, patient: null, newStatus: "" });
 
   const { data: patients = [], isLoading } = usePatients("");
+  const { data: insurers = [] } = useInsurers();
   const createMutation = useCreatePatient();
   const updateMutation = useUpdatePatient();
   const updateStatusMutation = useUpdatePatientStatus();
@@ -34,7 +35,7 @@ export const PatientsShared = () => {
     defaultValues: {
       fullName: "", dateOfBirth: "", identityDocument: "", gender: "male",
       phone: "", address: "", isMinor: false, responsibleName: "",
-      personalHistory: "", familyHistory: "",
+      personalHistory: "", familyHistory: "", insurerId: "",
     },
   });
 
@@ -74,7 +75,7 @@ export const PatientsShared = () => {
     reset({
       fullName: "", dateOfBirth: "", identityDocument: "", gender: "male",
       phone: "", address: "", isMinor: false, responsibleName: "",
-      personalHistory: "", familyHistory: "",
+      personalHistory: "", familyHistory: "", insurerId: "",
     });
     setShowModal(true);
   };
@@ -92,6 +93,7 @@ export const PatientsShared = () => {
       responsibleName: patient.responsibleName || "",
       personalHistory: patient.personalHistory || "",
       familyHistory: patient.familyHistory || "",
+      insurerId: patient.insurerId || "",
     });
     setShowModal(true);
   };
@@ -99,6 +101,9 @@ export const PatientsShared = () => {
   const onSubmit = (data) => {
     if (!data.isMinor) {
       data.responsibleName = null;
+    }
+    if (!data.insurerId || data.insurerId.trim() === "") {
+      data.insurerId = null;
     }
 
     if (editingPatient) {
@@ -137,221 +142,348 @@ export const PatientsShared = () => {
     [patients, historialPatientId]
   );
 
-  const S = {
-    page: { padding: "2rem", maxWidth: "1200px", margin: "0 auto" },
-    header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" },
-    table: { width: "100%", borderCollapse: "collapse", textAlign: "left" },
-    th: { padding: "1rem 1.2rem", borderBottom: "2px solid #e5e7eb", color: "#4b5563", fontSize: "0.9rem" },
-    td: { padding: "1rem 1.2rem", borderBottom: "1px solid #f3f4f6" },
-    card: { backgroundColor: "white", borderRadius: "1rem", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", overflow: "hidden" },
-    errorMsg: { color: "#ef4444", fontSize: "0.8rem", marginTop: "0.25rem" },
-    gridForm: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" },
-  };
+  const gridForm = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" };
 
   return (
-    <div style={S.page}>
-      <div style={S.header}>
-        <div>
-          <h1 style={{ color: "#1f2937", margin: 0 }}>Pacientes</h1>
-          <p style={{ color: "#6b7280", margin: "0.3rem 0 0" }}>Gestión de expedientes clínicos</p>
+    <div className="page">
+      <header className="page-header">
+        <div className="page-header__title">
+          <span className="page-header__eyebrow">Expedientes clínicos</span>
+          <h1 className="page-header__heading">Pacientes</h1>
+          <p className="page-header__sub">
+            Gestión de expedientes, búsqueda, historial clínico y cambios de estado.
+          </p>
         </div>
-        
-        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", flexWrap: "wrap" }}>
-          {/* Toggle para mostrar/ocultar inactivos */}
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.95rem", color: "#4b5563", userSelect: "none" }}>
-            <input 
-              type="checkbox" 
-              checked={mostrarInactivos} 
-              onChange={(e) => setMostrarInactivos(e.target.checked)} 
-              style={{ width: "16px", height: "16px", accentColor: "#0d9488" }} 
-            />
-            Mostrar Archivados
-          </label>
+        <div className="page-header__actions">
+          <button onClick={openCreate} className="btn btn-primary">
+            <i className="ri-user-add-line"></i> Nuevo paciente
+          </button>
+        </div>
+      </header>
 
-          <input type="text" className="form-input" placeholder="Buscar por nombre, DUI o expediente..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: "280px" }} />
-          <button onClick={openCreate} className="submit-btn" style={{ margin: 0, padding: "0.75rem 1.5rem", whiteSpace: "nowrap" }}>+ Nuevo Paciente</button>
+      {/* Toolbar de búsqueda */}
+      <div
+        className="card"
+        style={{
+          padding: "0.9rem 1.25rem",
+          marginBottom: "1.25rem",
+          display: "flex",
+          gap: "1rem",
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ position: "relative", flex: "1 1 320px", minWidth: "260px" }}>
+          <i
+            className="ri-search-line"
+            style={{
+              position: "absolute",
+              left: "0.9rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--fg-muted)",
+              fontSize: "1rem",
+            }}
+          ></i>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Buscar por nombre, DUI o número de expediente…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: "100%", paddingLeft: "2.5rem" }}
+          />
         </div>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            cursor: "pointer",
+            fontSize: "0.88rem",
+            color: "var(--fg-secondary)",
+            userSelect: "none",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={mostrarInactivos}
+            onChange={(e) => setMostrarInactivos(e.target.checked)}
+            style={{ width: "16px", height: "16px", accentColor: "var(--brand)" }}
+          />
+          Mostrar archivados
+        </label>
+        <span className="text-muted" style={{ fontSize: "0.82rem" }}>
+          {isLoading ? "Cargando…" : `${filtered.length} de ${patients.length}`}
+        </span>
       </div>
 
-      <div style={S.card}>
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         {isLoading ? (
-          <p style={{ padding: "2rem", textAlign: "center", color: "#6b7280" }}>Cargando pacientes...</p>
+          <p style={{ padding: "2.5rem", textAlign: "center", color: "var(--fg-muted)" }}>
+            Cargando pacientes…
+          </p>
         ) : filtered.length === 0 ? (
-          <p style={{ padding: "2rem", textAlign: "center", color: "#9ca3af" }}>No se encontraron pacientes.</p>
+          <div style={{ padding: "3rem 1rem", textAlign: "center", color: "var(--fg-muted)" }}>
+            <i
+              className="ri-search-line"
+              style={{ fontSize: "1.8rem", opacity: 0.5, display: "block", marginBottom: "0.4rem" }}
+            ></i>
+            No se encontraron pacientes con los filtros actuales.
+          </div>
         ) : (
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>Paciente</th>
-                <th style={S.th}>Expediente</th>
-                <th style={S.th}>DUI</th>
-                <th style={S.th}>Edad</th>
-                <th style={S.th}>Estado</th> 
-                <th style={S.th}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => {
-                const edad = calcularEdad(p.yearOfBirth);
-                const badge = getStatusBadge(p.status || "active"); // Salvaguarda visual
-                return (
-                  <tr key={p.id}>
-                    <td style={{ ...S.td, fontWeight: 500 }}>
-                      {p.fullName}
-                      {p.isMinor ? <span style={{ fontSize: "0.75rem", color: "#f59e0b", marginLeft: "6px" }}>(Menor)</span> : null}
-                    </td>
-                    <td style={{ ...S.td, color: "#6b7280" }}>{p.fileNumber}</td>
-                    <td style={{ ...S.td, color: "#6b7280" }}>{p.identityDocument}</td>
-                    <td style={S.td}>{edad} años</td>
-                    <td style={S.td}>
-                      <span style={{ backgroundColor: badge.bg, color: badge.color, padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.8rem", fontWeight: 600 }}>
-                        {badge.label}
-                      </span>
-                    </td>
-                    <td style={S.td}>
-                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                        <button onClick={() => openEdit(p)} className="doc-btn" style={{ color: "#0ea5e9" }}>Editar</button>
-                        <button onClick={() => openStatusModal(p)} className="doc-btn" style={{ color: "#f59e0b" }}>Estado</button>
-                        <button onClick={() => setHistorialPatientId(p.id)} className="doc-btn">Historial</button>
-                        
-                        {/* Ocultamos botón de pre-clínica si está inactivo o fallecido para evitar agendar citas por error (Escenario 1) */}
-                        {p.status === "active" && (
-                          <button onClick={() => goToPreclinica(p)} className="doc-btn" style={{ color: "#0d9488" }}>Pre-clínica</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Paciente</th>
+                  <th>Expediente</th>
+                  <th>DUI</th>
+                  <th>Edad</th>
+                  <th>Estado</th>
+                  <th style={{ textAlign: "right" }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p) => {
+                  const edad = calcularEdad(p.yearOfBirth);
+                  const badge = getStatusBadge(p.status || "active");
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: "var(--fg-primary)" }}>
+                          {p.fullName}
+                          {Boolean(p.isMinor) && (
+                            <span className="badge badge-warning" style={{ marginLeft: "0.4rem" }}>
+                              Menor
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.82rem", color: "var(--fg-muted)" }}>
+                        {p.fileNumber}
+                      </td>
+                      <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.82rem", color: "var(--fg-muted)" }}>
+                        {p.identityDocument}
+                      </td>
+                      <td>{edad} años</td>
+                      <td>
+                        <span
+                          className="badge"
+                          style={{ background: badge.bg, color: badge.color, border: "none" }}
+                        >
+                          {badge.label}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: "0.35rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          <button onClick={() => openEdit(p)} className="btn btn-ghost btn-sm" title="Editar">
+                            <i className="ri-edit-2-line"></i>
+                          </button>
+                          <button onClick={() => openStatusModal(p)} className="btn btn-ghost btn-sm" title="Estado">
+                            <i className="ri-archive-line"></i>
+                          </button>
+                          <button onClick={() => setHistorialPatientId(p.id)} className="btn btn-ghost btn-sm" title="Historial">
+                            <i className="ri-history-line"></i>
+                          </button>
+                          {p.status === "active" && (
+                            <button onClick={() => goToPreclinica(p)} className="btn btn-primary btn-sm">
+                              <i className="ri-heart-pulse-line"></i> Pre-clínica
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setEditingPatient(null); }} title={editingPatient ? "Editar Paciente" : "Nuevo Paciente"} size="lg">
-        <form onSubmit={handleSubmit(onSubmit)} className="login-form">
+      <Modal
+        isOpen={showModal}
+        onClose={() => { setShowModal(false); setEditingPatient(null); }}
+        title={editingPatient ? "Editar paciente" : "Nuevo paciente"}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div style={{ display: "grid", gap: "1.1rem" }}>
+            <div style={gridForm}>
+              <div className="form-group">
+                <label className="form-label">Nombre completo *</label>
+                <input type="text" className="form-input" {...register("fullName")} />
+                {errors.fullName && <span className="field-error">{errors.fullName.message}</span>}
+              </div>
 
-          <div style={S.gridForm}>
-            <div className="form-group">
-              <label className="form-label">Nombre Completo *</label>
-              <input type="text" className="form-input" {...register("fullName")} />
-              {errors.fullName && <span style={S.errorMsg}>{errors.fullName.message}</span>}
+              <div className="form-group">
+                <label className="form-label">Fecha de nacimiento *</label>
+                <input type="date" className="form-input" {...register("dateOfBirth")} />
+                {errors.dateOfBirth && <span className="field-error">{errors.dateOfBirth.message}</span>}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  {esMenor ? "DUI del responsable *" : "DUI *"}
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="12345678-9"
+                  {...register("identityDocument")}
+                  onChange={(e) =>
+                    setValue("identityDocument", formatDUI(e.target.value), { shouldValidate: true })
+                  }
+                />
+                {errors.identityDocument && <span className="field-error">{errors.identityDocument.message}</span>}
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Género *</label>
+                <select className="form-input" {...register("gender")}>
+                  <option value="male">Masculino</option>
+                  <option value="female">Femenino</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Teléfono</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="0000-0000"
+                  {...register("phone")}
+                  onChange={(e) => setValue("phone", formatPhone(e.target.value))}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Dirección</label>
+                <input type="text" className="form-input" {...register("address")} />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: "span 2" }}>
+                <label className="form-label">Aseguradora (opcional)</label>
+                <select className="form-input" {...register("insurerId")}>
+                  <option value="">Sin aseguradora / particular</option>
+                  {insurers.filter((i) => i.status !== "inactive").map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.companyName} — ${Number(i.fixedConsultationAmount).toFixed(2)} por consulta
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Fecha de Nacimiento *</label>
-              <input type="date" className="form-input" {...register("dateOfBirth")} />
-              {errors.dateOfBirth && <span style={S.errorMsg}>{errors.dateOfBirth.message}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                {esMenor ? "DUI del Responsable *" : "DUI *"}
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  cursor: isAdult ? "not-allowed" : "pointer",
+                  opacity: isAdult ? 0.6 : 1,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  {...register("isMinor")}
+                  disabled={isAdult}
+                  style={{ accentColor: "var(--brand)" }}
+                />
+                <span className="form-label" style={{ margin: 0 }}>
+                  Paciente es menor de edad
+                  {isAdult && (
+                    <span style={{ color: "var(--accent-coral)", fontSize: "0.8rem", marginLeft: "0.35rem" }}>
+                      (bloqueado por fecha de nacimiento)
+                    </span>
+                  )}
+                </span>
               </label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="12345678-9"
-                {...register("identityDocument")}
-                onChange={(e) =>
-                  setValue("identityDocument", formatDUI(e.target.value), { shouldValidate: true })
-                }
-              />
-              {errors.identityDocument && <span style={S.errorMsg}>{errors.identityDocument.message}</span>}
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Género *</label>
-              <select className="form-input" {...register("gender")} style={{ backgroundColor: "white" }}>
-                <option value="male">Masculino</option>
-                <option value="female">Femenino</option>
-              </select>
+            {esMenor && (
+              <div className="form-group">
+                <label className="form-label">Nombre del responsable *</label>
+                <input type="text" className="form-input" {...register("responsibleName")} />
+                {errors.responsibleName && <span className="field-error">{errors.responsibleName.message}</span>}
+              </div>
+            )}
+
+            <div style={gridForm}>
+              <div className="form-group">
+                <label className="form-label">Antecedentes personales</label>
+                <textarea className="form-input" rows={2} {...register("personalHistory")} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Antecedentes familiares</label>
+                <textarea className="form-input" rows={2} {...register("familyHistory")} />
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Teléfono</label>
-              <input type="text" className="form-input" placeholder="0000-0000" {...register("phone")}
-                onChange={(e) => setValue("phone", formatPhone(e.target.value))} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Dirección</label>
-              <input type="text" className="form-input" {...register("address")} />
-            </div>
-          </div>
-
-          <div className="form-group" style={{ marginTop: "1rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: isAdult ? "not-allowed" : "pointer", opacity: isAdult ? 0.6 : 1 }}>
-              <input 
-                type="checkbox" 
-                {...register("isMinor")} 
-                disabled={isAdult} // Se bloquea si tiene 18 años o más
-              />
-              <span className="form-label" style={{ margin: 0 }}>
-                Paciente es menor de edad {isAdult && <span style={{ color: "#ef4444", fontSize: "0.8rem", marginLeft: "5px" }}>(Bloqueado por fecha de nacimiento.)</span>}
-              </span>
-            </label>
-          </div>
-
-          {esMenor && (
-            <div className="form-group">
-              <label className="form-label">Nombre del Responsable *</label>
-              <input type="text" className="form-input" {...register("responsibleName")} />
-              {errors.responsibleName && <span style={S.errorMsg}>{errors.responsibleName.message}</span>}
-            </div>
-          )}
-
-          <div style={{ ...S.gridForm, marginTop: "0.5rem" }}>
-            <div className="form-group">
-              <label className="form-label">Antecedentes Personales</label>
-              <textarea className="form-input" rows={2} {...register("personalHistory")} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Antecedentes Familiares</label>
-              <textarea className="form-input" rows={2} {...register("familyHistory")} />
+            <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end", marginTop: "0.3rem" }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => { setShowModal(false); setEditingPatient(null); }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {(createMutation.isPending || updateMutation.isPending)
+                  ? "Guardando…"
+                  : editingPatient ? "Guardar cambios" : "Registrar paciente"}
+              </button>
             </div>
           </div>
-
-          <button type="submit" className="submit-btn" disabled={createMutation.isPending || updateMutation.isPending}>
-            {(createMutation.isPending || updateMutation.isPending)
-              ? "Guardando..."
-              : editingPatient ? "Guardar Cambios" : "Registrar Paciente"}
-          </button>
-
         </form>
       </Modal>
       <Modal
         isOpen={statusModal.isOpen}
         onClose={() => setStatusModal({ isOpen: false, patient: null, newStatus: "" })}
-        title="Archivo y Estado del Paciente"
+        title="Archivo y estado del paciente"
         size="sm"
       >
         {statusModal.patient && (
-          <div className="login-form">
-            <p style={{ color: "#4b5563", fontSize: "0.9rem", marginBottom: "1rem" }}>
-              Modificar estado de <strong>{statusModal.patient.fullName}</strong>.
+          <div style={{ display: "grid", gap: "1.1rem" }}>
+            <p style={{ color: "var(--fg-secondary)", fontSize: "0.92rem", margin: 0 }}>
+              Modificar estado de <strong style={{ color: "var(--fg-primary)" }}>{statusModal.patient.fullName}</strong>.
             </p>
             <div className="form-group">
-              <label className="form-label">Estado Actual</label>
+              <label className="form-label">Estado actual</label>
               <select
                 className="form-input"
                 value={statusModal.newStatus}
                 onChange={(e) => setStatusModal(prev => ({ ...prev, newStatus: e.target.value }))}
-                style={{ backgroundColor: "white" }}
               >
                 <option value="active">Activo</option>
                 <option value="inactive">Inactivo</option>
                 <option value="deceased">Fallecido</option>
               </select>
             </div>
-            <button 
-              onClick={handleStatusSave} 
-              className="submit-btn" 
-              disabled={updateStatusMutation.isPending || statusModal.newStatus === statusModal.patient.status}
-            >
-              {updateStatusMutation.isPending ? "Actualizando..." : "Guardar Estado"}
-            </button>
+            <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setStatusModal({ isOpen: false, patient: null, newStatus: "" })}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleStatusSave}
+                className="btn btn-primary"
+                disabled={updateStatusMutation.isPending || statusModal.newStatus === statusModal.patient.status}
+              >
+                {updateStatusMutation.isPending ? "Actualizando…" : "Guardar estado"}
+              </button>
+            </div>
           </div>
         )}
       </Modal>

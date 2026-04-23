@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 
-// Hooks
 import { consultationSchema } from "../../lib/validations/consultationSchema";
 import { usePreclinicalRecord } from "../../hooks/usePreclinical";
 import { useFinishConsultation } from "../../hooks/useConsultations";
@@ -13,51 +12,121 @@ import { usePatient, useUpdatePatient, usePatientClinicalHistory } from "../../h
 import { useSettings } from "../../hooks/useSettings";
 import { authClient } from "../../lib/auth-client";
 
-// Componentes
 import { Modal } from "../../components/Modal";
 import { ClinicalHistoryTimeline } from "../../components/clinical-history/ClinicalHistoryTimeline";
+import { GenerateDocumentModal } from "../../components/GenerateDocumentModal";
+import { PrescriptionPreviewModal } from "../../components/PrescriptionPreviewModal";
 import { calcularEdad, clasificarIMC } from "../../lib/utils";
-import { DocumentGeneratorModal } from "../../components/DocumentGeneratorModal"; 
+import { DocumentGeneratorModal } from "../../components/DocumentGeneratorModal";
 import "../../views/shared/Shared.css";
 
 const toNull = (v) => (v === "" || v === undefined ? null : v);
 
 const preventNegative = (e) => {
-  if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+  if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
     e.preventDefault();
   }
 };
 
 const createMedicationDraft = () => ({
   clientId: crypto.randomUUID(),
-  name: "", concentration: "", concentrationUnit: "mg", 
-  doseAmount: "", doseUnit: "Tableta(s)", route: "Oral", 
-  frequencyAmount: "", frequencyUnit: "horas",
-  durationAmount: "", durationUnit: "días",
+  name: "",
+  concentration: "",
+  concentrationUnit: "mg",
+  doseAmount: "",
+  doseUnit: "Tableta(s)",
+  route: "Oral",
+  frequencyAmount: "",
+  frequencyUnit: "horas",
+  durationAmount: "",
+  durationUnit: "días",
   additionalInstructions: "",
 });
 
+const NEUTRAL = "var(--fg-muted)";
+const OK = "var(--accent-forest)";
+const WARN = "var(--accent-ochre)";
+const DANGER = "var(--accent-coral)";
+const INFO = "var(--accent-slate)";
+
 const getVitalStatus = (type, value) => {
-  if (value === null || value === undefined || value === "") return { label: "", color: "#6b7280" };
+  if (value === null || value === undefined || value === "") return { label: "", color: NEUTRAL };
   const num = parseFloat(value);
-  if (isNaN(num)) return { label: "", color: "#6b7280" };
+  if (isNaN(num)) return { label: "", color: NEUTRAL };
   switch (type) {
-    case "temp": return num < 36 ? { label: "Baja", color: "#3b82f6" } : num > 37.5 ? { label: "Fiebre", color: "#ef4444" } : { label: "Normal", color: "#22c55e" };
-    case "hr": return num < 60 ? { label: "Bradicardia", color: "#3b82f6" } : num > 100 ? { label: "Taquicardia", color: "#ef4444" } : { label: "Normal", color: "#22c55e" };
-    case "o2": return num < 90 ? { label: "Crítica", color: "#ef4444" } : num < 95 ? { label: "Baja", color: "#f59e0b" } : { label: "Normal", color: "#22c55e" };
-    default: return { label: "", color: "#6b7280" };
+    case "temp":
+      return num < 36
+        ? { label: "Baja", color: INFO }
+        : num > 37.5
+          ? { label: "Fiebre", color: DANGER }
+          : { label: "Normal", color: OK };
+    case "hr":
+      return num < 60
+        ? { label: "Bradicardia", color: INFO }
+        : num > 100
+          ? { label: "Taquicardia", color: DANGER }
+          : { label: "Normal", color: OK };
+    case "o2":
+      return num < 90
+        ? { label: "Crítica", color: DANGER }
+        : num < 95
+          ? { label: "Baja", color: WARN }
+          : { label: "Normal", color: OK };
+    default:
+      return { label: "", color: NEUTRAL };
   }
 };
 
 const getBpStatus = (bp) => {
-  if (!bp || !bp.includes("/")) return { label: "", color: "#6b7280" };
+  if (!bp || !bp.includes("/")) return { label: "", color: NEUTRAL };
   const [sys, dia] = bp.split("/").map(Number);
-  if (isNaN(sys) || isNaN(dia) || sys === 0 || dia === 0) return { label: "", color: "#6b7280" };
-  if (sys < 90 || dia < 60) return { label: "Baja", color: "#3b82f6" }; 
-  if (sys >= 160 || dia >= 100) return { label: "Grado 2", color: "#991b1b" }; 
-  if (sys >= 140 || dia >= 90) return { label: "Grado 1", color: "#ef4444" }; 
-  if (sys >= 130 || dia >= 85) return { label: "Normal-Alta", color: "#f59e0b" }; 
-  return { label: "Normal", color: "#22c55e" }; 
+  if (isNaN(sys) || isNaN(dia) || sys === 0 || dia === 0) return { label: "", color: NEUTRAL };
+  if (sys < 90 || dia < 60) return { label: "Baja", color: INFO };
+  if (sys >= 160 || dia >= 100) return { label: "Grado 2", color: DANGER };
+  if (sys >= 140 || dia >= 90) return { label: "Grado 1", color: DANGER };
+  if (sys >= 130 || dia >= 85) return { label: "Normal-Alta", color: WARN };
+  return { label: "Normal", color: OK };
+};
+
+const vitalRow = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "0.55rem 0",
+  borderBottom: "1px solid var(--border-subtle)",
+};
+
+const vitalInput = {
+  width: "90px",
+  padding: "0.35rem 0.55rem",
+  border: "1px solid var(--border-default)",
+  borderRadius: "var(--radius-sm)",
+  textAlign: "right",
+  outline: "none",
+  fontSize: "0.88rem",
+  background: "var(--bg-surface)",
+  fontFamily: "var(--font-mono)",
+  color: "var(--fg-primary)",
+};
+
+const medSelect = {
+  padding: "0.6rem 0.75rem",
+  border: "1px solid var(--border-default)",
+  borderRadius: "var(--radius-sm)",
+  background: "var(--bg-surface)",
+  outline: "none",
+  width: "100%",
+  fontSize: "0.9rem",
+  color: "var(--fg-primary)",
+  fontFamily: "var(--font-body)",
+};
+
+const fieldLabel = {
+  fontSize: "0.78rem",
+  color: "var(--fg-muted)",
+  marginBottom: "0.3rem",
+  display: "block",
+  fontWeight: 500,
 };
 
 export const ConsultaMedica = () => {
@@ -83,13 +152,16 @@ export const ConsultaMedica = () => {
   const [medicamentos, setMedicamentos] = useState([]);
   const [documentosGenerados, setDocumentosGenerados] = useState([]); // <-- Hook de estado movido adentro del componente
   const [showHistory, setShowHistory] = useState(false);
-  
+
   const [isEditingAntecedents, setIsEditingAntecedents] = useState(false);
   const [tempPersonalHistory, setTempPersonalHistory] = useState("");
   const [tempFamilyHistory, setTempFamilyHistory] = useState("");
   
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState("certificate");
+
+  const [prescriptionPreview, setPrescriptionPreview] = useState({ open: false, html: "" });
+  const [docModal, setDocModal] = useState({ open: false, type: null });
 
   const { register, watch, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(consultationSchema),
@@ -156,7 +228,7 @@ export const ConsultaMedica = () => {
     return (wKg / (parseFloat(currentHeight) ** 2)).toFixed(2);
   }, [currentWeight, currentHeight]);
 
-  const imcInfo = clasificarIMC(bmi ? parseFloat(bmi) : null) || { label: "N/A", color: "#6b7280" };
+  const imcInfo = clasificarIMC(bmi ? parseFloat(bmi) : null) || { label: "N/A", color: NEUTRAL };
   const bpInfo = getBpStatus(currentBp);
 
   const handleAbrirDocumento = () => {
@@ -169,71 +241,76 @@ export const ConsultaMedica = () => {
 
   const handleSaveAntecedents = () => {
     if (!patientId) return toast.error("Error: ID de paciente no encontrado.");
-    updatePatientMutation.mutate({ 
-      id: patientId, data: { personalHistory: tempPersonalHistory, familyHistory: tempFamilyHistory } 
-    }, {
-      onSuccess: () => {
-        setIsEditingAntecedents(false);
-        toast.success("Antecedentes actualizados al vuelo.");
+    updatePatientMutation.mutate(
+      { id: patientId, data: { personalHistory: tempPersonalHistory, familyHistory: tempFamilyHistory } },
+      {
+        onSuccess: () => {
+          setIsEditingAntecedents(false);
+          toast.success("Antecedentes actualizados al vuelo.");
+        },
       }
-    });
+    );
   };
 
   const agregarMedicamento = () => setMedicamentos((current) => [...current, createMedicationDraft()]);
   const updateMed = (idx, field, value) => {
-    setMedicamentos((current) => { const copy = [...current]; copy[idx] = { ...copy[idx], [field]: value }; return copy; });
+    setMedicamentos((current) => {
+      const copy = [...current];
+      copy[idx] = { ...copy[idx], [field]: value };
+      return copy;
+    });
   };
   const removeMed = (idx) => setMedicamentos((current) => current.filter((_, i) => i !== idx));
 
-  const handlePrintPrescription = () => {
-    if (medicamentos.length === 0 || !medicamentos.some(m => m.name.trim() !== "")) {
-      return toast.error("Agrega al menos un medicamento válido para imprimir.");
-    }
-
+  const buildPrescriptionHtml = () => {
     const datosClinica = {
       nombreClinica: settings?.clinicName || "Consultorio Médico Integral",
       nombreMedico: session?.user?.name ? `Dr/Dra. ${session.user.name}` : "Médico Tratante",
       jvpm: session?.user?.jvpm || settings?.jvpm || "---",
       telefono: session?.user?.phone || settings?.phone || "---",
       direccion: settings?.address || "---",
-      logoUrl: settings?.logoUrl || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path fill='%230d9488' d='M35 15h30v20h20v30H65v20H35V65H15V35h20z'/></svg>"
+      logoUrl:
+        settings?.logoUrl ||
+        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path fill='%23285444' d='M35 15h30v20h20v30H65v20H35V65H15V35h20z'/></svg>",
     };
 
     const patientName = data?.patientName || data?.fullName || patientProfile?.fullName || "Paciente";
-    
-    const medsHTML = medicamentos.filter(m => m.name.trim()).map((med) => {
-      const fullName = med.concentration ? `${med.name} ${med.concentration}${med.concentrationUnit}` : med.name;
-      return `
-        <div style="margin-bottom: 22px; padding-bottom: 15px; border-bottom: 1px dashed #e5e7eb;">
-          <h3 style="margin: 0 0 6px 0; color: #111827; font-size: 1.15rem;">${fullName}</h3>
-          <p style="margin: 0 0 6px 0; font-size: 1rem; color: #374151;">
-            <strong>Tomar/Aplicar:</strong> ${med.doseAmount} ${med.doseUnit} 
-            cada ${med.frequencyAmount} ${med.frequencyUnit} 
-            por ${med.durationAmount} ${med.durationUnit}.
-            <br/><span style="color:#6b7280; font-size: 0.9rem;">Vía de administración: ${med.route}</span>
-          </p>
-          ${med.additionalInstructions ? `<p style="margin: 0; font-size: 0.95rem; color: #1f2937;"><strong>Indicaciones:</strong> ${med.additionalInstructions}</p>` : ""}
-        </div>
-      `;
-    }).join("");
 
-    const printWindow = window.open("", "_blank", "width=800,height=600");
-    printWindow.document.write(`
+    const medsHTML = medicamentos
+      .filter((m) => m.name.trim())
+      .map((med) => {
+        const fullName = med.concentration ? `${med.name} ${med.concentration}${med.concentrationUnit}` : med.name;
+        return `
+          <div style="margin-bottom: 22px; padding-bottom: 15px; border-bottom: 1px dashed #e5e7eb;">
+            <h3 style="margin: 0 0 6px 0; color: #111827; font-size: 1.15rem;">${fullName}</h3>
+            <p style="margin: 0 0 6px 0; font-size: 1rem; color: #374151;">
+              <strong>Tomar/Aplicar:</strong> ${med.doseAmount} ${med.doseUnit}
+              cada ${med.frequencyAmount} ${med.frequencyUnit}
+              por ${med.durationAmount} ${med.durationUnit}.
+              <br/><span style="color:#6b7280; font-size: 0.9rem;">Vía de administración: ${med.route}</span>
+            </p>
+            ${med.additionalInstructions ? `<p style="margin: 0; font-size: 0.95rem; color: #1f2937;"><strong>Indicaciones:</strong> ${med.additionalInstructions}</p>` : ""}
+          </div>
+        `;
+      })
+      .join("");
+
+    return `<!doctype html>
       <html>
         <head>
           <title>Receta Médica - ${patientName}</title>
           <style>
             @media print { @page { margin: 15mm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #1f2937; line-height: 1.5; }
-            .header { display: flex; align-items: center; border-bottom: 3px solid #0d9488; padding-bottom: 20px; margin-bottom: 20px; }
+            .header { display: flex; align-items: center; border-bottom: 3px solid #285444; padding-bottom: 20px; margin-bottom: 20px; }
             .logo { width: 80px; height: 80px; margin-right: 20px; object-fit: contain; }
             .clinic-info { flex-grow: 1; }
-            .clinic-name { color: #0d9488; margin: 0 0 5px 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
+            .clinic-name { color: #285444; margin: 0 0 5px 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
             .doc-name { font-size: 18px; font-weight: bold; margin: 0 0 4px 0; color: #111827; }
             .doc-details { font-size: 12px; color: #4b5563; margin: 0; line-height: 1.4; }
             .patient-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; }
             .patient-box p { margin: 3px 0; font-size: 14px; }
-            .rx { font-size: 40px; color: #0d9488; font-family: Georgia, serif; font-style: italic; line-height: 1; margin-bottom: 20px; }
+            .rx { font-size: 40px; color: #285444; font-family: Georgia, serif; font-style: italic; line-height: 1; margin-bottom: 20px; }
             .signature-section { margin-top: 80px; display: flex; justify-content: flex-end; }
             .signature-line { width: 250px; border-top: 1px solid #1f2937; text-align: center; padding-top: 8px; }
             .signature-line p { margin: 2px 0; font-size: 12px; color: #4b5563; }
@@ -271,13 +348,19 @@ export const ConsultaMedica = () => {
               <p>Firma y Sello</p>
             </div>
           </div>
-          <script>
-            setTimeout(() => { window.print(); window.close(); }, 500);
-          </script>
         </body>
-      </html>
-    `);
-    printWindow.document.close();
+      </html>`;
+  };
+
+  const handlePreviewPrescription = () => {
+    if (medicamentos.length === 0 || !medicamentos.some((m) => m.name.trim() !== "")) {
+      return toast.error("Agrega al menos un medicamento válido para previsualizar.");
+    }
+    setPrescriptionPreview({ open: true, html: buildPrescriptionHtml() });
+  };
+
+  const openDocumentModal = (type) => {
+    setDocModal({ open: true, type });
   };
 
   const onSubmit = (formData) => {
@@ -292,7 +375,7 @@ export const ConsultaMedica = () => {
         route: med.route,
         frequency: med.frequencyAmount ? `Cada ${med.frequencyAmount} ${med.frequencyUnit}` : "",
         duration: med.durationAmount ? `Por ${med.durationAmount} ${med.durationUnit}` : "",
-        additionalInstructions: med.additionalInstructions || null
+        additionalInstructions: med.additionalInstructions || null,
       }));
 
     const body = {
@@ -303,168 +386,339 @@ export const ConsultaMedica = () => {
       oxygenSaturation: toNull(formData.oxygenSaturation),
       weight: toNull(formData.weight),
       height: toNull(formData.height),
-      bmi: bmi ? String(bmi) : null, 
+      bmi: bmi ? String(bmi) : null,
       insurerId: formData.billingType === "insurance" ? formData.insurerId : undefined,
       agreedAmount: formData.billingType === "insurance" ? formData.agreedAmount : undefined,
       medicamentos: medicamentosPreparados,
       documentos: documentosGenerados,
     };
 
-    finishMutation.mutate({ id, data: body }, {
-      onSuccess: () => {
-        toast.success("Consulta finalizada con éxito");
-        setTimeout(() => navigate("/doctor"), 1200);
-      },
-      onError: (err) => toast.error(err.message || "Error al finalizar la consulta")
-    });
+    finishMutation.mutate(
+      { id, data: body },
+      {
+        onSuccess: () => {
+          toast.success("Consulta finalizada con éxito");
+          setTimeout(() => navigate("/doctor"), 1200);
+        },
+        onError: (err) => toast.error(err.message || "Error al finalizar la consulta"),
+      }
+    );
   };
 
-  const S = {
-    page: { minHeight: "100vh", background: "#f8fafc", padding: "2rem" },
-    layout: { display: "grid", gridTemplateColumns: "370px 1fr", gap: "2rem", maxWidth: "1350px", margin: "0 auto" },
-    sidebar: { backgroundColor: "white", borderRadius: "18px", padding: "1.5rem", boxShadow: "0 4px 15px rgba(0,0,0,0.05)", height: "fit-content", position: "sticky", top: "2rem" },
-    main: { display: "flex", flexDirection: "column", gap: "1.5rem" },
-    card: { backgroundColor: "white", borderRadius: "18px", padding: "2rem", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" },
-    sectionTitle: { color: "#0d9488", margin: "0 0 1rem", fontSize: "1.1rem", borderBottom: "2px solid #f0fdfa", paddingBottom: "8px" },
-    vitalRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid #f3f4f6" },
-    vitalInput: { width: "80px", padding: "0.25rem 0.5rem", border: "1px solid #d1d5db", borderRadius: "6px", textAlign: "right", outline: "none", fontSize: "0.9rem" },
-    errorMsg: { color: "#ef4444", fontSize: "0.8rem", marginTop: "0.25rem" },
-    historyBtn: { width: "100%", padding: "0.8rem", borderRadius: "12px", border: "2px solid #0d9488", color: "#0d9488", background: "white", fontWeight: "600", cursor: "pointer", marginBottom: "1.5rem", transition: "all 0.2s" },
-    antecedentsBox: { marginTop: "1rem", padding: "1rem", backgroundColor: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" },
-    medicationGrid: { display: "grid", gridTemplateColumns: "1fr", gap: "12px" },
-    medRow: { display: "flex", gap: "10px", alignItems: "center" },
-    medSelect: { padding: "8px", border: "1px solid #d1d5db", borderRadius: "6px", background: "white", outline: "none", width: "100%" }
-  };
+  if (isLoading) {
+    return (
+      <div className="page" style={{ textAlign: "center", color: "var(--fg-muted)" }}>
+        Cargando consulta…
+      </div>
+    );
+  }
+  if (isError || !data) {
+    return (
+      <div className="page" style={{ textAlign: "center", color: "var(--accent-coral)" }}>
+        Error al cargar datos.
+      </div>
+    );
+  }
 
-  if (isLoading) return <div style={{ ...S.page, display: "flex", justifyContent: "center", alignItems: "center" }}><p>Cargando consulta...</p></div>;
-  if (isError || !data) return <div style={{ ...S.page, display: "flex", justifyContent: "center", alignItems: "center" }}><p style={{ color: "red" }}>Error al cargar datos.</p></div>;
-  
   const isMale = (data.patientGender || data.gender || patientProfile?.gender)?.toLowerCase() === "male";
+  const patientName = data.patientName || data.fullName || patientProfile?.fullName || "Paciente";
 
   return (
-    <div style={S.page}>
-      <div style={S.layout}>
-        <form onSubmit={handleSubmit(onSubmit)} style={{ display: "contents" }}>
-          
-          <aside style={S.sidebar}>
-            <button type="button" onClick={() => setShowHistory(true)} style={S.historyBtn}>
-              <i className="ri-history-line" style={{ marginRight: "8px" }}></i> Ver Historial Clínico
-            </button>
+    <div className="page" style={{ maxWidth: "1350px" }}>
+      <header className="page-header">
+        <div className="page-header__title">
+          <span className="page-header__eyebrow">Consulta médica</span>
+          <h1 className="page-header__heading">{patientName}</h1>
+          <p className="page-header__sub">
+            {edad !== null && edad >= 0 ? `${edad} años` : "Edad N/A"} · {isMale ? "Masculino" : "Femenino"} · Exp:{" "}
+            {data.patientFileNumber || patientProfile?.fileNumber || "N/A"}
+          </p>
+        </div>
+        <div className="page-header__actions">
+          <button type="button" onClick={() => setShowHistory(true)} className="btn btn-secondary">
+            <i className="ri-history-line"></i> Ver historial clínico
+          </button>
+        </div>
+      </header>
 
-            <h2 style={{ margin: "0 0 0.5rem", color: "#1f2937" }}>{data.patientName || data.fullName || patientProfile?.fullName || "Paciente"}</h2>
-            <p style={{ color: "#6b7280", margin: "0 0 1rem", fontSize: "0.9rem" }}>
-              {edad !== null && edad >= 0 ? `${edad} años` : "Edad N/A"} | {isMale ? "Masculino" : "Femenino"} | Exp: {data.patientFileNumber || patientProfile?.fileNumber || "N/A"}
-            </p>
-            
-            <h3 style={{ color: "#0d9488", fontSize: "1rem", margin: "1rem 0 0.5rem" }}>Signos Vitales</h3>
-            <div style={S.vitalRow}>
-              <span style={{ color: "#6b7280", display: "flex", flexDirection: "column" }}>
-                P. Arterial <small style={{ color: bpInfo.color, fontWeight: 600 }}>{bpInfo.label}</small>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div style={{ display: "grid", gridTemplateColumns: "370px 1fr", gap: "2rem", alignItems: "start" }}>
+          <aside
+            className="card"
+            style={{ position: "sticky", top: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
+            <div
+              style={{
+                padding: "0.9rem 1rem",
+                background: "var(--brand-soft)",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--brand-soft)",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "var(--brand)",
+                }}
+              >
+                Motivo
               </span>
-              <input type="text" placeholder="120/80" style={S.vitalInput} {...register("bloodPressure")} />
-            </div>
-            <div style={S.vitalRow}>
-              <span style={{ color: "#6b7280", display: "flex", flexDirection: "column" }}>
-                Temp (°C) <small style={{ color: getVitalStatus("temp", currentTemp).color, fontWeight: 600 }}>{getVitalStatus("temp", currentTemp).label}</small>
-              </span>
-              <input type="number" step="0.1" min="0" onKeyDown={preventNegative} style={S.vitalInput} {...register("temperature")} />
-            </div>
-            <div style={S.vitalRow}>
-              <span style={{ color: "#6b7280", display: "flex", flexDirection: "column" }}>
-                Frec. Cardíaca <small style={{ color: getVitalStatus("hr", currentHr).color, fontWeight: 600 }}>{getVitalStatus("hr", currentHr).label}</small>
-              </span>
-              <input type="number" min="0" onKeyDown={preventNegative} style={S.vitalInput} {...register("heartRate")} />
-            </div>
-            <div style={S.vitalRow}>
-              <span style={{ color: "#6b7280", display: "flex", flexDirection: "column" }}>
-                SatO2 (%) <small style={{ color: getVitalStatus("o2", currentO2).color, fontWeight: 600 }}>{getVitalStatus("o2", currentO2).label}</small>
-              </span>
-              <input type="number" min="0" max="100" onKeyDown={preventNegative} style={S.vitalInput} {...register("oxygenSaturation")} />
-            </div>
-            <div style={S.vitalRow}>
-              <span style={{ color: "#6b7280" }}>Peso (lb)</span>
-              <input type="number" step="0.1" min="0" onKeyDown={preventNegative} style={S.vitalInput} {...register("weight")} />
-            </div>
-            <div style={S.vitalRow}>
-              <span style={{ color: "#6b7280" }}>Estatura (m)</span>
-              <input type="number" step="0.01" min="0" onKeyDown={preventNegative} style={S.vitalInput} {...register("height")} />
-            </div>
-            <div style={S.vitalRow}>
-              <span style={{ color: "#6b7280", display: "flex", flexDirection: "column" }}>
-                IMC <small style={{ color: imcInfo.color, fontWeight: 600 }}>{imcInfo.label}</small>
-              </span>
-              <span style={{ fontWeight: 600 }}>{bmi || "N/A"}</span>
+              <p style={{ margin: "0.35rem 0 0", color: "var(--fg-primary)", fontSize: "0.92rem" }}>
+                {data.motivo || "N/A"}
+              </p>
             </div>
 
-            <div style={{ marginTop: "1rem", padding: "1rem", backgroundColor: "#f0fdfa", borderRadius: "10px" }}>
-              <strong style={{ color: "#0d9488" }}>Motivo:</strong>
-              <p style={{ margin: "0.3rem 0 0", color: "#374151", fontSize: "0.9rem" }}>{data.motivo || "N/A"}</p>
+            <div>
+              <h3
+                style={{
+                  color: "var(--fg-primary)",
+                  fontFamily: "var(--font-display)",
+                  fontSize: "1rem",
+                  margin: "0 0 0.35rem",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Signos vitales
+              </h3>
+
+              <div style={vitalRow}>
+                <span style={{ color: "var(--fg-muted)", display: "flex", flexDirection: "column" }}>
+                  P. arterial{" "}
+                  <small style={{ color: bpInfo.color, fontWeight: 600 }}>{bpInfo.label}</small>
+                </span>
+                <input type="text" placeholder="120/80" style={vitalInput} {...register("bloodPressure")} />
+              </div>
+              <div style={vitalRow}>
+                <span style={{ color: "var(--fg-muted)", display: "flex", flexDirection: "column" }}>
+                  Temp (°C){" "}
+                  <small style={{ color: getVitalStatus("temp", currentTemp).color, fontWeight: 600 }}>
+                    {getVitalStatus("temp", currentTemp).label}
+                  </small>
+                </span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  onKeyDown={preventNegative}
+                  style={vitalInput}
+                  {...register("temperature")}
+                />
+              </div>
+              <div style={vitalRow}>
+                <span style={{ color: "var(--fg-muted)", display: "flex", flexDirection: "column" }}>
+                  Frec. cardíaca{" "}
+                  <small style={{ color: getVitalStatus("hr", currentHr).color, fontWeight: 600 }}>
+                    {getVitalStatus("hr", currentHr).label}
+                  </small>
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  onKeyDown={preventNegative}
+                  style={vitalInput}
+                  {...register("heartRate")}
+                />
+              </div>
+              <div style={vitalRow}>
+                <span style={{ color: "var(--fg-muted)", display: "flex", flexDirection: "column" }}>
+                  SatO₂ (%){" "}
+                  <small style={{ color: getVitalStatus("o2", currentO2).color, fontWeight: 600 }}>
+                    {getVitalStatus("o2", currentO2).label}
+                  </small>
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  onKeyDown={preventNegative}
+                  style={vitalInput}
+                  {...register("oxygenSaturation")}
+                />
+              </div>
+              <div style={vitalRow}>
+                <span style={{ color: "var(--fg-muted)" }}>Peso (lb)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  onKeyDown={preventNegative}
+                  style={vitalInput}
+                  {...register("weight")}
+                />
+              </div>
+              <div style={vitalRow}>
+                <span style={{ color: "var(--fg-muted)" }}>Estatura (m)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  onKeyDown={preventNegative}
+                  style={vitalInput}
+                  {...register("height")}
+                />
+              </div>
+              <div style={vitalRow}>
+                <span style={{ color: "var(--fg-muted)", display: "flex", flexDirection: "column" }}>
+                  IMC{" "}
+                  <small style={{ color: imcInfo.color, fontWeight: 600 }}>{imcInfo.label}</small>
+                </span>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: "var(--fg-primary)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {bmi || "N/A"}
+                </span>
+              </div>
             </div>
 
-            <div style={S.antecedentsBox}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                <strong style={{ fontSize: "0.9rem", color: "#0f172a" }}>Antecedentes</strong>
+            <div
+              style={{
+                padding: "1rem",
+                background: "var(--bg-surface-alt)",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                <strong style={{ fontSize: "0.9rem", color: "var(--fg-primary)" }}>Antecedentes</strong>
                 {!isEditingAntecedents ? (
-                  <button type="button" onClick={() => setIsEditingAntecedents(true)} style={{ color: "#0d9488", border: "none", background: "none", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>Editar</button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingAntecedents(true)}
+                    style={{
+                      color: "var(--brand)",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Editar
+                  </button>
                 ) : (
-                  <button type="button" onClick={handleSaveAntecedents} disabled={updatePatientMutation.isPending} style={{ color: "#22c55e", border: "none", background: "none", cursor: "pointer", fontSize: "0.85rem", fontWeight: "bold" }}>
-                    {updatePatientMutation.isPending ? "Guardando..." : "Guardar"}
+                  <button
+                    type="button"
+                    onClick={handleSaveAntecedents}
+                    disabled={updatePatientMutation.isPending}
+                    style={{
+                      color: "var(--accent-forest)",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {updatePatientMutation.isPending ? "Guardando…" : "Guardar"}
                   </button>
                 )}
               </div>
 
               {isEditingAntecedents ? (
                 <>
-                  <label style={{ fontSize: "0.8rem", color: "#64748b", display: "block", marginBottom: "4px" }}>Personales</label>
-                  <textarea value={tempPersonalHistory} onChange={(e) => setTempPersonalHistory(e.target.value)} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "0.85rem", padding: "8px", marginBottom: "10px" }} rows={3} />
-                  <label style={{ fontSize: "0.8rem", color: "#64748b", display: "block", marginBottom: "4px" }}>Familiares</label>
-                  <textarea value={tempFamilyHistory} onChange={(e) => setTempFamilyHistory(e.target.value)} style={{ width: "100%", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "0.85rem", padding: "8px" }} rows={3} />
+                  <label style={fieldLabel}>Personales</label>
+                  <textarea
+                    value={tempPersonalHistory}
+                    onChange={(e) => setTempPersonalHistory(e.target.value)}
+                    className="form-input"
+                    style={{ marginBottom: "0.6rem", width: "100%" }}
+                    rows={3}
+                  />
+                  <label style={fieldLabel}>Familiares</label>
+                  <textarea
+                    value={tempFamilyHistory}
+                    onChange={(e) => setTempFamilyHistory(e.target.value)}
+                    className="form-input"
+                    style={{ width: "100%" }}
+                    rows={3}
+                  />
                 </>
               ) : (
-                <div style={{ fontSize: "0.85rem", color: "#475569" }}>
-                  <p style={{ margin: "0 0 10px 0" }}><strong>Personales:</strong> <br/>{tempPersonalHistory || "Ninguno registrado."}</p>
-                  <p style={{ margin: 0 }}><strong>Familiares:</strong> <br/>{tempFamilyHistory || "Ninguno registrado."}</p>
+                <div style={{ fontSize: "0.85rem", color: "var(--fg-secondary)" }}>
+                  <p style={{ margin: "0 0 0.6rem 0" }}>
+                    <strong>Personales:</strong>
+                    <br />
+                    {tempPersonalHistory || "Ninguno registrado."}
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Familiares:</strong>
+                    <br />
+                    {tempFamilyHistory || "Ninguno registrado."}
+                  </p>
                 </div>
               )}
             </div>
           </aside>
 
-          <main style={S.main}>
-            <div style={S.card}>
-              <h2 style={S.sectionTitle}>Consulta Médica</h2>
-              <div className="form-group" style={{ marginBottom: "1rem" }}>
-                <label className="form-label">Anamnesis / Historia de enfermedad actual *</label>
-                <textarea className="form-input" rows={4} {...register("anamnesis")} />
-                {errors.anamnesis && <span style={S.errorMsg}>{errors.anamnesis.message}</span>}
-              </div>
-              <div className="form-group" style={{ marginBottom: "1rem" }}>
-                <label className="form-label">Examen Físico</label>
-                <textarea className="form-input" rows={3} {...register("physicalExam")} />
-              </div>
-              <div className="form-group" style={{ marginBottom: "1rem" }}>
-                <label className="form-label">Diagnóstico *</label>
-                <textarea className="form-input" rows={2} {...register("diagnosis")} />
-                {errors.diagnosis && <span style={S.errorMsg}>{errors.diagnosis.message}</span>}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <main style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <section className="card">
+              <h2 className="card-heading">Consulta médica</h2>
+              <div style={{ display: "grid", gap: "1rem", marginTop: "0.75rem" }}>
                 <div className="form-group">
-                  <label className="form-label">Resultados de Laboratorio</label>
-                  <textarea className="form-input" rows={2} {...register("labResults")} />
+                  <label className="form-label">Anamnesis / historia de enfermedad actual *</label>
+                  <textarea className="form-input" rows={4} {...register("anamnesis")} />
+                  {errors.anamnesis && <span className="field-error">{errors.anamnesis.message}</span>}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Observaciones</label>
-                  <textarea className="form-input" rows={2} {...register("observations")} />
+                  <label className="form-label">Examen físico</label>
+                  <textarea className="form-input" rows={3} {...register("physicalExam")} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Diagnóstico *</label>
+                  <textarea className="form-input" rows={2} {...register("diagnosis")} />
+                  {errors.diagnosis && <span className="field-error">{errors.diagnosis.message}</span>}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <div className="form-group">
+                    <label className="form-label">Resultados de laboratorio</label>
+                    <textarea className="form-input" rows={2} {...register("labResults")} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Observaciones</label>
+                    <textarea className="form-input" rows={2} {...register("observations")} />
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div style={S.card}>
-              <h2 style={S.sectionTitle}>Cobertura de la consulta</h2>
-              <div style={{ display: "grid", gridTemplateColumns: billingType === "insurance" ? "1fr 1fr 1fr" : "1fr", gap: "1rem" }}>
+            <section className="card">
+              <h2 className="card-heading">Cobertura de la consulta</h2>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: billingType === "insurance" ? "1fr 1fr 1fr" : "1fr",
+                  gap: "1rem",
+                  marginTop: "0.75rem",
+                }}
+              >
                 <div className="form-group">
                   <label className="form-label">Tipo de cobertura</label>
-                  <select className="form-input" {...billingTypeField} onChange={(e) => { billingTypeField.onChange(e); if (e.target.value !== "insurance") { setValue("insurerId", "", { shouldValidate: true }); setValue("agreedAmount", "", { shouldValidate: false }); } }} style={{ backgroundColor: "white" }}>
-                    <option value="private">Normal</option>
+                  <select
+                    className="form-input"
+                    {...billingTypeField}
+                    onChange={(e) => {
+                      billingTypeField.onChange(e);
+                      if (e.target.value !== "insurance") {
+                        setValue("insurerId", "", { shouldValidate: true });
+                        setValue("agreedAmount", "", { shouldValidate: false });
+                      }
+                    }}
+                  >
+                    <option value="private">Particular</option>
                     <option value="insurance">Aseguradora</option>
                   </select>
                 </div>
@@ -472,63 +726,152 @@ export const ConsultaMedica = () => {
                   <>
                     <div className="form-group">
                       <label className="form-label">Aseguradora</label>
-                      <select className="form-input" {...insurerField} onChange={(e) => { insurerField.onChange(e); const ins = insurers.find((i) => String(i.id) === String(e.target.value)); setValue("agreedAmount", ins ? String(ins.fixedConsultationAmount ?? "") : "", { shouldValidate: true }); }} style={{ backgroundColor: "white" }}>
+                      <select
+                        className="form-input"
+                        {...insurerField}
+                        onChange={(e) => {
+                          insurerField.onChange(e);
+                          const ins = insurers.find((i) => String(i.id) === String(e.target.value));
+                          setValue("agreedAmount", ins ? String(ins.fixedConsultationAmount ?? "") : "", { shouldValidate: true });
+                        }}
+                      >
                         <option value="">Seleccione una aseguradora</option>
-                        {insurers.filter((i) => i.status !== 'inactive').map((i) => (
-                            <option key={i.id} value={i.id}>{i.companyName}</option>
+                        {insurers.filter((i) => i.status !== "inactive").map((i) => (
+                          <option key={i.id} value={i.id}>{i.companyName}</option>
                         ))}
                       </select>
-                      {errors.insurerId && <span style={S.errorMsg}>{errors.insurerId.message}</span>}
+                      {errors.insurerId && <span className="field-error">{errors.insurerId.message}</span>}
                     </div>
                     <div className="form-group">
                       <label className="form-label">Monto a cubrir</label>
-                      <input type="number" step="0.01" min="0" onKeyDown={preventNegative} className="form-input" {...register("agreedAmount")} />
-                      {errors.agreedAmount && <span style={S.errorMsg}>{errors.agreedAmount.message}</span>}
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        onKeyDown={preventNegative}
+                        className="form-input"
+                        {...register("agreedAmount")}
+                      />
+                      {errors.agreedAmount && <span className="field-error">{errors.agreedAmount.message}</span>}
                     </div>
                   </>
                 )}
               </div>
-            </div>
+            </section>
 
-            <div style={S.card}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "10px" }}>
-                <h2 style={{ ...S.sectionTitle, marginBottom: 0 }}>Receta Médica ({medicamentos.length})</h2>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button type="button" onClick={handlePrintPrescription} style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #0d9488", color: "#0d9488", background: "white", cursor: "pointer", fontWeight: "600" }}>
-                    <i className="ri-printer-line" style={{ marginRight: "5px" }}></i> Imprimir
+            <section className="card">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                  flexWrap: "wrap",
+                  gap: "0.6rem",
+                }}
+              >
+                <h2 className="card-heading" style={{ margin: 0 }}>
+                  Receta médica ({medicamentos.length})
+                </h2>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => openDocumentModal("constancia")} className="btn btn-secondary btn-sm">
+                    <i className="ri-file-text-line"></i> Constancia
                   </button>
-                  <button type="button" onClick={agregarMedicamento} style={{ padding: "8px 16px", borderRadius: "8px", border: "none", color: "white", background: "#0d9488", cursor: "pointer", fontWeight: "600" }}>
-                    + Agregar
+                  <button type="button" onClick={() => openDocumentModal("incapacidad")} className="btn btn-secondary btn-sm">
+                    <i className="ri-health-book-line"></i> Incapacidad
+                  </button>
+                  <button type="button" onClick={handlePreviewPrescription} className="btn btn-secondary btn-sm">
+                    <i className="ri-eye-line"></i> Previsualizar
+                  </button>
+                  <button type="button" onClick={agregarMedicamento} className="btn btn-primary btn-sm">
+                    <i className="ri-add-line"></i> Agregar
                   </button>
                 </div>
               </div>
-              
+
               {medicamentos.length === 0 ? (
-                <p style={{ textAlign: "center", color: "#9ca3af" }}>No se han agregado medicamentos.</p>
+                <div
+                  style={{
+                    textAlign: "center",
+                    color: "var(--fg-muted)",
+                    padding: "2rem 1rem",
+                    background: "var(--bg-surface-alt)",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px dashed var(--border-default)",
+                  }}
+                >
+                  No se han agregado medicamentos.
+                </div>
               ) : (
                 medicamentos.map((med, idx) => (
-                  <div key={med.clientId} style={{ padding: "1.2rem", border: "1px solid #e5e7eb", borderRadius: "12px", marginBottom: "1rem", background: "#f9fafb" }}>
-                    
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem", alignItems: "center" }}>
-                      <strong style={{ color: "#374151" }}>Medicamento #{idx + 1}</strong>
-                      <button type="button" onClick={() => removeMed(idx)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", padding: "5px" }} title="Eliminar">
+                  <div
+                    key={med.clientId}
+                    style={{
+                      padding: "1.2rem",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "var(--radius-md)",
+                      marginBottom: "1rem",
+                      background: "var(--bg-surface-alt)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "1rem",
+                        alignItems: "center",
+                      }}
+                    >
+                      <strong style={{ color: "var(--fg-secondary)", fontSize: "0.9rem" }}>
+                        Medicamento #{idx + 1}
+                      </strong>
+                      <button
+                        type="button"
+                        onClick={() => removeMed(idx)}
+                        style={{
+                          color: "var(--accent-coral)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "0.3rem",
+                        }}
+                        title="Eliminar"
+                        aria-label={`Eliminar medicamento ${idx + 1}`}
+                      >
                         <i className="ri-delete-bin-line" style={{ fontSize: "1.2rem" }}></i>
                       </button>
                     </div>
 
-                    <div style={S.medicationGrid}>
-                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "15px" }}>
+                    <div style={{ display: "grid", gap: "0.75rem" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "0.75rem" }}>
                         <div>
-                          <label style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", display: "block" }}>Nombre *</label>
-                          <input placeholder="Ej. Paracetamol" className="form-input" value={med.name} onChange={(e) => updateMed(idx, "name", e.target.value)} />
+                          <label style={fieldLabel}>Nombre *</label>
+                          <input
+                            placeholder="Ej. Paracetamol"
+                            className="form-input"
+                            value={med.name}
+                            onChange={(e) => updateMed(idx, "name", e.target.value)}
+                          />
                         </div>
                         <div>
-                          <label style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", display: "block" }}>Concentración</label>
-                          <input type="number" min="0" onKeyDown={preventNegative} placeholder="Ej. 500" className="form-input" value={med.concentration} onChange={(e) => updateMed(idx, "concentration", e.target.value)} />
+                          <label style={fieldLabel}>Concentración</label>
+                          <input
+                            type="number"
+                            min="0"
+                            onKeyDown={preventNegative}
+                            placeholder="Ej. 500"
+                            className="form-input"
+                            value={med.concentration}
+                            onChange={(e) => updateMed(idx, "concentration", e.target.value)}
+                          />
                         </div>
                         <div>
-                          <label style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", display: "block" }}>Unidad</label>
-                          <select style={S.medSelect} value={med.concentrationUnit} onChange={(e) => updateMed(idx, "concentrationUnit", e.target.value)}>
+                          <label style={fieldLabel}>Unidad</label>
+                          <select
+                            style={medSelect}
+                            value={med.concentrationUnit}
+                            onChange={(e) => updateMed(idx, "concentrationUnit", e.target.value)}
+                          >
                             <option value="mg">mg</option>
                             <option value="g">g</option>
                             <option value="ml">ml</option>
@@ -539,10 +882,14 @@ export const ConsultaMedica = () => {
                         </div>
                       </div>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr 1.5fr", gap: "15px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr 1.5fr", gap: "0.75rem" }}>
                         <div>
-                          <label style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", display: "block" }}>Vía Admin.</label>
-                          <select style={S.medSelect} value={med.route} onChange={(e) => updateMed(idx, "route", e.target.value)}>
+                          <label style={fieldLabel}>Vía admin.</label>
+                          <select
+                            style={medSelect}
+                            value={med.route}
+                            onChange={(e) => updateMed(idx, "route", e.target.value)}
+                          >
                             <option value="Oral">Oral</option>
                             <option value="Tópica">Tópica</option>
                             <option value="Intravenosa">Intravenosa</option>
@@ -555,10 +902,23 @@ export const ConsultaMedica = () => {
                         </div>
 
                         <div>
-                          <label style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", display: "block" }}>Tomar/Aplicar</label>
-                          <div style={S.medRow}>
-                            <input type="number" min="0" onKeyDown={preventNegative} placeholder="Ej. 1" className="form-input" value={med.doseAmount} onChange={(e) => updateMed(idx, "doseAmount", e.target.value)} style={{ width: "60px" }} />
-                            <select style={{ ...S.medSelect, flex: 1 }} value={med.doseUnit} onChange={(e) => updateMed(idx, "doseUnit", e.target.value)}>
+                          <label style={fieldLabel}>Tomar/aplicar</label>
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <input
+                              type="number"
+                              min="0"
+                              onKeyDown={preventNegative}
+                              placeholder="Ej. 1"
+                              className="form-input"
+                              value={med.doseAmount}
+                              onChange={(e) => updateMed(idx, "doseAmount", e.target.value)}
+                              style={{ width: "72px" }}
+                            />
+                            <select
+                              style={{ ...medSelect, flex: 1 }}
+                              value={med.doseUnit}
+                              onChange={(e) => updateMed(idx, "doseUnit", e.target.value)}
+                            >
                               <option value="Tableta(s)">Tableta(s)</option>
                               <option value="Cápsula(s)">Cápsula(s)</option>
                               <option value="Mililitro(s)">Mililitro(s)</option>
@@ -572,10 +932,23 @@ export const ConsultaMedica = () => {
                         </div>
 
                         <div>
-                          <label style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", display: "block" }}>Frecuencia (Cada...)</label>
-                          <div style={S.medRow}>
-                            <input type="number" min="0" onKeyDown={preventNegative} placeholder="Ej. 8" className="form-input" value={med.frequencyAmount} onChange={(e) => updateMed(idx, "frequencyAmount", e.target.value)} style={{ width: "60px" }} />
-                            <select style={{ ...S.medSelect, flex: 1 }} value={med.frequencyUnit} onChange={(e) => updateMed(idx, "frequencyUnit", e.target.value)}>
+                          <label style={fieldLabel}>Frecuencia (cada…)</label>
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <input
+                              type="number"
+                              min="0"
+                              onKeyDown={preventNegative}
+                              placeholder="Ej. 8"
+                              className="form-input"
+                              value={med.frequencyAmount}
+                              onChange={(e) => updateMed(idx, "frequencyAmount", e.target.value)}
+                              style={{ width: "72px" }}
+                            />
+                            <select
+                              style={{ ...medSelect, flex: 1 }}
+                              value={med.frequencyUnit}
+                              onChange={(e) => updateMed(idx, "frequencyUnit", e.target.value)}
+                            >
                               <option value="horas">Hora(s)</option>
                               <option value="días">Día(s)</option>
                             </select>
@@ -583,12 +956,25 @@ export const ConsultaMedica = () => {
                         </div>
                       </div>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "15px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.75rem" }}>
                         <div>
-                          <label style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", display: "block" }}>Duración (Por...)</label>
-                          <div style={S.medRow}>
-                            <input type="number" min="0" onKeyDown={preventNegative} placeholder="Ej. 5" className="form-input" value={med.durationAmount} onChange={(e) => updateMed(idx, "durationAmount", e.target.value)} style={{ width: "80px" }} />
-                            <select style={{ ...S.medSelect, flex: 1 }} value={med.durationUnit} onChange={(e) => updateMed(idx, "durationUnit", e.target.value)}>
+                          <label style={fieldLabel}>Duración (por…)</label>
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <input
+                              type="number"
+                              min="0"
+                              onKeyDown={preventNegative}
+                              placeholder="Ej. 5"
+                              className="form-input"
+                              value={med.durationAmount}
+                              onChange={(e) => updateMed(idx, "durationAmount", e.target.value)}
+                              style={{ width: "84px" }}
+                            />
+                            <select
+                              style={{ ...medSelect, flex: 1 }}
+                              value={med.durationUnit}
+                              onChange={(e) => updateMed(idx, "durationUnit", e.target.value)}
+                            >
                               <option value="días">Día(s)</option>
                               <option value="semanas">Semana(s)</option>
                               <option value="meses">Mes(es)</option>
@@ -597,16 +983,20 @@ export const ConsultaMedica = () => {
                         </div>
 
                         <div>
-                          <label style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "4px", display: "block" }}>Indicaciones de uso</label>
-                          <input placeholder="Ej. Tomar después de las comidas" className="form-input" value={med.additionalInstructions} onChange={(e) => updateMed(idx, "additionalInstructions", e.target.value)} />
+                          <label style={fieldLabel}>Indicaciones de uso</label>
+                          <input
+                            placeholder="Ej. Tomar después de las comidas"
+                            className="form-input"
+                            value={med.additionalInstructions}
+                            onChange={(e) => updateMed(idx, "additionalInstructions", e.target.value)}
+                          />
                         </div>
                       </div>
-
                     </div>
                   </div>
                 ))
               )}
-            </div>
+            </section>
 
             <div style={S.card}>
               <h2 style={S.sectionTitle}>Documentos Clínicos</h2>
@@ -642,14 +1032,24 @@ export const ConsultaMedica = () => {
               </div>
             </div>
 
-            <button type="submit" className="submit-btn" disabled={finishMutation.isPending} style={{ width: "100%", padding: "1rem", fontSize: "1.1rem", marginTop: "1rem" }}>
-              {finishMutation.isPending ? "Finalizando consulta..." : "Finalizar Consulta"}
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg"
+              disabled={finishMutation.isPending}
+              style={{ width: "100%", padding: "1rem", fontSize: "1.1rem", marginTop: "1rem" }}
+            >
+              {finishMutation.isPending ? "Finalizando consulta…" : "Finalizar consulta"}
             </button>
           </main>
-        </form>
-      </div>
+        </div>
+      </form>
 
-      <Modal isOpen={showHistory} onClose={() => setShowHistory(false)} title={`Historial Clínico - ${data?.patientName || "Paciente"}`} size="xl">
+      <Modal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        title={`Historial clínico — ${patientName}`}
+        size="xl"
+      >
         <ClinicalHistoryTimeline history={historialClinico} isLoading={historialLoading} isError={historialError} />
       </Modal>
 
@@ -660,6 +1060,26 @@ export const ConsultaMedica = () => {
         patientId={data?.patientId || data?.patient?.id} 
         currentDiagnosis={currentDiagnosis} 
         onDocumentGenerated={(nuevoDoc) => setDocumentosGenerados([...documentosGenerados, nuevoDoc])}
+      />
+
+      <PrescriptionPreviewModal
+        isOpen={prescriptionPreview.open}
+        onClose={() => setPrescriptionPreview({ open: false, html: "" })}
+        html={prescriptionPreview.html}
+        patientName={patientName}
+      />
+
+      <GenerateDocumentModal
+        isOpen={docModal.open}
+        onClose={() => setDocModal({ open: false, type: null })}
+        type={docModal.type}
+        patientId={patientId}
+        consultationId={null}
+        patientName={patientName}
+        clinicSettings={settings}
+        doctor={session?.user}
+        patient={patientProfile}
+        diagnosis={watch("diagnosis")}
       />
     </div>
   );
