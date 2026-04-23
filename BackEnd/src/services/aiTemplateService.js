@@ -41,9 +41,10 @@ const ALLOWED_TYPES = new Set(["constancia", "incapacidad"]);
  * @param {{ preferType?: string, extraContext?: string }} [options]
  */
 export const draftTemplateWithAI = async (prompt, options = {}) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Acepta ambos nombres de variable (SECRET_KEY_GEMINI tiene precedencia).
+    const apiKey = process.env.SECRET_KEY_GEMINI || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        const error = new Error("La integración con IA no está configurada. Define GEMINI_API_KEY en el servidor.");
+        const error = new Error("La integración con IA no está configurada. Define SECRET_KEY_GEMINI en el servidor.");
         error.status = 503;
         throw error;
     }

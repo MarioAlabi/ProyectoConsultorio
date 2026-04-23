@@ -196,6 +196,28 @@ export const clinicSettings = mysqlTable("clinic_settings", {
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
 
+export const consultationDocuments = mysqlTable("consultation_documents", {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    consultationId: varchar("consultation_id", { length: 36 })
+        .notNull() 
+        .references(() => medicalConsultations.id, { onDelete: "cascade" }),
+    patientId: varchar("patient_id", { length: 36 })
+        .notNull()
+        .references(() => patients.id, { onDelete: "cascade" }),
+    documentType: mysqlEnum("document_type", [
+        "prescription", 
+        "sick_leave",   
+        "certificate",  
+        "other"        
+    ]).notNull(),
+    
+    textContent: longtext("text_content"), 
+    pdfBase64: longtext("pdf_base64"),     
+    
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
 export const documentTemplates = mysqlTable("document_templates", {
     id: varchar("id", { length: 36 }).primaryKey(),
     type: mysqlEnum("type", ["constancia", "incapacidad"]).notNull(),

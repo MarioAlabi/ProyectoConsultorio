@@ -98,7 +98,10 @@ export const useGenerateDocument = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload) => {
-      const res = await api.post("/documents", payload);
+      // Emitir documento desde plantilla reutilizable (flujo de plantillas).
+      // /api/documents quedó reservado para el flujo ad-hoc con Puppeteer,
+      // así que los documentos a partir de plantilla viven en /generated-documents.
+      const res = await api.post("/generated-documents", payload);
       return res.data?.data;
     },
     onSuccess: (data) => {
@@ -131,7 +134,7 @@ export const usePatientDocuments = (patientId) => {
   return useQuery({
     queryKey: ["patient-documents", patientId],
     queryFn: async () => {
-      const res = await api.get(`/documents/patient/${patientId}`);
+      const res = await api.get(`/generated-documents/patient/${patientId}`);
       return res.data?.data || [];
     },
     enabled: !!patientId,

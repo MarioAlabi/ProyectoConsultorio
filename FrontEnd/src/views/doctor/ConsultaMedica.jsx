@@ -23,6 +23,7 @@ import {
   useExtractHistory,
 } from "../../hooks/useAIClinical";
 import { calcularEdad, clasificarIMC } from "../../lib/utils";
+import { DocumentGeneratorModal } from "../../components/DocumentGeneratorModal";
 
 const toNull = (v) => (v === "" || v === undefined ? null : v);
 
@@ -134,7 +135,7 @@ const fieldLabel = {
 };
 
 export const ConsultaMedica = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // Este es el preclinicalId
   const navigate = useNavigate();
 
   const { data: session } = authClient.useSession();
@@ -149,17 +150,20 @@ export const ConsultaMedica = () => {
 
   const { data: patientProfile } = usePatient(patientId);
   const { data: historialClinico, isLoading: historialLoading, isError: historialError } = usePatientClinicalHistory(patientId);
-
   const finishMutation = useFinishConsultation();
   const updatePatientMutation = useUpdatePatient();
   const { data: insurers = [] } = useInsurers();
 
   const [medicamentos, setMedicamentos] = useState([]);
+  const [documentosGenerados, setDocumentosGenerados] = useState([]); // <-- Hook de estado movido adentro del componente
   const [showHistory, setShowHistory] = useState(false);
 
   const [isEditingAntecedents, setIsEditingAntecedents] = useState(false);
   const [tempPersonalHistory, setTempPersonalHistory] = useState("");
   const [tempFamilyHistory, setTempFamilyHistory] = useState("");
+  
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState("certificate");
 
   const [prescriptionPreview, setPrescriptionPreview] = useState({ open: false, html: "" });
   const [docModal, setDocModal] = useState({ open: false, type: null });
@@ -196,6 +200,7 @@ export const ConsultaMedica = () => {
   const currentTemp = watch("temperature");
   const currentHr = watch("heartRate");
   const currentO2 = watch("oxygenSaturation");
+  const currentDiagnosis = watch("diagnosis");
 
   const dobToUse = data?.patientDob || patientProfile?.yearOfBirth;
   const safeDob = typeof dobToUse === "string" ? dobToUse.split("T")[0] : dobToUse;
@@ -241,6 +246,14 @@ export const ConsultaMedica = () => {
 
   const imcInfo = clasificarIMC(bmi ? parseFloat(bmi) : null) || { label: "N/A", color: NEUTRAL };
   const bpInfo = getBpStatus(currentBp);
+
+  const handleAbrirDocumento = () => {
+    if (!currentDiagnosis) {
+      toast.error("Por favor, ingrese un diagnóstico primero para que la IA tenga contexto.");
+      return;
+    }
+    setIsDocModalOpen(true);
+  };
 
   const handleSaveAntecedents = () => {
     if (!patientId) return toast.error("Error: ID de paciente no encontrado.");
@@ -396,6 +409,7 @@ export const ConsultaMedica = () => {
       diagnosisCode: diagnosisCode?.code || null,
       diagnosisCodeName: diagnosisCode?.name || null,
       medicamentos: medicamentosPreparados,
+      documentos: documentosGenerados,
     };
 
     finishMutation.mutate(
@@ -1327,13 +1341,46 @@ export const ConsultaMedica = () => {
               )}
             </section>
 
+            <section className="card">
+              <h2 className="card-heading">Documento ad-hoc con IA</h2>
+              <p style={{ margin: "0 0 1rem", color: "var(--fg-muted)", fontSize: "0.9rem" }}>
+                Redacta constancias, incapacidades o recetas libres con asistencia de IA y PDF.
+                Requiere diagnóstico ingresado. Complementa las plantillas pre-aprobadas.
+              </p>
+
+              <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0, minWidth: "250px" }}>
+                  <label className="form-label">Tipo de documento</label>
+                  <select
+                    className="form-input"
+                    value={selectedDocType}
+                    onChange={(e) => setSelectedDocType(e.target.value)}
+                  >
+                    <option value="certificate">Constancia médica (buena salud, embarazo, etc.)</option>
+                    <option value="sick_leave">Incapacidad médica</option>
+                    <option value="prescription">Receta médica extra</option>
+                    <option value="other">Documento libre / otro</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAbrirDocumento}
+                  className="btn btn-ai"
+                >
+                  <i className="ri-file-text-line"></i>
+                  Redactar documento
+                </button>
+              </div>
+            </section>
+
             <button
               type="submit"
               className="btn btn-primary btn-lg"
               disabled={finishMutation.isPending}
-              style={{ width: "100%", marginTop: "0.5rem" }}
+              style={{ width: "100%", padding: "1rem", fontSize: "1.1rem", marginTop: "1rem" }}
             >
-              {finishMutation.isPending ? "Finalizando…" : "Finalizar consulta"}
+              {finishMutation.isPending ? "Finalizando consulta…" : "Finalizar consulta"}
             </button>
           </main>
         </div>
@@ -1352,6 +1399,15 @@ export const ConsultaMedica = () => {
           patientId={patientId}
         />
       </Modal>
+
+      <DocumentGeneratorModal 
+        isOpen={isDocModalOpen} 
+        onClose={() => setIsDocModalOpen(false)} 
+        initialDocType={selectedDocType} 
+        patientId={data?.patientId || data?.patient?.id} 
+        currentDiagnosis={currentDiagnosis} 
+        onDocumentGenerated={(nuevoDoc) => setDocumentosGenerados([...documentosGenerados, nuevoDoc])}
+      />
 
       <PrescriptionPreviewModal
         isOpen={prescriptionPreview.open}

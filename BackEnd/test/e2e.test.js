@@ -843,10 +843,10 @@ const run = async () => {
     });
 
     // ── 10. Generated documents ─────────────────────────────────────
-    log.section("10. Generated documents");
+    log.section("10. Generated documents (template-based)");
 
-    await test("POST /api/documents — doctor emits constancia", async () => {
-        const res = await doctor.post("/api/documents", {
+    await test("POST /api/generated-documents — doctor emits constancia", async () => {
+        const res = await doctor.post("/api/generated-documents", {
             templateId: state.templateId,
             patientId: state.patientId,
             consultationId: state.consultationId,
@@ -858,22 +858,44 @@ const run = async () => {
         state.documentId = res.body.data.id;
     });
 
-    await test("GET /api/documents/:id — detail", async () => {
-        const res = await doctor.get(`/api/documents/${state.documentId}`);
+    await test("GET /api/generated-documents/:id — detail", async () => {
+        const res = await doctor.get(`/api/generated-documents/${state.documentId}`);
         expect.status(res, 200);
         expect.eq(res.body?.data?.id, state.documentId, "id match");
     });
 
-    await test("GET /api/documents/patient/:patientId — list by patient", async () => {
-        const res = await doctor.get(`/api/documents/patient/${state.patientId}`);
+    await test("GET /api/generated-documents/patient/:patientId — list by patient", async () => {
+        const res = await doctor.get(`/api/generated-documents/patient/${state.patientId}`);
         expect.status(res, 200);
         expect.truthy(Array.isArray(res.body?.data), "array");
     });
 
-    await test("POST /api/documents — assistant forbidden", async () => {
-        const res = await assistant.post("/api/documents", {
+    await test("POST /api/generated-documents — assistant forbidden", async () => {
+        const res = await assistant.post("/api/generated-documents", {
             templateId: state.templateId,
             patientId: state.patientId,
+        });
+        expect.status(res, 403);
+    });
+
+    // ── 10.5 Ad-hoc AI document flow (Puppeteer-rendered PDF) ──────────
+    log.section("10.5 Ad-hoc AI document generation");
+
+    await test("POST /api/documents/generate-draft — auth required", async () => {
+        const res = await doctor.post("/api/documents/generate-draft", {
+            patientId: state.patientId,
+            diagnosis: "Cefalea tensional",
+            promptText: "Genera una incapacidad por 2 días de reposo",
+        });
+        // 200 si hay API key, 400/500/502 si falla Gemini, 503 si no configurada
+        expect.statusIn(res, [200, 400, 500, 502, 503]);
+    });
+
+    await test("POST /api/documents/generate-draft — assistant forbidden", async () => {
+        const res = await assistant.post("/api/documents/generate-draft", {
+            patientId: state.patientId,
+            diagnosis: "x",
+            promptText: "x",
         });
         expect.status(res, 403);
     });

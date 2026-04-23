@@ -12,9 +12,11 @@ import auditRoutes from "./routes/auditRoutes.js";
 import insurerRoutes from "./routes/insurerRoutes.js";
 import mantenimientoRoutes from './routes/mantenimientoroutes.js';
 import settingsRoutes from "./routes/settingsRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 import documentTemplateRoutes from "./routes/documentTemplateRoutes.js";
 import generatedDocumentRoutes from "./routes/generatedDocumentRoutes.js";
 import aiClinicalRoutes from "./routes/aiClinicalRoutes.js";
+
 const app = express();
 
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
@@ -24,7 +26,7 @@ const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
 app.use(cors({
     origin: allowedOrigins,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH","DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
@@ -44,9 +46,21 @@ app.use("/api/audit", auditRoutes);
 app.use("/api/insurers", insurerRoutes);
 app.use('/api/admin', mantenimientoRoutes);
 app.use("/api/settings", settingsRoutes);
+
+// Generación ad-hoc de documentos con IA + Puppeteer (flujo de Mario):
+// - POST /api/documents/generate-draft
+// - POST /api/documents/render-pdf
+app.use("/api/documents", documentRoutes);
+
+// Plantillas reutilizables de constancia/incapacidad y sus documentos emitidos:
+// - CRUD de plantillas        → /api/document-templates
+// - Emisión + historial       → /api/generated-documents
 app.use("/api/document-templates", documentTemplateRoutes);
-app.use("/api/documents", generatedDocumentRoutes);
+app.use("/api/generated-documents", generatedDocumentRoutes);
+
+// Asistente clínico IA (ICD-10, resumen, anamnesis, receta, antecedentes, reportes):
 app.use("/api/ai", aiClinicalRoutes);
+
 app.get("/status", (req, res) => {
     res.json({
         status: "ok",

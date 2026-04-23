@@ -3,9 +3,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 const requireApiKey = () => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Acepta ambos nombres de variable para compatibilidad:
+    // - SECRET_KEY_GEMINI (convención del flujo documentService/aiService)
+    // - GEMINI_API_KEY    (convención original de aiTemplateService)
+    const apiKey = process.env.SECRET_KEY_GEMINI || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        const error = new Error("La integración con IA no está configurada. Define GEMINI_API_KEY en el servidor.");
+        const error = new Error("La integración con IA no está configurada. Define SECRET_KEY_GEMINI en el servidor.");
         error.status = 503;
         throw error;
     }
