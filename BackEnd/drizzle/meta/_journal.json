@@ -64,6 +64,13 @@
       "when": 1776835707945,
       "tag": "0008_common_grandmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1776927264964,
+      "tag": "0009_clever_wallow",
+      "breakpoints": true
     }
   ]
 }

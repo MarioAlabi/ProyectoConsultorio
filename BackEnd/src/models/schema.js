@@ -64,6 +64,7 @@ export const insurers = mysqlTable("insurers", {
     phone: varchar("phone", { length: 20 }).notNull(),
     email: varchar("email", { length: 100 }).notNull(),
     fixedConsultationAmount: decimal("fixed_consultation_amount", { precision: 10, scale: 2 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("active"), // active / inactive
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });

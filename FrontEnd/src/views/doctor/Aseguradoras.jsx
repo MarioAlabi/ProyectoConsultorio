@@ -1,132 +1,178 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import toast from "react-hot-toast";
 import { Modal } from "../../components/Modal";
-import { useCreateInsurer, useInsurers } from "../../hooks/useInsurers";
+import { useInsurers, useCreateInsurer, useUpdateInsurer, useToggleInsurerStatus } from "../../hooks/useInsurers";
 import { insurerSchema } from "../../lib/validations/insurerSchema";
 import "../shared/Shared.css";
 
 export const Aseguradoras = () => {
   const [showModal, setShowModal] = useState(false);
+  const [editingInsurer, setEditingInsurer] = useState(null);
+  
   const { data: insurers = [], isLoading, isError } = useInsurers();
   const createMutation = useCreateInsurer();
+  const updateMutation = useUpdateInsurer();
+  const toggleStatusMutation = useToggleInsurerStatus();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(insurerSchema),
-    defaultValues: {
-      companyName: "",
-      contactName: "",
-      phone: "",
-      email: "",
-      fixedConsultationAmount: "",
-    },
+    defaultValues: { companyName: "", contactName: "", phone: "", email: "", fixedConsultationAmount: "" }
   });
 
-  const onSubmit = (data) => {
-    createMutation.mutate(data, {
-      onSuccess: () => {
-        reset();
-        setShowModal(false);
-      },
+  // Estadísticas calculadas
+  const activeCount = useMemo(() => insurers.filter(i => i.status !== 'inactive').length, [insurers]);
+  const averageAmount = useMemo(() => {
+    if (insurers.length === 0) return 0;
+    const sum = insurers.reduce((acc, curr) => acc + Number(curr.fixedConsultationAmount), 0);
+    return (sum / insurers.length).toFixed(2);
+  }, [insurers]);
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingInsurer(null);
+    reset({ companyName: "", contactName: "", phone: "", email: "", fixedConsultationAmount: "" });
+  };
+
+  const handleOpenEdit = (insurer) => {
+    setEditingInsurer(insurer);
+    reset({
+      companyName: insurer.companyName,
+      contactName: insurer.contactName,
+      phone: insurer.phone,
+      email: insurer.email,
+      fixedConsultationAmount: insurer.fixedConsultationAmount.toString(),
+    });
+    setShowModal(true);
+  };
+
+  const handleToggleStatus = (insurer) => {
+    const isActivating = insurer.status === 'inactive';
+    const msg = `¿Está seguro de ${isActivating ? 'activar' : 'inhabilitar'} a ${insurer.companyName}?`;
+    
+    if (!window.confirm(msg)) return;
+    
+    toggleStatusMutation.mutate({ id: insurer.id, status: isActivating ? 'active' : 'inactive' }, {
+      onSuccess: () => toast.success(isActivating ? "Aseguradora reactivada" : "Aseguradora inhabilitada")
     });
   };
 
+  const onSubmit = (data) => {
+    const mutation = editingInsurer ? updateMutation : createMutation;
+    const payload = editingInsurer ? { id: editingInsurer.id, ...data } : data;
+
+    mutation.mutate(payload, {
+      onSuccess: () => {
+        toast.success(editingInsurer ? "Datos actualizados" : "Aseguradora registrada con éxito");
+        handleCloseModal();
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || "Ocurrió un error");
+      }
+    });
+  };
+
+  if (isLoading) return <div style={S.loadingContainer}>Cargando catálogo de aseguradoras...</div>;
+  if (isError) return <div style={S.errorContainer}>Error al conectar con el servidor.</div>;
+
   return (
     <div style={{ padding: "2rem", maxWidth: "1150px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
+      <div style={S.header}>
         <div>
           <h1 style={{ color: "#1f2937", margin: 0 }}>Aseguradoras</h1>
-          <p style={{ color: "#6b7280", margin: "0.35rem 0 0" }}>
-            Registra y consulta los convenios disponibles para asignarlos a tus pacientes.
-          </p>
+          <p style={{ color: "#6b7280", margin: "0.35rem 0 0" }}>Registra y gestiona convenios para tus pacientes.</p>
         </div>
-        <button
-          type="button"
-          className="submit-btn"
-          style={{ marginTop: 0, padding: "0.8rem 1.35rem" }}
-          onClick={() => setShowModal(true)}
-        >
-          + Nueva
+        <button className="submit-btn" style={{ width: 'auto', padding: "0.8rem 1.5rem" }} onClick={() => setShowModal(true)}>
+          + Nueva Aseguradora
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
-        <StatCard label="Aseguradoras activas" value={insurers.length} color="#0d9488" />
-        <StatCard
-          label="Monto fijo promedio"
-          value={insurers.length ? `$${(insurers.reduce((sum, insurer) => sum + Number(insurer.fixedConsultationAmount || 0), 0) / insurers.length).toFixed(2)}` : "$0.00"}
-          color="#0284c7"
-        />
+      <div style={S.statsGrid}>
+        <StatCard label="Aseguradoras Activas" value={activeCount} color="#0d9488" />
+        <StatCard label="Monto Promedio" value={`$${averageAmount}`} color="#0284c7" />
+        <StatCard label="Inactivas" value={insurers.length - activeCount} color="#94a3b8" />
       </div>
 
-      <div style={{ backgroundColor: "white", borderRadius: "1rem", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", overflow: "hidden" }}>
-        {isLoading ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#6b7280" }}>Cargando aseguradoras...</div>
-        ) : isError ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#dc2626" }}>No se pudo cargar el catalogo de aseguradoras.</div>
-        ) : insurers.length === 0 ? (
-          <div style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>
-            Aun no hay aseguradoras registradas. Usa <strong>Nueva</strong> para agregar la primera.
-          </div>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid #e5e7eb", color: "#4b5563", fontSize: "0.85rem" }}>
-                <th style={S.th}>Compania</th>
-                <th style={S.th}>Contacto</th>
-                <th style={S.th}>Telefono</th>
-                <th style={S.th}>Correo</th>
-                <th style={S.th}>Monto fijo por consulta</th>
+      <div style={S.tableCard}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={S.tableHeaderRow}>
+              <th style={S.th}>Compañía</th>
+              <th style={S.th}>Contacto / Teléfono</th>
+              <th style={S.th}>Monto por Consulta</th>
+              <th style={S.th}>Estado</th>
+              <th style={S.th}>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {insurers.map((insurer) => (
+              <tr key={insurer.id} style={{ 
+                borderBottom: "1px solid #f3f4f6", 
+                backgroundColor: insurer.status === 'inactive' ? '#fcfcfc' : 'white',
+                opacity: insurer.status === 'inactive' ? 0.7 : 1
+              }}>
+                <td style={S.td}>
+                  <div style={{ fontWeight: 600, color: "#1f2937" }}>{insurer.companyName}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{insurer.email}</div>
+                </td>
+                <td style={S.td}>
+                  <div>{insurer.contactName}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{insurer.phone}</div>
+                </td>
+                <td style={{ ...S.td, color: "#0f766e", fontWeight: 700 }}>
+                  ${Number(insurer.fixedConsultationAmount).toFixed(2)}
+                </td>
+                <td style={S.td}>
+                  <span style={{ ...S.badge, ...(insurer.status === 'inactive' ? S.badgeInactive : S.badgeActive) }}>
+                    {insurer.status === 'inactive' ? 'Inactiva' : 'Activa'}
+                  </span>
+                </td>
+                <td style={S.td}>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => handleOpenEdit(insurer)} style={S.btnEdit}>Editar</button>
+                    <button onClick={() => handleToggleStatus(insurer)} style={insurer.status === 'inactive' ? S.btnActivate : S.btnDeactivate}>
+                      {insurer.status === 'inactive' ? 'Activar' : 'Inhabilitar'}
+                    </button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {insurers.map((insurer) => (
-                <tr key={insurer.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <td style={{ ...S.td, fontWeight: 600, color: "#1f2937" }}>{insurer.companyName}</td>
-                  <td style={S.td}>{insurer.contactName}</td>
-                  <td style={S.td}>{insurer.phone}</td>
-                  <td style={S.td}>{insurer.email}</td>
-                  <td style={{ ...S.td, color: "#0f766e", fontWeight: 700 }}>${Number(insurer.fixedConsultationAmount || 0).toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nueva Aseguradora" size="lg">
+      <Modal isOpen={showModal} onClose={handleCloseModal} title={editingInsurer ? "Editar Aseguradora" : "Nueva Aseguradora"} size="lg">
         <form onSubmit={handleSubmit(onSubmit)} className="login-form">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.2rem" }}>
             <div className="form-group">
-              <label className="form-label">Nombre de la compania *</label>
-              <input type="text" className="form-input" {...register("companyName")} />
-              {errors.companyName && <span style={S.errorMsg}>{errors.companyName.message}</span>}
+              <label className="form-label">Nombre de la Compañía *</label>
+              <input {...register("companyName")} className="form-input" placeholder="Ej. ASESUISA" />
+              {errors.companyName && <span style={S.error}>{errors.companyName.message}</span>}
             </div>
             <div className="form-group">
-              <label className="form-label">Persona encargada *</label>
-              <input type="text" className="form-input" {...register("contactName")} />
-              {errors.contactName && <span style={S.errorMsg}>{errors.contactName.message}</span>}
+              <label className="form-label">Monto Prenegociado ($) *</label>
+              <input type="number" step="0.01" {...register("fixedConsultationAmount")} className="form-input" placeholder="0.00" />
+              {errors.fixedConsultationAmount && <span style={S.error}>{errors.fixedConsultationAmount.message}</span>}
             </div>
             <div className="form-group">
-              <label className="form-label">Telefono *</label>
-              <input type="text" className="form-input" {...register("phone")} />
-              {errors.phone && <span style={S.errorMsg}>{errors.phone.message}</span>}
+              <label className="form-label">Persona de Contacto *</label>
+              <input {...register("contactName")} className="form-input" placeholder="Nombre del encargado" />
+              {errors.contactName && <span style={S.error}>{errors.contactName.message}</span>}
             </div>
             <div className="form-group">
-              <label className="form-label">Correo electronico *</label>
-              <input type="email" className="form-input" {...register("email")} />
-              {errors.email && <span style={S.errorMsg}>{errors.email.message}</span>}
+              <label className="form-label">Teléfono *</label>
+              <input {...register("phone")} className="form-input" placeholder="2200-0000" />
+              {errors.phone && <span style={S.error}>{errors.phone.message}</span>}
+            </div>
+            <div className="form-group" style={{ gridColumn: "span 2" }}>
+              <label className="form-label">Correo Electrónico *</label>
+              <input type="email" {...register("email")} className="form-input" placeholder="contacto@empresa.com" />
+              {errors.email && <span style={S.error}>{errors.email.message}</span>}
             </div>
           </div>
-
-          <div className="form-group">
-            <label className="form-label">Monto fijo prenegociado por consulta *</label>
-            <input type="number" step="0.01" min="0" className="form-input" placeholder="25.00" {...register("fixedConsultationAmount")} />
-            {errors.fixedConsultationAmount && <span style={S.errorMsg}>{errors.fixedConsultationAmount.message}</span>}
-          </div>
-
-          <button type="submit" className="submit-btn" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Guardando..." : "Registrar Aseguradora"}
+          <button type="submit" className="submit-btn" disabled={updateMutation.isPending || createMutation.isPending} style={{ marginTop: "1.5rem" }}>
+            {updateMutation.isPending || createMutation.isPending ? "Procesando..." : (editingInsurer ? "Guardar Cambios" : "Registrar Aseguradora")}
           </button>
         </form>
       </Modal>
@@ -142,7 +188,19 @@ const StatCard = ({ label, value, color }) => (
 );
 
 const S = {
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" },
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" },
+  tableCard: { backgroundColor: "white", borderRadius: "1rem", boxShadow: "0 4px 6px rgba(0,0,0,0.05)", overflow: "hidden" },
+  tableHeaderRow: { borderBottom: "2px solid #e5e7eb", color: "#4b5563", fontSize: "0.85rem", textAlign: "left" },
   th: { padding: "1rem 1.15rem", fontWeight: 600 },
-  td: { padding: "1rem 1.15rem", color: "#4b5563" },
-  errorMsg: { color: "#ef4444", fontSize: "0.8rem", marginTop: "0.25rem" },
+  td: { padding: "1rem 1.15rem", color: "#4b5563", fontSize: "0.9rem" },
+  badge: { padding: "0.25rem 0.6rem", borderRadius: "99px", fontSize: "0.75rem", fontWeight: 600 },
+  badgeActive: { backgroundColor: "#ccfbf1", color: "#115e59" },
+  badgeInactive: { backgroundColor: "#fee2e2", color: "#991b1b" },
+  btnEdit: { padding: "0.4rem 0.8rem", backgroundColor: "#f3f4f6", border: "1px solid #d1d5db", borderRadius: "0.4rem", cursor: "pointer", fontSize: "0.8rem" },
+  btnDeactivate: { padding: "0.4rem 0.8rem", backgroundColor: "#fee2e2", color: "#991b1b", border: "none", borderRadius: "0.4rem", cursor: "pointer", fontSize: "0.8rem" },
+  btnActivate: { padding: "0.4rem 0.8rem", backgroundColor: "#ccfbf1", color: "#115e59", border: "none", borderRadius: "0.4rem", cursor: "pointer", fontSize: "0.8rem" },
+  error: { color: "#ef4444", fontSize: "0.8rem", marginTop: "0.25rem", display: "block" },
+  loadingContainer: { padding: "5rem", textAlign: "center", color: "#6b7280" },
+  errorContainer: { padding: "5rem", textAlign: "center", color: "#dc2626" }
 };

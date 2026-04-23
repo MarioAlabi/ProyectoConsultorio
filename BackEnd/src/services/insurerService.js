@@ -27,11 +27,13 @@ const normalizeAmount = (value) => {
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Modificada para permitir validaciones parciales en actualizaciones si fuera necesario
 export const validateInsurerPayload = (data = {}) => {
     const companyName = normalizeNullable(data.companyName);
     const contactName = normalizeNullable(data.contactName);
     const phone = normalizeNullable(data.phone);
     const email = normalizeNullable(data.email);
+    const status = normalizeNullable(data.status) || 'active'; // Por defecto activa
 
     if (!companyName) {
         const error = new Error("El nombre de la compania es obligatorio.");
@@ -69,6 +71,7 @@ export const validateInsurerPayload = (data = {}) => {
         phone,
         email: email.toLowerCase(),
         fixedConsultationAmount: normalizeAmount(data.fixedConsultationAmount),
+        status: status === 'inactive' ? 'inactive' : 'active' // Validar que solo entren estados permitidos
     };
 };
 
@@ -85,6 +88,30 @@ export const createInsurer = async (data) => {
         id: insurerId,
         ...payload,
     };
+};
+
+// --- NUEVA FUNCIÓN: UPDATE ---
+export const updateInsurer = async (id, data) => {
+    // Primero verificamos que exista
+    const existing = await getInsurerById(id);
+
+    // Si solo estamos actualizando el status (patch), no validamos todo el payload
+    // Si estamos actualizando datos generales, validamos
+    let payload;
+    if (Object.keys(data).length === 1 && data.status) {
+        payload = { status: data.status === 'inactive' ? 'inactive' : 'active' };
+    } else {
+        payload = validateInsurerPayload({ ...existing, ...data });
+    }
+
+    await db.update(insurers)
+        .set({
+            ...payload,
+            updatedAt: new Date() // Forzamos el update de la fecha si es necesario
+        })
+        .where(eq(insurers.id, id));
+
+    return { id, ...payload };
 };
 
 export const getInsurers = async () => {
