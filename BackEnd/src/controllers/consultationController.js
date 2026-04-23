@@ -1,4 +1,12 @@
-import { createMedicalConsultation, getClinicalHistoryByPatientId, getConsultationByPreclinicalId, getInsurerConsultationReport, normalizePrescribedMedications } from "../services/consultationService.js";
+import {
+    createMedicalConsultation,
+    getClinicalHistoryByPatientId,
+    getConsultationByPreclinicalId,
+    getInsurerConsultationReport,
+    getDiagnosticsReport,
+    getDiagnosisCatalog,
+    normalizePrescribedMedications,
+} from "../services/consultationService.js";
 import { logAudit } from "../services/auditService.js";
 
 export const createConsultationController = async (req, res, next) => {
@@ -55,6 +63,29 @@ export const getInsurerConsultationReportController = async (req, res, next) => 
     try {
         const { insurerId, from, to } = req.query;
         const data = await getInsurerConsultationReport({ insurerId, from, to });
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getDiagnosticsReportController = async (req, res, next) => {
+    try {
+        const { fromYear, toYear, diagnosisCode } = req.query;
+        const data = await getDiagnosticsReport({
+            fromYear: fromYear ? Number(fromYear) : undefined,
+            toYear: toYear ? Number(toYear) : undefined,
+            diagnosisCode,
+        });
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getDiagnosisCatalogController = async (req, res, next) => {
+    try {
+        const data = await getDiagnosisCatalog();
         res.status(200).json({ success: true, data });
     } catch (error) {
         next(error);

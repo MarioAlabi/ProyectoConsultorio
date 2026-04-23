@@ -159,9 +159,11 @@ export const createMedicalConsultation = async (preclinicalId, data, doctorId) =
         anamnesis: data.anamnesis || null,
         physicalExam: data.physicalExam || null,
         diagnosis: data.diagnosis || null,
+        diagnosisCode: data.diagnosisCode || null,
+        diagnosisCodeName: data.diagnosisCodeName || null,
         labResults: data.labResults || null,
         observations: data.observations || null,
-        documents: data.documents || null, 
+        documents: data.documents || null,
     });
 
     const medications = normalizePrescribedMedications(data);
@@ -419,4 +421,118 @@ export const getInsurerConsultationReport = async ({ insurerId, from, to }) => {
             totalAmount: totalAmount.toFixed(2),
         },
     };
+};
+
+/**
+ * HU-07: Reporte de diagnósticos por año.
+ * Agrupa consultas por diagnosticCode + año y permite comparación YoY.
+ *
+ * @param {{ fromYear: number, toYear: number, diagnosisCode?: string }} filters
+ * @returns {Promise<{ byCode: Array, byYear: Array, totals: object }>}
+ */
+export const getDiagnosticsReport = async ({ fromYear, toYear, diagnosisCode } = {}) => {
+    const currentYear = new Date().getFullYear();
+    const yFrom = Number(fromYear) || currentYear - 4;
+    const yTo = Number(toYear) || currentYear;
+
+    if (yFrom > yTo) {
+        const error = new Error("El año inicial no puede ser mayor al año final.");
+        error.status = 400;
+        throw error;
+    }
+
+    const fromDate = `${yFrom}-01-01 00:00:00`;
+    const toDate = `${yTo}-12-31 23:59:59`;
+
+    const whereConditions = [
+        gte(medicalConsultations.createdAt, sql`${fromDate}`),
+        lte(medicalConsultations.createdAt, sql`${toDate}`),
+    ];
+    if (diagnosisCode && typeof diagnosisCode === "string" && diagnosisCode.trim().length > 0) {
+        whereConditions.push(eq(medicalConsultations.diagnosisCode, diagnosisCode.trim()));
+    }
+
+    // Agregación por código + año. MySQL acepta DATE_FORMAT para extraer año.
+    const rows = await db
+        .select({
+            year: sql`YEAR(${medicalConsultations.createdAt})`.as("year"),
+            code: medicalConsultations.diagnosisCode,
+            name: medicalConsultations.diagnosisCodeName,
+            count: sql`COUNT(*)`.as("count"),
+        })
+        .from(medicalConsultations)
+        .where(and(...whereConditions))
+        .groupBy(sql`YEAR(${medicalConsultations.createdAt})`, medicalConsultations.diagnosisCode, medicalConsultations.diagnosisCodeName)
+        .orderBy(sql`year DESC`, sql`count DESC`);
+
+    // Normaliza el row output (los number de SQL vienen como strings en mysql2).
+    const normalized = rows.map((r) => ({
+        year: Number(r.year),
+        code: r.code || "(sin codificar)",
+        name: r.name || "Diagnóstico sin codificar",
+        count: Number(r.count),
+    }));
+
+    // byCode: agrupa por código, dentro de cada código los años con count.
+    const byCodeMap = new Map();
+    for (const row of normalized) {
+        if (!byCodeMap.has(row.code)) {
+            byCodeMap.set(row.code, { code: row.code, name: row.name, years: {}, total: 0 });
+        }
+        const entry = byCodeMap.get(row.code);
+        entry.years[row.year] = (entry.years[row.year] || 0) + row.count;
+        entry.total += row.count;
+    }
+
+    const byCode = Array.from(byCodeMap.values()).sort((a, b) => b.total - a.total);
+
+    // byYear: agrupa por año, dentro de cada año lista top diagnósticos.
+    const byYearMap = new Map();
+    for (let y = yFrom; y <= yTo; y++) byYearMap.set(y, { year: y, total: 0, diagnoses: [] });
+    for (const row of normalized) {
+        const entry = byYearMap.get(row.year);
+        if (!entry) continue;
+        entry.total += row.count;
+        entry.diagnoses.push({ code: row.code, name: row.name, count: row.count });
+    }
+    const byYear = Array.from(byYearMap.values()).sort((a, b) => a.year - b.year);
+
+    // Totales + comparación YoY.
+    const totalConsultations = normalized.reduce((acc, r) => acc + r.count, 0);
+    const uncoded = normalized
+        .filter((r) => r.code === "(sin codificar)")
+        .reduce((acc, r) => acc + r.count, 0);
+
+    return {
+        filters: { fromYear: yFrom, toYear: yTo, diagnosisCode: diagnosisCode || null },
+        totals: {
+            totalConsultations,
+            uniqueDiagnoses: byCodeMap.size,
+            uncoded,
+            codedPercentage: totalConsultations > 0
+                ? Number((((totalConsultations - uncoded) / totalConsultations) * 100).toFixed(1))
+                : 0,
+        },
+        byCode,
+        byYear,
+    };
+};
+
+/**
+ * Catálogo de diagnósticos con códigos ICD existentes en la DB.
+ * Útil para el selector de tipo de diagnóstico en el filtro de HU-07.
+ */
+export const getDiagnosisCatalog = async () => {
+    const rows = await db
+        .select({
+            code: medicalConsultations.diagnosisCode,
+            name: medicalConsultations.diagnosisCodeName,
+            count: sql`COUNT(*)`.as("count"),
+        })
+        .from(medicalConsultations)
+        .where(sql`${medicalConsultations.diagnosisCode} IS NOT NULL AND ${medicalConsultations.diagnosisCode} <> ''`)
+        .groupBy(medicalConsultations.diagnosisCode, medicalConsultations.diagnosisCodeName)
+        .orderBy(sql`count DESC`);
+
+    return rows.map((r) => ({ code: r.code, name: r.name, count: Number(r.count) }));
 };
