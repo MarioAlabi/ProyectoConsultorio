@@ -19,12 +19,20 @@ import aiClinicalRoutes from "./routes/aiClinicalRoutes.js";
 
 const app = express();
 
+// 1. Limpiamos espacios en blanco por si hubo un dedazo en el .env
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
-    ? process.env.APP_ALLOWED_ORIGINS.split(',')
-    : ["http://localhost:5173"];
+    ? process.env.APP_ALLOWED_ORIGINS.split(',').map(url => url.trim())
+    : ["http://localhost:5173", "https://consultoriofront.marioalabi.com"];
 
 app.use(cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+        // Permitir peticiones sin origin (como Postman) o si el origin está en nuestra lista
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Bloqueado por CORS'));
+        }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
