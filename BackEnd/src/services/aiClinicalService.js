@@ -45,11 +45,27 @@ const callGemini = async ({ systemInstruction, userContent, schema, temperature 
         throw error;
     }
 
+    const cleaned = raw
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+
     try {
-        return JSON.parse(raw);
-    } catch {
+        return JSON.parse(cleaned);
+    } catch (firstErr) {
+        const firstBrace = cleaned.indexOf("{");
+        const lastBrace = cleaned.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+            const candidate = cleaned.slice(firstBrace, lastBrace + 1);
+            try {
+                return JSON.parse(candidate);
+            } catch {
+            }
+        }
+        console.error("[AI] JSON inválido devuelto por Gemini. Raw (primeros 500 chars):", cleaned.slice(0, 500));
         const error = new Error("La respuesta del modelo de IA no es JSON válido.");
         error.status = 502;
+        error.cause = firstErr;
         throw error;
     }
 };
@@ -79,9 +95,9 @@ export const suggestIcd10 = async (diagnosisText) => {
 
     return await callGemini({
         systemInstruction: ICD10_INSTRUCTION,
-        userContent: `Diagnóstico libre: """${clean}"""\n\nResponde en JSON válido.`,
+        userContent: `Diagnóstico libre: """${clean}"""\n\nResponde SOLO con JSON válido (sin markdown, sin texto extra).`,
         temperature: 0.1, // más determinista para codificación
-        maxOutputTokens: 512,
+        maxOutputTokens: 1024,
         schema: {
             type: Type.OBJECT,
             properties: {
@@ -143,9 +159,9 @@ export const summarizePatient = async ({ patient, consultations }) => {
 
     return await callGemini({
         systemInstruction: SUMMARY_INSTRUCTION,
-        userContent: `Datos del paciente:\n${JSON.stringify(payload, null, 2)}\n\nResponde en JSON válido.`,
+        userContent: `Datos del paciente:\n${JSON.stringify(payload, null, 2)}\n\nResponde SOLO con JSON válido (sin markdown, sin texto extra).`,
         temperature: 0.3,
-        maxOutputTokens: 800,
+        maxOutputTokens: 1500,
         schema: {
             type: Type.OBJECT,
             properties: {
@@ -198,9 +214,9 @@ export const draftAnamnesis = async ({ motivo, signosVitales, antecedentes, edad
 
     return await callGemini({
         systemInstruction: ANAMNESIS_INSTRUCTION,
-        userContent: `Datos preclínicos:\n${JSON.stringify(payload, null, 2)}\n\nGenera un borrador de anamnesis en JSON.`,
+        userContent: `Datos preclínicos:\n${JSON.stringify(payload, null, 2)}\n\nGenera un borrador de anamnesis. Responde SOLO con JSON válido (sin markdown, sin texto extra).`,
         temperature: 0.4,
-        maxOutputTokens: 800,
+        maxOutputTokens: 1500,
         schema: {
             type: Type.OBJECT,
             properties: {
@@ -259,9 +275,9 @@ export const checkPrescriptionSafety = async ({ medications, patient }) => {
 
     return await callGemini({
         systemInstruction: RX_SAFETY_INSTRUCTION,
-        userContent: `Revisa la siguiente receta:\n${JSON.stringify(payload, null, 2)}\n\nResponde en JSON válido.`,
+        userContent: `Revisa la siguiente receta:\n${JSON.stringify(payload, null, 2)}\n\nResponde SOLO con JSON válido (sin markdown, sin texto extra).`,
         temperature: 0.1,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 2048,
         schema: {
             type: Type.OBJECT,
             properties: {
@@ -300,9 +316,9 @@ export const extractStructuredHistory = async (rawHistoryText) => {
 
     return await callGemini({
         systemInstruction: HISTORY_EXTRACT_INSTRUCTION,
-        userContent: `Texto a estructurar:\n"""${clean || "(vacío)"}"""\n\nResponde en JSON válido.`,
+        userContent: `Texto a estructurar:\n"""${clean || "(vacío)"}"""\n\nResponde SOLO con JSON válido (sin markdown, sin texto extra).`,
         temperature: 0.1,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 1500,
         schema: {
             type: Type.OBJECT,
             properties: {
@@ -348,21 +364,29 @@ Reglas:
 4. Si los datos son muy escasos (<5 registros), menciónalo.`;
 
 export const analyzeDiagnosticsReport = async ({ byYear, period, totalConsultations }) => {
+    const compactByYear = (byYear || []).map((y) => ({
+        year: y.year,
+        total: y.total,
+        topDiagnoses: (y.diagnoses || [])
+            .slice(0, 5)
+            .map((d) => ({ code: d.code, name: d.name, count: d.count })),
+    }));
+
     const payload = {
         periodo: period,
         totalConsultas: totalConsultations,
-        desgloseAnual: byYear,
+        resumenAnual: compactByYear,
     };
 
     return await callGemini({
         systemInstruction: REPORT_NARRATIVE_INSTRUCTION,
-        userContent: `Datos del reporte:\n${JSON.stringify(payload, null, 2)}\n\nResponde en JSON válido.`,
+        userContent: `Datos del reporte:\n${JSON.stringify(payload, null, 2)}\n\nResponde SOLO con JSON válido que cumpla el esquema (sin texto extra, sin markdown).`,
         temperature: 0.4,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 2048,
         schema: {
             type: Type.OBJECT,
             properties: {
-                narrative: { type: Type.STRING, description: "Párrafo analítico." },
+                narrative: { type: Type.STRING, description: "Párrafo analítico de 3-6 líneas." },
                 highlights: {
                     type: Type.ARRAY,
                     items: { type: Type.STRING },
@@ -370,6 +394,7 @@ export const analyzeDiagnosticsReport = async ({ byYear, period, totalConsultati
                 },
             },
             required: ["narrative"],
+            propertyOrdering: ["narrative", "highlights"],
         },
     });
 };
