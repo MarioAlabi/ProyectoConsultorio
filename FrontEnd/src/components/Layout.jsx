@@ -4,7 +4,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 
 export const Layout = () => {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#f9fafb" }}>
+    <div className="app-shell">
       <Navbar />
       <main>
         <ErrorBoundary>

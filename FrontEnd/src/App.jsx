@@ -21,6 +21,7 @@ import { Aseguradoras } from './views/doctor/Aseguradoras';
 import { ReporteAseguradoras } from './views/doctor/ReporteAseguradoras';
 import Mantenimiento from './views/admin/Mantenimiento'; 
 import { ConfiguracionClinica } from './views/admin/ConfiguracionClinica';
+import { PlantillasDocumentos } from './views/shared/PlantillasDocumentos';
 function App() {
   return (
     <BrowserRouter>
@@ -39,6 +40,7 @@ function App() {
             <Route path="/admin/auditoria" element={<AuditoriaRegistros />} />
             <Route path="/admin/mantenimiento" element={<Mantenimiento />} />
             <Route path="/admin/configuracion" element={<ConfiguracionClinica />} />
+            <Route path="/admin/plantillas" element={<PlantillasDocumentos />} />
           </Route>
         </Route>
 
@@ -68,6 +70,7 @@ function App() {
             <Route path="/doctor/consulta-detalle/:id" element={<ConsultaDetalleShared />} />
             {/* 3. NUEVA RUTA DE AGENDA PARA DOCTOR */}
             <Route path="/doctor/agenda" element={<AgendaCitas />} />
+            <Route path="/doctor/plantillas" element={<PlantillasDocumentos />} />
           </Route>
         </Route>
 

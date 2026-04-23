@@ -2,44 +2,86 @@ import { getMonthGrid, formatDateKey, isSameDay, DAY_NAMES_SHORT, STATUS_COLORS 
 
 const today = new Date();
 
-const S = {
-  daysHeader: {
-    display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "1px",
-    borderRadius: "12px 12px 0 0", overflow: "hidden", border: "1px solid #e5e7eb",
-    backgroundColor: "#e5e7eb",
-  },
-  dayHeaderCell: {
-    backgroundColor: "white", padding: "0.6rem", textAlign: "center",
-    fontSize: "0.85rem", fontWeight: 600, color: "#6b7280",
-  },
-  grid: {
-    display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "1px",
-    borderRadius: "0 0 12px 12px", overflow: "hidden",
-    border: "1px solid #e5e7eb", borderTop: "none", backgroundColor: "#e5e7eb",
-  },
-  cell: (isCurrentMonth, isToday, isSelected) => ({
-    backgroundColor: isToday ? "#f0fdfa" : isCurrentMonth ? "white" : "#f9fafb",
-    padding: "0.5rem", minHeight: "100px", cursor: "pointer",
-    outline: isSelected ? "2px solid #0d9488" : "none",
-    outlineOffset: "-2px",
-    transition: "background-color 0.15s",
-  }),
-  dateNum: (isCurrentMonth, isToday) => ({
-    textAlign: "right", fontSize: "0.85rem",
-    fontWeight: isToday ? 700 : 500,
-    color: isToday ? "#0d9488" : isCurrentMonth ? "#374151" : "#9ca3af",
-  }),
-  eventDot: (status) => ({
-    display: "flex", alignItems: "center", gap: "4px",
-    padding: "2px 6px", borderRadius: "4px", marginBottom: "2px",
-    backgroundColor: STATUS_COLORS[status] || "#6b7280",
-    color: "white", fontSize: "0.7rem", fontWeight: 600,
-    overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis",
-    cursor: "pointer",
-  }),
-  moreLabel: {
-    fontSize: "0.7rem", color: "#6b7280", fontWeight: 600, paddingLeft: "6px",
-  },
+const daysHeader = {
+  display: "grid",
+  gridTemplateColumns: "repeat(7, 1fr)",
+  gap: "1px",
+  borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
+  overflow: "hidden",
+  border: "1px solid var(--border-subtle)",
+  background: "var(--border-subtle)",
+};
+
+const dayHeaderCell = {
+  background: "var(--bg-surface-alt)",
+  padding: "0.6rem",
+  textAlign: "center",
+  fontSize: "0.72rem",
+  fontWeight: 600,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  color: "var(--fg-muted)",
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(7, 1fr)",
+  gap: "1px",
+  borderRadius: "0 0 var(--radius-lg) var(--radius-lg)",
+  overflow: "hidden",
+  border: "1px solid var(--border-subtle)",
+  borderTop: "none",
+  background: "var(--border-subtle)",
+};
+
+const cell = (isCurrentMonth, isToday, isSelected) => ({
+  background: isToday
+    ? "var(--brand-soft)"
+    : isCurrentMonth
+      ? "var(--bg-surface)"
+      : "var(--bg-surface-alt)",
+  padding: "0.5rem",
+  minHeight: "108px",
+  cursor: "pointer",
+  outline: isSelected ? "2px solid var(--brand)" : "none",
+  outlineOffset: "-2px",
+  transition: "background var(--t-fast)",
+});
+
+const dateNum = (isCurrentMonth, isToday) => ({
+  textAlign: "right",
+  fontSize: "0.85rem",
+  fontWeight: isToday ? 700 : 500,
+  fontFamily: "var(--font-mono)",
+  color: isToday
+    ? "var(--brand)"
+    : isCurrentMonth
+      ? "var(--fg-primary)"
+      : "var(--fg-subtle)",
+});
+
+const eventDot = (status) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "4px",
+  padding: "2px 6px",
+  borderRadius: "var(--radius-xs)",
+  marginBottom: "2px",
+  background: STATUS_COLORS[status] || "var(--fg-muted)",
+  color: "#fff",
+  fontSize: "0.7rem",
+  fontWeight: 600,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  cursor: "pointer",
+});
+
+const moreLabel = {
+  fontSize: "0.7rem",
+  color: "var(--fg-muted)",
+  fontWeight: 600,
+  paddingLeft: "6px",
 };
 
 export const CalendarMonthView = ({ currentDate, appointments, selectedDate, onSelectDate }) => {
@@ -47,7 +89,6 @@ export const CalendarMonthView = ({ currentDate, appointments, selectedDate, onS
   const month = currentDate.getMonth();
   const days = getMonthGrid(year, month);
 
-  // Agrupar citas por dateKey
   const byDate = {};
   for (const apt of appointments) {
     const key = typeof apt.date === "string" ? apt.date.split("T")[0] : formatDateKey(new Date(apt.date));
@@ -57,15 +98,13 @@ export const CalendarMonthView = ({ currentDate, appointments, selectedDate, onS
 
   return (
     <div>
-      {/* Header dias de la semana */}
-      <div style={S.daysHeader}>
+      <div style={daysHeader}>
         {DAY_NAMES_SHORT.map((name) => (
-          <div key={name} style={S.dayHeaderCell}>{name}</div>
+          <div key={name} style={dayHeaderCell}>{name}</div>
         ))}
       </div>
 
-      {/* Grilla */}
-      <div style={S.grid}>
+      <div style={grid}>
         {days.map((day, idx) => {
           const key = formatDateKey(day.date);
           const isToday = isSameDay(day.date, today);
@@ -77,24 +116,26 @@ export const CalendarMonthView = ({ currentDate, appointments, selectedDate, onS
           return (
             <div
               key={idx}
-              style={S.cell(day.currentMonth, isToday, isSelected)}
+              style={cell(day.currentMonth, isToday, isSelected)}
               onClick={() => onSelectDate(day.date)}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => e.key === "Enter" && onSelectDate(day.date)}
             >
-              <div style={S.dateNum(day.currentMonth, isToday)}>
+              <div style={dateNum(day.currentMonth, isToday)}>
                 {day.date.getDate()}
               </div>
               <div style={{ marginTop: "4px" }}>
                 {visibleCitas.map((cita) => (
-                  <div key={cita.id} style={S.eventDot(cita.status)} title={`${cita.time} - ${cita.patientName}`}>
+                  <div
+                    key={cita.id}
+                    style={eventDot(cita.status)}
+                    title={`${cita.time} - ${cita.patientName}`}
+                  >
                     {cita.time} {cita.patientName?.split(" ")[0]}
                   </div>
                 ))}
-                {remaining > 0 && (
-                  <div style={S.moreLabel}>+{remaining} mas</div>
-                )}
+                {remaining > 0 && <div style={moreLabel}>+{remaining} más</div>}
               </div>
             </div>
           );

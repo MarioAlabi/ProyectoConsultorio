@@ -2,18 +2,20 @@ import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { appointmentSchema } from "../../lib/validations/appointmentSchema";
-import { useAppointmentsRange, useCreateAppointment, useUpdateAppointment, useUpdateAppointmentStatus } from "../../hooks/useAppointments";
+import {
+  useAppointmentsRange,
+  useCreateAppointment,
+  useUpdateAppointment,
+  useUpdateAppointmentStatus,
+} from "../../hooks/useAppointments";
 import { usePatients } from "../../hooks/usePatients";
-import { getStatusBadge } from "../../lib/utils";
 import { CalendarHeader } from "../../components/calendar/CalendarHeader";
 import { CalendarMonthView } from "../../components/calendar/CalendarMonthView";
 import { CalendarWeekView } from "../../components/calendar/CalendarWeekView";
 import { CalendarDayView } from "../../components/calendar/CalendarDayView";
 import { formatDateKey, getWeekDays } from "../../components/calendar/calendarUtils";
 import { Modal } from "../../components/Modal";
-import "../../views/shared/Shared.css";
 
-// Generar slots de tiempo en intervalos de 30min
 const TIME_SLOTS_30 = [];
 const TIME_SLOTS_60 = [];
 for (let h = 7; h <= 17; h++) {
@@ -25,6 +27,13 @@ for (let h = 7; h <= 17; h++) {
 TIME_SLOTS_60.push("18:00");
 TIME_SLOTS_30.push("18:00");
 
+const statusAccent = {
+  scheduled: "var(--accent-slate)",
+  present: "var(--accent-forest)",
+  cancelled: "var(--accent-coral)",
+  done: "var(--fg-subtle)",
+};
+
 export const AgendaCitas = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState("month");
@@ -34,12 +43,10 @@ export const AgendaCitas = () => {
   const [cancelConfirm, setCancelConfirm] = useState(null);
   const [intervalo, setIntervalo] = useState("30");
 
-  // Busqueda de pacientes
   const [busqueda, setBusqueda] = useState("");
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState(null);
   const [ocultarCanceladas, setOcultarCanceladas] = useState(false);
 
-  // Rango de fechas segun vista
   const { from, to } = useMemo(() => {
     const y = currentDate.getFullYear();
     const m = currentDate.getMonth();
@@ -61,7 +68,6 @@ export const AgendaCitas = () => {
     return { from: key, to: key };
   }, [currentDate, view]);
 
-  // Data hooks
   const { data: appointments = [], isLoading } = useAppointmentsRange(from, to);
   const { data: pacientesResultados = [] } = usePatients(busqueda.length >= 3 ? busqueda : "");
   const createMutation = useCreateAppointment();
@@ -70,7 +76,6 @@ export const AgendaCitas = () => {
 
   const timeSlots = intervalo === "60" ? TIME_SLOTS_60 : TIME_SLOTS_30;
 
-  // Citas del dia seleccionado
   const selectedDateKey = formatDateKey(selectedDate);
   const citasDelDia = useMemo(() => {
     return appointments.filter((a) => {
@@ -79,25 +84,21 @@ export const AgendaCitas = () => {
     });
   }, [appointments, selectedDateKey]);
 
-  // Horas ya ocupadas (para marcar en el select)
   const horasOcupadas = useMemo(() => {
     return new Set(
       citasDelDia.filter((c) => c.status !== "cancelled").map((c) => c.time)
     );
   }, [citasDelDia]);
 
-  // --- Formulario crear ---
   const createForm = useForm({
     resolver: zodResolver(appointmentSchema),
     defaultValues: { patientId: "", date: formatDateKey(selectedDate), time: "", reason: "" },
   });
 
-  // --- Formulario editar ---
   const editForm = useForm({
     defaultValues: { date: "", time: "", reason: "" },
   });
 
-  // Navegacion
   const navigate = (dir) => {
     const d = new Date(currentDate);
     if (view === "month") d.setMonth(d.getMonth() + dir);
@@ -114,7 +115,6 @@ export const AgendaCitas = () => {
     if (view === "month" && date.getMonth() !== currentDate.getMonth()) setCurrentDate(date);
   };
 
-  // --- Crear cita ---
   const onCreateSubmit = (data) => {
     createMutation.mutate(
       { ...data, date: formatDateKey(selectedDate) },
@@ -135,7 +135,6 @@ export const AgendaCitas = () => {
     setBusqueda("");
   };
 
-  // --- Editar cita ---
   const openEditModal = (cita) => {
     setEditingCita(cita);
     const dateStr = typeof cita.date === "string" ? cita.date.split("T")[0] : formatDateKey(new Date(cita.date));
@@ -149,7 +148,6 @@ export const AgendaCitas = () => {
     );
   };
 
-  // --- Cancelar cita ---
   const confirmCancel = () => {
     if (!cancelConfirm) return;
     statusMutation.mutate({ id: cancelConfirm.id, status: "cancelled" }, {
@@ -161,315 +159,516 @@ export const AgendaCitas = () => {
     statusMutation.mutate({ id, status });
   };
 
-  // --- Estilos ---
-  const C = {
-    teal50: "#f0fdfa", teal600: "#0d9488", teal700: "#0f766e",
-    gray50: "#f9fafb", gray100: "#f3f4f6", gray200: "#e5e7eb", gray400: "#9ca3af",
-    gray500: "#6b7280", gray700: "#374151", gray900: "#111827",
-    blue500: "#3b82f6", green500: "#22c55e", red500: "#ef4444",
-  };
-
-  const S = {
-    layout: { /* moved to inline */ },
-    sidebar: { display: "flex", flexDirection: "column", gap: "1rem" },
-    card: {
-      backgroundColor: "white", padding: "1.25rem", borderRadius: "12px",
-      border: `1px solid ${C.gray200}`, boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-    },
-    sectionTitle: { margin: "0 0 1rem", color: C.gray900, fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "space-between" },
-    citaRow: (status) => ({
-      display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.75rem",
-      borderRadius: "8px", marginBottom: "0.5rem", transition: "background 0.15s",
-      backgroundColor: status === "cancelled" ? "#fef2f2" : C.gray50,
-      opacity: status === "cancelled" ? 0.55 : 1,
-      border: `1px solid ${status === "cancelled" ? "#fecaca" : C.gray100}`,
-    }),
-    timeBadge: (status) => ({
-      backgroundColor: status === "scheduled" ? C.blue500 : status === "present" ? C.green500 : status === "cancelled" ? C.red500 : C.gray400,
-      color: "white", padding: "3px 8px", borderRadius: "6px", fontSize: "0.78rem",
-      fontWeight: 700, fontVariantNumeric: "tabular-nums", minWidth: "48px", textAlign: "center",
-    }),
-    actionsRow: { display: "flex", gap: "4px", marginLeft: "auto", flexShrink: 0 },
-    iconBtn: (color) => ({
-      background: "none", border: "none", cursor: "pointer", color,
-      padding: "4px", borderRadius: "4px", fontSize: "1rem", lineHeight: 1,
-      display: "inline-flex", alignItems: "center",
-    }),
-    selectTime: (occupied) => ({
-      padding: "0.5rem 0.75rem", fontSize: "0.875rem", borderRadius: "6px",
-      border: `1px solid ${C.gray200}`, backgroundColor: occupied ? "#fef2f2" : "white",
-      color: occupied ? C.red500 : C.gray900, width: "100%",
-    }),
-    errorMsg: { color: C.red500, fontSize: "0.78rem", marginTop: "4px" },
-    statBox: { textAlign: "center", padding: "0.6rem 0.4rem", borderRadius: "8px", backgroundColor: C.gray50 },
-  };
+  const visibleAppts = ocultarCanceladas ? appointments.filter((a) => a.status !== "cancelled") : appointments;
 
   return (
-    <div style={{ padding: "1.5rem", maxWidth: "1400px", margin: "0 auto", minHeight: "calc(100vh - 80px)" }}>
-      {/* === BARRA SUPERIOR: STATS + INTERVALO === */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem",
-        backgroundColor: "white", padding: "0.75rem 1.25rem", borderRadius: "12px",
-        border: `1px solid ${C.gray200}`, boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-        marginBottom: "1.5rem", flexWrap: "wrap",
-      }}>
-        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
-          <div style={{ textAlign: "center" }}><span style={{ fontSize: "1.3rem", fontWeight: 800, color: C.gray900 }}>{appointments.length}</span><span style={{ fontSize: "0.75rem", color: C.gray500, marginLeft: "6px" }}>Total</span></div>
-          <div style={{ width: "1px", height: "28px", backgroundColor: C.gray200 }} />
-          <div style={{ textAlign: "center" }}><span style={{ fontSize: "1.3rem", fontWeight: 800, color: C.blue500 }}>{appointments.filter((a) => a.status === "scheduled").length}</span><span style={{ fontSize: "0.75rem", color: C.gray500, marginLeft: "6px" }}>Programadas</span></div>
-          <div style={{ textAlign: "center" }}><span style={{ fontSize: "1.3rem", fontWeight: 800, color: C.green500 }}>{appointments.filter((a) => a.status === "present").length}</span><span style={{ fontSize: "0.75rem", color: C.gray500, marginLeft: "6px" }}>Presentes</span></div>
-          <div style={{ textAlign: "center" }}><span style={{ fontSize: "1.3rem", fontWeight: 800, color: C.red500 }}>{appointments.filter((a) => a.status === "cancelled").length}</span><span style={{ fontSize: "0.75rem", color: C.gray500, marginLeft: "6px" }}>Canceladas</span></div>
+    <div className="page" style={{ maxWidth: "1400px" }}>
+      <header className="page-header">
+        <div className="page-header__title">
+          <span className="page-header__eyebrow">Agenda</span>
+          <h1 className="page-header__heading">Citas y disponibilidad</h1>
+          <p className="page-header__sub">
+            {currentDate.toLocaleDateString("es-SV", { month: "long", year: "numeric" })} — organiza los espacios del consultorio.
+          </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div className="page-header__actions">
           <button
+            type="button"
             onClick={() => setOcultarCanceladas(!ocultarCanceladas)}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: "5px",
-              padding: "5px 12px", fontSize: "0.8rem", fontWeight: 600, borderRadius: "6px", cursor: "pointer",
-              border: `1px solid ${ocultarCanceladas ? C.teal600 : C.gray200}`,
-              backgroundColor: ocultarCanceladas ? C.teal50 : "white",
-              color: ocultarCanceladas ? C.teal600 : C.gray500,
-            }}
+            className={`btn ${ocultarCanceladas ? "btn-primary" : "btn-secondary"} btn-sm`}
           >
-            <i className={ocultarCanceladas ? "ri-eye-off-line" : "ri-eye-line"} style={{ fontSize: "0.9rem" }}></i>
-            {ocultarCanceladas ? "Canceladas ocultas" : "Ocultar citas canceladas"}
+            <i className={ocultarCanceladas ? "ri-eye-off-line" : "ri-eye-line"}></i>
+            {ocultarCanceladas ? "Canceladas ocultas" : "Ocultar canceladas"}
           </button>
-          <div style={{ width: "1px", height: "24px", backgroundColor: C.gray200 }} />
-          <span style={{ fontSize: "0.82rem", color: C.gray500, fontWeight: 600 }}>Intervalo</span>
-          <div style={{ display: "inline-flex", borderRadius: "6px", overflow: "hidden", border: `1px solid ${C.gray200}` }}>
-            <button onClick={() => setIntervalo("30")} style={{
-              padding: "5px 14px", fontSize: "0.8rem", fontWeight: 600, border: "none", cursor: "pointer",
-              backgroundColor: intervalo === "30" ? C.teal600 : "white", color: intervalo === "30" ? "white" : C.gray700,
-            }}>30 min</button>
-            <button onClick={() => setIntervalo("60")} style={{
-              padding: "5px 14px", fontSize: "0.8rem", fontWeight: 600, border: "none", cursor: "pointer",
-              borderLeft: `1px solid ${C.gray200}`,
-              backgroundColor: intervalo === "60" ? C.teal600 : "white", color: intervalo === "60" ? "white" : C.gray700,
-            }}>1 hora</button>
-          </div>
+          <button type="button" onClick={() => setShowNewModal(true)} className="btn btn-primary btn-sm">
+            <i className="ri-add-line"></i> Nueva cita
+          </button>
+        </div>
+      </header>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "1rem",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <div className="stat-card">
+          <span className="stat-card__accent" />
+          <div className="stat-card__label"><i className="ri-calendar-line"></i> Total</div>
+          <div className="stat-card__value">{appointments.length}</div>
+          <div className="stat-card__meta">Citas en el rango visible</div>
+        </div>
+        <div className="stat-card stat-card--slate">
+          <span className="stat-card__accent" />
+          <div className="stat-card__label"><i className="ri-time-line"></i> Programadas</div>
+          <div className="stat-card__value">{appointments.filter((a) => a.status === "scheduled").length}</div>
+          <div className="stat-card__meta">Pendientes de atención</div>
+        </div>
+        <div className="stat-card stat-card--forest">
+          <span className="stat-card__accent" />
+          <div className="stat-card__label"><i className="ri-user-received-2-line"></i> Presentes</div>
+          <div className="stat-card__value">{appointments.filter((a) => a.status === "present").length}</div>
+          <div className="stat-card__meta">Pacientes registrados</div>
+        </div>
+        <div className="stat-card stat-card--coral">
+          <span className="stat-card__accent" />
+          <div className="stat-card__label"><i className="ri-close-circle-line"></i> Canceladas</div>
+          <div className="stat-card__value">{appointments.filter((a) => a.status === "cancelled").length}</div>
+          <div className="stat-card__meta">En el rango visible</div>
         </div>
       </div>
 
-      {/* === GRID: CALENDARIO + SIDEBAR === */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "1.5rem", alignItems: "stretch" }}>
-        {/* === COLUMNA PRINCIPAL: CALENDARIO === */}
-        <div>
-          <CalendarHeader currentDate={currentDate} view={view} onPrev={() => navigate(-1)} onNext={() => navigate(1)} onToday={goToday} onViewChange={setView} />
-          {isLoading && <div style={{ textAlign: "center", padding: "1rem", color: C.gray500 }}>Cargando citas...</div>}
-          {(() => {
-            const visibleAppts = ocultarCanceladas ? appointments.filter((a) => a.status !== "cancelled") : appointments;
+      <div
+        className="card"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          gap: "0.75rem",
+          padding: "0.75rem 1.1rem",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <span className="eyebrow" style={{ letterSpacing: "0.12em" }}>Intervalo</span>
+        <div
+          role="group"
+          aria-label="Intervalo de tiempo"
+          style={{
+            display: "inline-flex",
+            borderRadius: "var(--radius-md)",
+            overflow: "hidden",
+            border: "1px solid var(--border-default)",
+          }}
+        >
+          {[
+            { k: "30", label: "30 min" },
+            { k: "60", label: "1 hora" },
+          ].map((opt, i) => {
+            const active = intervalo === opt.k;
             return (
-              <>
-                {view === "month" && <CalendarMonthView currentDate={currentDate} appointments={visibleAppts} selectedDate={selectedDate} onSelectDate={handleSelectDate} />}
-                {view === "week" && <CalendarWeekView currentDate={currentDate} appointments={visibleAppts} selectedDate={selectedDate} onSelectDate={handleSelectDate} />}
-                {view === "day" && <CalendarDayView currentDate={currentDate} appointments={visibleAppts} />}
-              </>
+              <button
+                key={opt.k}
+                type="button"
+                onClick={() => setIntervalo(opt.k)}
+                aria-pressed={active}
+                style={{
+                  padding: "0.45rem 1rem",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  border: "none",
+                  borderLeft: i > 0 ? "1px solid var(--border-default)" : "none",
+                  cursor: "pointer",
+                  background: active ? "var(--brand)" : "var(--bg-surface)",
+                  color: active ? "var(--fg-on-brand)" : "var(--fg-secondary)",
+                  transition: "background var(--t-fast), color var(--t-fast)",
+                }}
+              >
+                {opt.label}
+              </button>
             );
-          })()}
+          })}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "1.5rem", alignItems: "flex-start" }}>
+        <div>
+          <CalendarHeader
+            currentDate={currentDate}
+            view={view}
+            onPrev={() => navigate(-1)}
+            onNext={() => navigate(1)}
+            onToday={goToday}
+            onViewChange={setView}
+          />
+          {isLoading && (
+            <div style={{ textAlign: "center", padding: "1rem", color: "var(--fg-muted)" }}>
+              Cargando citas…
+            </div>
+          )}
+          {view === "month" && (
+            <CalendarMonthView
+              currentDate={currentDate}
+              appointments={visibleAppts}
+              selectedDate={selectedDate}
+              onSelectDate={handleSelectDate}
+            />
+          )}
+          {view === "week" && (
+            <CalendarWeekView
+              currentDate={currentDate}
+              appointments={visibleAppts}
+              selectedDate={selectedDate}
+              onSelectDate={handleSelectDate}
+            />
+          )}
+          {view === "day" && (
+            <CalendarDayView currentDate={currentDate} appointments={visibleAppts} />
+          )}
         </div>
 
-        {/* === SIDEBAR DERECHA === */}
-        <aside style={S.sidebar}>
-          {/* Boton nueva cita */}
-          <button onClick={() => setShowNewModal(true)} style={{
-            backgroundColor: C.teal600, color: "white", border: "none", padding: "0.85rem 1rem",
-            borderRadius: "10px", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
-            boxShadow: "0 2px 8px rgba(13,148,136,0.3)", transition: "background 0.15s",
-          }}>
-            <i className="ri-add-line" style={{ fontSize: "1.1rem" }}></i> Nueva Cita
-          </button>
-
-          {/* Citas del dia */}
-          <div style={{ ...S.card, flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={S.sectionTitle}>
-              <span>
-                <i className="ri-calendar-event-line" style={{ color: C.teal600, marginRight: "6px" }}></i>
+        <aside className="card" style={{ display: "flex", flexDirection: "column", gap: "0.9rem", padding: "1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div className="eyebrow">Citas del día</div>
+              <div
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "1.05rem",
+                  fontWeight: 600,
+                  color: "var(--fg-primary)",
+                  marginTop: "0.2rem",
+                  textTransform: "capitalize",
+                }}
+              >
                 {selectedDate.toLocaleDateString("es-SV", { weekday: "long", day: "numeric", month: "short" })}
-              </span>
-              <span style={{ fontSize: "0.78rem", color: C.gray400, fontWeight: 500 }}>
-                {citasDelDia.filter((c) => c.status !== "cancelled").length} citas
-              </span>
-            </div>
-
-            {citasDelDia.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "2rem 0", color: C.gray400 }}>
-                <i className="ri-calendar-line" style={{ fontSize: "2rem", display: "block", marginBottom: "0.5rem" }}></i>
-                Sin citas para este dia
               </div>
-            ) : (
-              <div style={{ flex: 1, overflowY: "auto" }}>
-                {citasDelDia.filter((c) => !(ocultarCanceladas && c.status === "cancelled")).map((c) => {
-                  const badge = getStatusBadge(c.status);
+            </div>
+            <span className="badge badge-brand">
+              {citasDelDia.filter((c) => c.status !== "cancelled").length} citas
+            </span>
+          </div>
+
+          {citasDelDia.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "2rem 1rem",
+                color: "var(--fg-muted)",
+                border: "1px dashed var(--border-default)",
+                borderRadius: "var(--radius-md)",
+                background: "var(--bg-surface-alt)",
+              }}
+            >
+              <i className="ri-calendar-line" style={{ fontSize: "1.75rem", display: "block", marginBottom: "0.4rem", color: "var(--fg-subtle)" }}></i>
+              Sin citas para este día
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "520px", overflowY: "auto" }}>
+              {citasDelDia
+                .filter((c) => !(ocultarCanceladas && c.status === "cancelled"))
+                .map((c) => {
+                  const cancelled = c.status === "cancelled";
                   return (
-                    <div key={c.id} style={S.citaRow(c.status)}>
-                      <span style={S.timeBadge(c.status)}>{c.time}</span>
+                    <div
+                      key={c.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        padding: "0.7rem 0.8rem",
+                        borderRadius: "var(--radius-md)",
+                        background: cancelled ? "var(--accent-coral-soft)" : "var(--bg-surface-alt)",
+                        border: `1px solid ${cancelled ? "var(--accent-coral-soft)" : "var(--border-subtle)"}`,
+                        opacity: cancelled ? 0.65 : 1,
+                        transition: "background var(--t-fast)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: statusAccent[c.status] || "var(--fg-subtle)",
+                          color: "#fff",
+                          padding: "0.2rem 0.55rem",
+                          borderRadius: "var(--radius-sm)",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          fontVariantNumeric: "tabular-nums",
+                          fontFamily: "var(--font-mono)",
+                          minWidth: "54px",
+                          textAlign: "center",
+                        }}
+                      >
+                        {c.time}
+                      </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: "0.88rem", color: C.gray900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: "0.88rem",
+                            color: "var(--fg-primary)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {c.patientName || "Paciente"}
                         </div>
-                        <div style={{ fontSize: "0.75rem", color: C.gray500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--fg-muted)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {c.reason || "Sin motivo"}
                         </div>
                       </div>
-                      <div style={S.actionsRow}>
+                      <div style={{ display: "flex", gap: "0.15rem", flexShrink: 0 }}>
                         {c.status === "scheduled" && (
                           <>
-                            <button onClick={() => cambiarEstado(c.id, "present")} style={S.iconBtn(C.green500)} title="Marcar presente">
-                              <i className="ri-user-received-2-line"></i>
-                            </button>
-                            <button onClick={() => openEditModal(c)} style={S.iconBtn(C.blue500)} title="Editar cita">
-                              <i className="ri-pencil-line"></i>
-                            </button>
-                            <button onClick={() => setCancelConfirm(c)} style={S.iconBtn(C.red500)} title="Cancelar cita">
-                              <i className="ri-close-circle-line"></i>
-                            </button>
+                            <IconAction onClick={() => cambiarEstado(c.id, "present")} tone="forest" icon="ri-user-received-2-line" label="Marcar presente" />
+                            <IconAction onClick={() => openEditModal(c)} tone="slate" icon="ri-pencil-line" label="Editar cita" />
+                            <IconAction onClick={() => setCancelConfirm(c)} tone="coral" icon="ri-close-circle-line" label="Cancelar cita" />
                           </>
                         )}
                         {c.status === "present" && (
-                          <span style={{ fontSize: "0.75rem", color: C.green500, fontWeight: 600, display: "flex", alignItems: "center", gap: "3px" }}>
-                            <i className="ri-checkbox-circle-fill"></i> Presente
-                          </span>
+                          <span className="badge badge-success badge-dot">Presente</span>
                         )}
                         {c.status === "done" && (
-                          <span style={{ fontSize: "0.75rem", color: C.gray400 }}>Atendido</span>
+                          <span className="badge">Atendido</span>
                         )}
                       </div>
                     </div>
                   );
                 })}
-              </div>
-            )}
-          </div>
-
+            </div>
+          )}
         </aside>
       </div>
 
-      {/* === MODAL NUEVA CITA === */}
-      <Modal isOpen={showNewModal} onClose={() => { setShowNewModal(false); setPacienteSeleccionado(null); setBusqueda(""); createForm.clearErrors(); }} title="Agendar Nueva Cita" size="md">
-        <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="login-form">
-          {/* Paciente */}
-          <div className="form-group">
-            <label className="form-label">Paciente *</label>
-            {!pacienteSeleccionado ? (
-              <>
-                <input type="text" className="form-input" placeholder="Buscar por nombre o DUI..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-                {createForm.formState.errors.patientId && <span style={S.errorMsg}>{createForm.formState.errors.patientId.message}</span>}
-                {pacientesResultados.length > 0 && (
-                  <div style={{ border: `1px solid ${C.gray200}`, borderRadius: "8px", marginTop: "6px", maxHeight: "140px", overflowY: "auto" }}>
-                    {pacientesResultados.map((p) => (
-                      <div key={p.id} role="option" tabIndex={0} onClick={() => seleccionarPaciente(p)} onKeyDown={(e) => e.key === "Enter" && seleccionarPaciente(p)}
-                        style={{ padding: "8px 10px", cursor: "pointer", borderBottom: `1px solid ${C.gray100}`, fontSize: "0.9rem" }}>
-                        <strong>{p.fullName}</strong> <span style={{ color: C.gray500 }}>- {p.identityDocument}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div style={{ padding: "8px 12px", backgroundColor: C.teal50, borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px solid #ccfbf1` }}>
-                <span style={{ fontWeight: 600 }}>{pacienteSeleccionado.fullName}</span>
-                <button type="button" onClick={() => { setPacienteSeleccionado(null); createForm.setValue("patientId", ""); }} style={{ background: "none", border: "none", color: C.red500, cursor: "pointer", fontSize: "1.1rem" }}>
-                  <i className="ri-close-circle-line"></i>
-                </button>
-              </div>
-            )}
-            <input type="hidden" {...createForm.register("patientId")} />
-          </div>
-
-          {/* Fecha */}
-          <div className="form-group">
-            <label className="form-label">Fecha</label>
-            <input type="date" className="form-input" value={formatDateKey(selectedDate)}
-              {...createForm.register("date")}
-              onChange={(e) => { setSelectedDate(new Date(e.target.value + "T12:00:00")); createForm.setValue("date", e.target.value, { shouldValidate: true }); }}
-            />
-            {createForm.formState.errors.date && <span style={S.errorMsg}>{createForm.formState.errors.date.message}</span>}
-          </div>
-
-          {/* Hora con slots */}
-          <div className="form-group">
-            <label className="form-label">Hora * (intervalo: {intervalo} min)</label>
-            <select className="form-input" {...createForm.register("time")} style={{ backgroundColor: "white" }}>
-              <option value="">Seleccionar hora...</option>
-              {timeSlots.map((t) => {
-                const occupied = horasOcupadas.has(t);
-                return (
-                  <option key={t} value={t} disabled={occupied} style={{ color: occupied ? C.red500 : "inherit" }}>
-                    {t} {occupied ? " (ocupado)" : ""}
-                  </option>
-                );
-              })}
-            </select>
-            {createForm.formState.errors.time && <span style={S.errorMsg}>{createForm.formState.errors.time.message}</span>}
-          </div>
-
-          {/* Motivo */}
-          <div className="form-group">
-            <label className="form-label">Motivo (opcional)</label>
-            <input type="text" className="form-input" placeholder="Ej. Control de azucar" {...createForm.register("reason")} />
-          </div>
-
-          <button type="submit" className="submit-btn" disabled={createMutation.isPending} style={{ marginTop: "0.5rem" }}>
-            {createMutation.isPending ? "Agendando..." : "Agendar Cita"}
-          </button>
-        </form>
-      </Modal>
-
-      {/* === MODAL EDITAR CITA === */}
-      <Modal isOpen={!!editingCita} onClose={() => setEditingCita(null)} title="Editar Cita" size="md">
-        {editingCita && (
-          <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="login-form">
-            <div style={{ padding: "0.75rem", backgroundColor: C.teal50, borderRadius: "8px", marginBottom: "1rem", border: "1px solid #ccfbf1" }}>
-              <strong style={{ color: C.teal700 }}>{editingCita.patientName}</strong>
+      <Modal
+        isOpen={showNewModal}
+        onClose={() => {
+          setShowNewModal(false);
+          setPacienteSeleccionado(null);
+          setBusqueda("");
+          createForm.clearErrors();
+        }}
+        title="Agendar nueva cita"
+        size="md"
+      >
+        <form onSubmit={createForm.handleSubmit(onCreateSubmit)}>
+          <div style={{ display: "grid", gap: "1.1rem" }}>
+            <div className="form-group">
+              <label className="form-label">Paciente *</label>
+              {!pacienteSeleccionado ? (
+                <>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Buscar por nombre o DUI…"
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                  />
+                  {createForm.formState.errors.patientId && (
+                    <span className="field-error">{createForm.formState.errors.patientId.message}</span>
+                  )}
+                  {pacientesResultados.length > 0 && (
+                    <div
+                      style={{
+                        border: "1px solid var(--border-default)",
+                        borderRadius: "var(--radius-md)",
+                        marginTop: "0.4rem",
+                        maxHeight: "160px",
+                        overflowY: "auto",
+                        background: "var(--bg-surface)",
+                      }}
+                    >
+                      {pacientesResultados.map((p) => (
+                        <div
+                          key={p.id}
+                          role="option"
+                          tabIndex={0}
+                          onClick={() => seleccionarPaciente(p)}
+                          onKeyDown={(e) => e.key === "Enter" && seleccionarPaciente(p)}
+                          style={{
+                            padding: "0.6rem 0.75rem",
+                            cursor: "pointer",
+                            borderBottom: "1px solid var(--border-subtle)",
+                            fontSize: "0.9rem",
+                            color: "var(--fg-primary)",
+                          }}
+                        >
+                          <strong>{p.fullName}</strong>{" "}
+                          <span style={{ color: "var(--fg-muted)" }}>— {p.identityDocument}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    padding: "0.6rem 0.85rem",
+                    background: "var(--brand-soft)",
+                    borderRadius: "var(--radius-md)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    border: "1px solid var(--brand-soft)",
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: "var(--brand)" }}>{pacienteSeleccionado.fullName}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setPacienteSeleccionado(null); createForm.setValue("patientId", ""); }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--accent-coral)",
+                      cursor: "pointer",
+                      fontSize: "1.1rem",
+                    }}
+                    aria-label="Quitar paciente"
+                  >
+                    <i className="ri-close-circle-line"></i>
+                  </button>
+                </div>
+              )}
+              <input type="hidden" {...createForm.register("patientId")} />
             </div>
 
             <div className="form-group">
               <label className="form-label">Fecha</label>
-              <input type="date" className="form-input" {...editForm.register("date")} />
+              <input
+                type="date"
+                className="form-input"
+                value={formatDateKey(selectedDate)}
+                {...createForm.register("date")}
+                onChange={(e) => {
+                  setSelectedDate(new Date(e.target.value + "T12:00:00"));
+                  createForm.setValue("date", e.target.value, { shouldValidate: true });
+                }}
+              />
+              {createForm.formState.errors.date && (
+                <span className="field-error">{createForm.formState.errors.date.message}</span>
+              )}
             </div>
 
             <div className="form-group">
-              <label className="form-label">Hora (intervalo: {intervalo} min)</label>
-              <select className="form-input" {...editForm.register("time")} style={{ backgroundColor: "white" }}>
-                <option value="">Seleccionar hora...</option>
+              <label className="form-label">Hora * (intervalo: {intervalo} min)</label>
+              <select className="form-input" {...createForm.register("time")}>
+                <option value="">Seleccionar hora…</option>
                 {timeSlots.map((t) => {
-                  const occupied = horasOcupadas.has(t) && t !== editingCita.time;
+                  const occupied = horasOcupadas.has(t);
                   return (
-                    <option key={t} value={t} disabled={occupied} style={{ color: occupied ? C.red500 : "inherit" }}>
-                      {t} {occupied ? " (ocupado)" : ""} {t === editingCita.time ? " (actual)" : ""}
+                    <option key={t} value={t} disabled={occupied}>
+                      {t}{occupied ? " (ocupado)" : ""}
                     </option>
                   );
                 })}
               </select>
+              {createForm.formState.errors.time && (
+                <span className="field-error">{createForm.formState.errors.time.message}</span>
+              )}
             </div>
 
             <div className="form-group">
-              <label className="form-label">Motivo</label>
-              <input type="text" className="form-input" {...editForm.register("reason")} />
+              <label className="form-label">Motivo (opcional)</label>
+              <input type="text" className="form-input" placeholder="Ej. Control de azúcar" {...createForm.register("reason")} />
             </div>
 
-            <button type="submit" className="submit-btn" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-            </button>
+            <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end", marginTop: "0.3rem" }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowNewModal(false);
+                  setPacienteSeleccionado(null);
+                  setBusqueda("");
+                  createForm.clearErrors();
+                }}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Agendando…" : "Agendar cita"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={!!editingCita} onClose={() => setEditingCita(null)} title="Editar cita" size="md">
+        {editingCita && (
+          <form onSubmit={editForm.handleSubmit(onEditSubmit)}>
+            <div style={{ display: "grid", gap: "1.1rem" }}>
+              <div
+                style={{
+                  padding: "0.7rem 0.85rem",
+                  background: "var(--brand-soft)",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--brand-soft)",
+                }}
+              >
+                <strong style={{ color: "var(--brand)" }}>{editingCita.patientName}</strong>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Fecha</label>
+                <input type="date" className="form-input" {...editForm.register("date")} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Hora (intervalo: {intervalo} min)</label>
+                <select className="form-input" {...editForm.register("time")}>
+                  <option value="">Seleccionar hora…</option>
+                  {timeSlots.map((t) => {
+                    const occupied = horasOcupadas.has(t) && t !== editingCita.time;
+                    return (
+                      <option key={t} value={t} disabled={occupied}>
+                        {t}
+                        {occupied ? " (ocupado)" : ""}
+                        {t === editingCita.time ? " (actual)" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Motivo</label>
+                <input type="text" className="form-input" {...editForm.register("reason")} />
+              </div>
+
+              <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end", marginTop: "0.3rem" }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingCita(null)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Guardando…" : "Guardar cambios"}
+                </button>
+              </div>
+            </div>
           </form>
         )}
       </Modal>
 
-      {/* === MODAL CONFIRMAR CANCELACION === */}
-      <Modal isOpen={!!cancelConfirm} onClose={() => setCancelConfirm(null)} title="Cancelar Cita" size="sm">
+      <Modal isOpen={!!cancelConfirm} onClose={() => setCancelConfirm(null)} title="Cancelar cita" size="sm">
         {cancelConfirm && (
-          <div>
-            <p style={{ color: C.gray700, marginBottom: "0.5rem" }}>Estas seguro de cancelar esta cita?</p>
-            <div style={{ padding: "0.75rem", backgroundColor: "#fef2f2", borderRadius: "8px", marginBottom: "1.5rem", border: "1px solid #fecaca" }}>
-              <div style={{ fontWeight: 700, color: C.gray900 }}>{cancelConfirm.time} - {cancelConfirm.patientName}</div>
-              <div style={{ fontSize: "0.85rem", color: C.gray500 }}>{cancelConfirm.reason || "Sin motivo"}</div>
+          <div style={{ display: "grid", gap: "1rem" }}>
+            <p style={{ color: "var(--fg-secondary)", margin: 0 }}>
+              ¿Estás seguro de cancelar esta cita?
+            </p>
+            <div
+              style={{
+                padding: "0.85rem 1rem",
+                background: "var(--accent-coral-soft)",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--accent-coral-soft)",
+              }}
+            >
+              <div style={{ fontWeight: 700, color: "var(--fg-primary)" }}>
+                {cancelConfirm.time} — {cancelConfirm.patientName}
+              </div>
+              <div style={{ fontSize: "0.85rem", color: "var(--fg-muted)" }}>
+                {cancelConfirm.reason || "Sin motivo"}
+              </div>
             </div>
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-              <button onClick={() => setCancelConfirm(null)} className="doc-btn">No, mantener</button>
-              <button onClick={confirmCancel} disabled={statusMutation.isPending}
-                style={{ padding: "0.5rem 1rem", borderRadius: "8px", border: "none", backgroundColor: C.red500, color: "white", fontWeight: 700, cursor: "pointer", opacity: statusMutation.isPending ? 0.7 : 1 }}>
-                {statusMutation.isPending ? "Cancelando..." : "Si, cancelar cita"}
+            <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end" }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setCancelConfirm(null)}>
+                No, mantener
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger-solid"
+                onClick={confirmCancel}
+                disabled={statusMutation.isPending}
+              >
+                {statusMutation.isPending ? "Cancelando…" : "Sí, cancelar cita"}
               </button>
             </div>
           </div>
@@ -478,3 +677,37 @@ export const AgendaCitas = () => {
     </div>
   );
 };
+
+const IconAction = ({ onClick, tone, icon, label }) => {
+  const color = {
+    forest: "var(--accent-forest)",
+    slate: "var(--accent-slate)",
+    coral: "var(--accent-coral)",
+  }[tone];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      style={{
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        color,
+        padding: "0.25rem",
+        borderRadius: "var(--radius-sm)",
+        fontSize: "1rem",
+        lineHeight: 1,
+        display: "inline-flex",
+        alignItems: "center",
+        transition: "background var(--t-fast)",
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-surface-alt)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+    >
+      <i className={icon}></i>
+    </button>
+  );
+};
+

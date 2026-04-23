@@ -21,11 +21,11 @@ export const calcularEdad = (dateStr) => {
  * @returns {{ label: string, color: string }}
  */
 export const clasificarIMC = (bmi) => {
-  if (!bmi || bmi <= 0) return { label: "N/A", color: "#6b7280" };
-  if (bmi < 18.5) return { label: "Bajo peso", color: "#f59e0b" };
-  if (bmi < 25) return { label: "Normal", color: "#22c55e" };
-  if (bmi < 30) return { label: "Sobrepeso", color: "#f59e0b" };
-  return { label: "Obesidad", color: "#ef4444" };
+  if (!bmi || bmi <= 0) return { label: "N/A", color: "var(--fg-muted)" };
+  if (bmi < 18.5) return { label: "Bajo peso", color: "var(--accent-ochre)" };
+  if (bmi < 25) return { label: "Normal", color: "var(--accent-forest)" };
+  if (bmi < 30) return { label: "Sobrepeso", color: "var(--accent-ochre)" };
+  return { label: "Obesidad", color: "var(--accent-coral)" };
 };
 
 /**
@@ -96,14 +96,14 @@ export const formatPhone = (val) => {
  */
 export const getStatusBadge = (status) => {
   const map = {
-    active: { label: "Activo", bg: "#dcfce7", color: "#166534" },
-    inactive: { label: "Inactivo", bg: "#fee2e2", color: "#991b1b" },
-    waiting: { label: "En espera", bg: "#dbeafe", color: "#1e40af" },
-    in_consultation: { label: "En consulta", bg: "#fef3c7", color: "#92400e" },
-    done: { label: "Finalizado", bg: "#dcfce7", color: "#166534" },
-    cancelled: { label: "Cancelado", bg: "#fee2e2", color: "#991b1b" },
-    scheduled: { label: "Programada", bg: "#dbeafe", color: "#1e40af" },
-    present: { label: "Presente", bg: "#dcfce7", color: "#166534" },
+    active: { label: "Activo", bg: "var(--accent-forest-soft)", color: "var(--accent-forest)" },
+    inactive: { label: "Inactivo", bg: "var(--accent-coral-soft)", color: "var(--accent-coral)" },
+    waiting: { label: "En espera", bg: "var(--accent-slate-soft)", color: "var(--accent-slate)" },
+    in_consultation: { label: "En consulta", bg: "var(--accent-ochre-soft)", color: "var(--accent-ochre)" },
+    done: { label: "Finalizado", bg: "var(--accent-forest-soft)", color: "var(--accent-forest)" },
+    cancelled: { label: "Cancelado", bg: "var(--accent-coral-soft)", color: "var(--accent-coral)" },
+    scheduled: { label: "Programada", bg: "var(--accent-slate-soft)", color: "var(--accent-slate)" },
+    present: { label: "Presente", bg: "var(--accent-forest-soft)", color: "var(--accent-forest)" },
   };
-  return map[status] || { label: status || "Desconocido", bg: "#f3f4f6", color: "#6b7280" };
+  return map[status] || { label: status || "Desconocido", bg: "var(--bg-surface-alt)", color: "var(--fg-muted)" };
 };

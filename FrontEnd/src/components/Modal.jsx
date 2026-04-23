@@ -26,7 +26,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
 
   if (!isOpen) return null;
 
-  const widths = { sm: "400px", md: "550px", lg: "750px", xl: "950px" };
+  const widths = { sm: "420px", md: "560px", lg: "760px", xl: "960px" };
 
   return (
     <div
@@ -36,29 +36,79 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
       aria-labelledby="modal-title"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
       style={{
-        position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)",
-        display: "flex", justifyContent: "center", alignItems: "center",
-        zIndex: 1000, padding: "1rem",
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(26, 28, 26, 0.48)",
+        backdropFilter: "blur(3px)",
+        WebkitBackdropFilter: "blur(3px)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 1000,
+        padding: "1rem",
+        animation: "fadeIn 180ms cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       <div
         ref={contentRef}
         style={{
-          backgroundColor: "white", borderRadius: "1rem", width: "100%",
-          maxWidth: widths[size], maxHeight: "90vh", overflow: "auto",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.15)", padding: "2rem",
+          backgroundColor: "var(--bg-surface)",
+          borderRadius: "var(--radius-xl)",
+          width: "100%",
+          maxWidth: widths[size],
+          maxHeight: "90vh",
+          overflow: "auto",
+          boxShadow: "var(--shadow-xl)",
+          padding: "1.75rem 2rem 2rem",
+          border: "1px solid var(--border-subtle)",
+          animation: "slideUp 220ms cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-          <h2 id="modal-title" style={{ margin: 0, color: "#1f2937", fontSize: "1.25rem", fontWeight: 700 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1.25rem",
+            paddingBottom: "1rem",
+            borderBottom: "1px solid var(--border-subtle)",
+          }}
+        >
+          <h2
+            id="modal-title"
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-display)",
+              fontSize: "1.35rem",
+              fontWeight: 600,
+              letterSpacing: "-0.015em",
+              color: "var(--fg-primary)",
+            }}
+          >
             {title}
           </h2>
           <button
             onClick={onClose}
             aria-label="Cerrar"
+            type="button"
             style={{
-              background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer",
-              color: "#9ca3af", lineHeight: 1, padding: "0.25rem",
+              background: "transparent",
+              border: "none",
+              fontSize: "1.5rem",
+              cursor: "pointer",
+              color: "var(--fg-muted)",
+              lineHeight: 1,
+              padding: "0.2rem 0.4rem",
+              borderRadius: "var(--radius-sm)",
+              transition: "background-color 140ms, color 140ms",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--bg-surface-alt)";
+              e.currentTarget.style.color = "var(--fg-primary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--fg-muted)";
             }}
           >
             <i className="ri-close-line"></i>

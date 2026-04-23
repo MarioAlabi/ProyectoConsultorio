@@ -75,10 +75,10 @@ export const DAY_NAMES_SHORT = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
 export const DAY_NAMES_LONG = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
 
 export const STATUS_COLORS = {
-  scheduled: "#3b82f6",
-  present: "#22c55e",
-  done: "#6b7280",
-  cancelled: "#ef4444",
+  scheduled: "var(--accent-slate)",
+  present: "var(--accent-forest)",
+  done: "var(--fg-muted)",
+  cancelled: "var(--accent-coral)",
 };
 
 /**
