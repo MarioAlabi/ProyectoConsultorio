@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { appointmentSchema } from "../../lib/validations/appointmentSchema";
@@ -9,6 +10,7 @@ import {
   useUpdateAppointmentStatus,
 } from "../../hooks/useAppointments";
 import { usePatients } from "../../hooks/usePatients";
+import { useWaitingRoom } from "../../hooks/usePreclinical";
 import { CalendarHeader } from "../../components/calendar/CalendarHeader";
 import { CalendarMonthView } from "../../components/calendar/CalendarMonthView";
 import { CalendarWeekView } from "../../components/calendar/CalendarWeekView";
@@ -35,6 +37,12 @@ const statusAccent = {
 };
 
 export const AgendaCitas = () => {
+  const routerNavigate = useNavigate();
+  const location = useLocation();
+  // La agenda es compartida por doctor y recepción; determinamos a qué
+  // área volver tras tomar signos para preservar el scope de la sesión.
+  const basePath = location.pathname.startsWith("/doctor") ? "/doctor" : "/reception";
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState("month");
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -46,6 +54,32 @@ export const AgendaCitas = () => {
   const [busqueda, setBusqueda] = useState("");
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState(null);
   const [ocultarCanceladas, setOcultarCanceladas] = useState(false);
+
+  const { data: waitingList = [] } = useWaitingRoom();
+  // Pacientes con pre-clínica activa hoy: para saber si basta mostrar el badge
+  // "En sala de espera" o todavía falta la toma de signos.
+  const patientsInClinicalQueue = useMemo(
+    () => new Set(
+      waitingList
+        .filter((w) => w.status === "waiting" || w.status === "in_consultation")
+        .map((w) => w.patientId)
+    ),
+    [waitingList]
+  );
+
+  const irAPreclinica = (cita) => {
+    if (!cita?.patientId) return;
+    routerNavigate(`${basePath}/preclinica`, {
+      state: {
+        paciente: {
+          id: cita.patientId,
+          fullName: cita.patientName,
+          patientName: cita.patientName,
+        },
+        redirectTo: `${basePath}/agenda`,
+      },
+    });
+  };
 
   const { from, to } = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -415,7 +449,18 @@ export const AgendaCitas = () => {
                           </>
                         )}
                         {c.status === "present" && (
-                          <span className="badge badge-success badge-dot">Presente</span>
+                          patientsInClinicalQueue.has(c.patientId) ? (
+                            <span className="badge badge-success badge-dot" title="Pre-clínica registrada, el doctor ya puede atender">
+                              En sala de espera
+                            </span>
+                          ) : (
+                            <IconAction
+                              onClick={() => irAPreclinica(c)}
+                              tone="forest"
+                              icon="ri-heart-pulse-line"
+                              label="Tomar signos vitales"
+                            />
+                          )
                         )}
                         {c.status === "done" && (
                           <span className="badge">Atendido</span>
