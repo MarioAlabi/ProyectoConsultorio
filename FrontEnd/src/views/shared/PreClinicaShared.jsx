@@ -72,9 +72,16 @@ export const PreclinicaShared = () => {
 
   useEffect(() => {
     if (historialPaciente && paciente) {
-      const activeRecord = historialPaciente.find(
-        (r) => r.status === "waiting" || r.status === "in_consultation"
-      );
+      // Solo consideramos "activo" un registro creado hoy y en estado abierto.
+      // Sin este filtro, un waiting olvidado de días previos capturaría el
+      // formulario en modo edición, y al guardar no moveria al paciente a la
+      // cola del día (porque el dashboard filtra por createdAt === hoy).
+      const todayKey = new Date().toISOString().split("T")[0];
+      const isOpen = (r) => r.status === "waiting" || r.status === "in_consultation";
+      const isToday = (r) =>
+        typeof r.createdAt === "string" && r.createdAt.startsWith(todayKey);
+
+      const activeRecord = historialPaciente.find((r) => isOpen(r) && isToday(r));
 
       if (activeRecord) {
         setEditRecord(activeRecord);

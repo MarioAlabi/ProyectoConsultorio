@@ -12,28 +12,49 @@ const normalizeNullable = (value) => {
 };
 
 export const createPreclinical = async (data, user) => {
-  
-
   if (!data?.patientId) {
     const error = new Error("patientId es obligatorio.");
     error.status = 400;
     throw error;
   }
-  const [existingRecord] = await db
+
+  // El duplicado solo aplica para registros creados HOY: un paciente puede
+  // volver otro día aunque arrastre un waiting viejo olvidado de otra jornada.
+  const today = new Date().toISOString().split("T")[0];
+  const dayStart = `${today} 00:00:00`;
+  const dayEnd = `${today} 23:59:59`;
+
+  const [existingToday] = await db
     .select()
     .from(preclinicalRecords)
     .where(
       and(
         eq(preclinicalRecords.patientId, data.patientId),
-        eq(preclinicalRecords.status, "waiting")
+        eq(preclinicalRecords.status, "waiting"),
+        gte(preclinicalRecords.createdAt, sql`${dayStart}`),
+        lte(preclinicalRecords.createdAt, sql`${dayEnd}`)
       )
     )
     .limit(1);
-  if (existingRecord) {
+  if (existingToday) {
     const error = new Error("El paciente ya se encuentra en la sala de espera (Estado: Esperando).");
     error.status = 409;
     throw error;
   }
+
+  // Auto-cerrar registros waiting de días previos: quedaron abandonados y
+  // bloquearían la creación de uno nuevo. No se pierden datos (siguen en DB
+  // con status=cancelled), simplemente se sacan de la cola activa.
+  await db
+    .update(preclinicalRecords)
+    .set({ status: "cancelled", updatedAt: new Date() })
+    .where(
+      and(
+        eq(preclinicalRecords.patientId, data.patientId),
+        eq(preclinicalRecords.status, "waiting"),
+        lte(preclinicalRecords.createdAt, sql`${dayStart}`)
+      )
+    );
 
   const weight = normalizeNullable(data.weight);
   const height = normalizeNullable(data.height);
