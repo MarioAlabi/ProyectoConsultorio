@@ -8,16 +8,25 @@ export const DocumentGeneratorModal = ({ isOpen, onClose, patientId, currentDiag
   const [documentType, setDocumentType] = useState(initialDocType || "certificate");
   const [promptText, setPromptText] = useState("");
   const [finalText, setFinalText] = useState("");
+  const [sickLeaveDays, setSickLeaveDays] = useState(1);
 
   const draftMutation = useGenerateDraft();
   const renderMutation = useRenderPdf();
 
   const handleGenerateDraft = () => {
-    if (!promptText.trim()) return toast.error("Ingrese instrucciones.");
     if (!currentDiagnosis) return toast.error("Debe llenar el campo de Diagnóstico primero.");
+    
+    if (documentType !== "sick_leave" && !promptText.trim()) {
+        return toast.error("Ingrese instrucciones para la IA.");
+    }
+
+    let finalPrompt = promptText;
+    if (documentType === "sick_leave") {
+        finalPrompt = `Genera una incapacidad médica formal por ${sickLeaveDays} día(s) de reposo (incluyendo el día de hoy). ${promptText}`;
+    }
 
     draftMutation.mutate(
-      { patientId, diagnosis: currentDiagnosis, promptText },
+      { patientId, diagnosis: currentDiagnosis, promptText: finalPrompt },
       {
         onSuccess: (data) => {
           setFinalText(data.draftText);
@@ -27,31 +36,32 @@ export const DocumentGeneratorModal = ({ isOpen, onClose, patientId, currentDiag
     );
   };
 
-  const handlePrint = (base64) => {
-    try {
-        const byteCharacters = atob(base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
-        const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
-        const printWindow = window.open(blobUrl);
-        if (printWindow) printWindow.onload = () => printWindow.print();
-    } catch (error) { toast.error("Error al abrir PDF."); }
-  };
+  // Esta función ahora solo prepara los datos, ya no abre el pop-up de impresión
+ const handleSaveToConsultation = () => {
+    // 1. Mapeamos el título según el tipo seleccionado
+    const titulosFormales = {
+        certificate: "CONSTANCIA MÉDICA",
+        sick_leave: "INCAPACIDAD MÉDICA",
+        other: "DOCUMENTO MÉDICO"
+    };
+    
+    const tituloSeleccionado = titulosFormales[documentType] || "DOCUMENTO MÉDICO";
 
-  const handleSaveAndPrint = () => {
     renderMutation.mutate(
-      { patientId, finalText },
+      { 
+        patientId, 
+        finalText, 
+        title: tituloSeleccionado // <-- Enviamos el título al Backend
+      },
       {
         onSuccess: (data) => {
-          handlePrint(data.pdfBase64); 
-          // Pasamos el documento a la pantalla de Consulta Médica para que lo guarde al finalizar
           onDocumentGenerated({
             documentType,
             textContent: finalText,
-            pdfBase64: `data:application/pdf;base64,${data.pdfBase64}`
+            pdfBase64: data.pdfBase64.startsWith('data:') ? data.pdfBase64 : `data:application/pdf;base64,${data.pdfBase64}`
           });
-          toast.success("Documento preparado para guardar.");
+          
+          toast.success(`${tituloSeleccionado} adjuntada a la consulta.`, { icon: '📎' });
           handleClose();
         },
       }
@@ -59,11 +69,15 @@ export const DocumentGeneratorModal = ({ isOpen, onClose, patientId, currentDiag
   };
 
   const handleClose = () => {
-    setStep(1); setPromptText(""); setFinalText(""); onClose();
+    setStep(1); 
+    setPromptText(""); 
+    setFinalText(""); 
+    setSickLeaveDays(1);
+    onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Generador de documentos médicos" size="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Asistente de Documentos IA" size="lg">
       {step === 1 && (
         <div style={{ display: "grid", gap: "1.1rem" }}>
           <div className="form-group">
@@ -74,33 +88,49 @@ export const DocumentGeneratorModal = ({ isOpen, onClose, patientId, currentDiag
               onChange={(e) => setDocumentType(e.target.value)}
             >
               <option value="certificate">Constancia médica</option>
-              <option value="sick_leave">Incapacidad médica</option>
-              <option value="prescription">Receta médica extra</option>
+              <option value="sick_leave">Incapacidad médica (Reposo)</option>
               <option value="other">Documento libre / otro</option>
             </select>
           </div>
+
+          {documentType === "sick_leave" && (
+            <div className="form-group" style={{ background: "var(--brand-soft)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border-default)" }}>
+              <label className="form-label" style={{ color: "var(--brand)", fontWeight: "bold" }}>
+                <i className="ri-calendar-check-line"></i> Días de incapacidad (Máximo 3)
+              </label>
+              <select
+                className="form-input"
+                value={sickLeaveDays}
+                onChange={(e) => setSickLeaveDays(e.target.value)}
+                style={{ background: "white" }}
+              >
+                <option value="1">1 Día</option>
+                <option value="2">2 Días</option>
+                <option value="3">3 Días</option>
+              </select>
+            </div>
+          )}
+
           <div className="form-group">
-            <label className="form-label">Instrucciones para la IA (prompt)</label>
+            <label className="form-label">Instrucciones para la IA</label>
             <textarea
               className="form-input"
               rows={4}
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
-              placeholder="Ej. Genera una constancia de incapacidad por 5 días por cuadro gripal…"
+              placeholder="Ej. Redactar constancia de buena salud para fines laborales..."
             />
           </div>
+
           <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end" }}>
-            <button type="button" className="btn btn-secondary" onClick={handleClose}>
-              Cancelar
-            </button>
+            <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancelar</button>
             <button
               type="button"
               onClick={handleGenerateDraft}
-              className="btn btn-ai"
+              className="btn btn-primary"
               disabled={draftMutation.isPending}
             >
-              <i className="ri-sparkling-2-line"></i>
-              {draftMutation.isPending ? "Generando…" : "Generar borrador"}
+              {draftMutation.isPending ? "Generando..." : "Generar con IA"}
             </button>
           </div>
         </div>
@@ -108,8 +138,10 @@ export const DocumentGeneratorModal = ({ isOpen, onClose, patientId, currentDiag
 
       {step === 2 && (
         <div style={{ display: "grid", gap: "1.1rem" }}>
+          <div style={{ backgroundColor: "#e0f2fe", color: "#0369a1", padding: "0.75rem", borderRadius: "8px", fontSize: "0.9rem", border: "1px solid #bae6fd" }}>
+            <i className="ri-information-line"></i> <strong>Aviso:</strong> El documento se adjuntará a la consulta actual. El PDF final para imprimir se generará automáticamente al hacer clic en <strong>"Finalizar Consulta"</strong>.
+          </div>
           <div className="form-group">
-            <label className="form-label">Borrador editable</label>
             <textarea
               className="form-input"
               rows={12}
@@ -119,17 +151,15 @@ export const DocumentGeneratorModal = ({ isOpen, onClose, patientId, currentDiag
             />
           </div>
           <div style={{ display: "flex", gap: "0.6rem", justifyContent: "space-between" }}>
-            <button type="button" onClick={() => setStep(1)} className="btn btn-secondary">
-              ← Regresar
-            </button>
+            <button type="button" onClick={() => setStep(1)} className="btn btn-secondary">← Editar</button>
             <button
               type="button"
-              onClick={handleSaveAndPrint}
+              onClick={handleSaveToConsultation}
               className="btn btn-primary"
               disabled={renderMutation.isPending}
             >
-              <i className="ri-printer-line"></i>
-              {renderMutation.isPending ? "Procesando…" : "Imprimir y adjuntar"}
+              <i className="ri-attachment-line"></i>
+              {renderMutation.isPending ? " Procesando..." : " Confirmar y adjuntar a consulta"}
             </button>
           </div>
         </div>

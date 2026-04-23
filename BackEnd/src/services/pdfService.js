@@ -1,74 +1,132 @@
 import puppeteer from 'puppeteer';
 
-export const generateConsultationPdf = async (documentData, clinicSettings) => {
-    const browser = await puppeteer.launch({ headless: "new" });
+export const generateConsultationPdf = async (data) => {
+    const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox'] });
     const page = await browser.newPage();
 
-    // Estructura HTML "Sándwich" con estilos minimalistas y elegantes
+    const fechaActual = new Date();
+    const dia = fechaActual.getDate();
+    const mes = fechaActual.toLocaleString('es-ES', { month: 'long' });
+    const anio = fechaActual.getFullYear();
+
     const htmlContent = `
         <!DOCTYPE html>
         <html lang="es">
         <head>
             <meta charset="UTF-8">
             <style>
-                body { font-family: 'Helvetica', 'Arial', sans-serif; color: #1f2937; line-height: 1.6; padding: 40px; }
-                .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0d9488; padding-bottom: 20px; margin-bottom: 30px; }
-                .clinic-info { text-align: right; }
-                .clinic-name { color: #0d9488; font-size: 22px; font-weight: bold; margin: 0; }
-                .logo { max-height: 80px; max-width: 200px; object-fit: contain; }
+                /* Configuración base */
+                body { 
+                    font-family: 'Helvetica', Arial, sans-serif; 
+                    padding: 40px; 
+                    color: #1a1a1a; 
+                    line-height: 1.5;
+                    font-size: 14px;
+                }
                 
-                .patient-section { background-color: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; }
-                .section-title { font-weight: bold; color: #374151; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; margin-bottom: 5px; }
+                /* Encabezado */
+                .header { 
+                    text-align: center; 
+                    border-bottom: 2px solid #285444; 
+                    padding-bottom: 15px; 
+                    margin-bottom: 30px; 
+                }
+                .header h1 { margin: 0; font-size: 22px; color: #285444; text-transform: uppercase; }
+                .header h2 { margin: 3px 0; font-size: 16px; font-weight: bold; }
+                .header p { margin: 1px 0; font-size: 11px; color: #444; }
                 
-                .content-body { min-height: 400px; white-space: pre-wrap; font-size: 16px; margin-bottom: 50px; text-align: justify; }
-                
-                .footer { margin-top: 50px; border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; }
-                .signature-line { width: 250px; border-top: 1px solid #1f2937; margin: 0 auto 10px; }
-                .doctor-name { font-weight: bold; font-size: 16px; margin: 0; }
-                .doctor-jvpm { font-size: 13px; color: #6b7280; margin: 0; }
+                .doc-title { 
+                    text-align: center; 
+                    font-size: 18px; 
+                    font-weight: bold; 
+                    text-decoration: underline; 
+                    margin-bottom: 25px; 
+                    letter-spacing: 2px; 
+                }
+
+                /* Contenido Principal */
+                .main-content { 
+                    text-align: justify; 
+                    min-height: 300px; 
+                    margin-bottom: 30px;
+                    white-space: pre-wrap; /* Mantiene los saltos de línea de la IA */
+                }
+
+                /* CONTENEDOR DE CIERRE: Evita saltos de página internos */
+                .closing-wrapper {
+                    page-break-inside: avoid; /* REGLA ORO: No se divide entre páginas */
+                    margin-top: 20px;
+                }
+
+                .footer-date { 
+                    margin-bottom: 40px; 
+                    font-size: 14px; 
+                }
+
+                .signature-area { 
+                    text-align: center; 
+                    margin-top: 20px;
+                }
+                .line { 
+                    width: 220px; 
+                    border-top: 1px solid #000; 
+                    margin: 0 auto 8px; 
+                }
+                .signature-name { font-weight: bold; font-size: 14px; margin: 0; }
+                .signature-detail { font-size: 12px; margin: 1px 0; text-transform: uppercase; }
+
+                /* Optimización para impresión */
+                @media print {
+                    .header { -webkit-print-color-adjust: exact; }
+                }
             </style>
         </head>
         <body>
             <div class="header">
-                <img src="${clinicSettings.logoUrl}" class="logo" alt="Logo">
-                <div class="clinic-info">
-                    <p class="clinic-name">${clinicSettings.clinicName}</p>
-                    <p style="font-size: 12px; margin: 5px 0;">${clinicSettings.address || ''}</p>
+                ${data.logoUrl ? `<img src="${data.logoUrl}" style="max-height: 60px; margin-bottom: 5px;">` : ''}
+                <h1>${data.clinicName}</h1>
+                <h2 style="color: #444;">SANTA ANA</h2>
+                <h2>${data.doctorName}</h2>
+                <p>JVPM: ${data.doctorJvpm} | TEL: ${data.doctorPhone}</p>
+                <p>${data.clinicAddress}</p>
+            </div>
+
+            <div class="doc-title">CONSTANCIA MÉDICA</div>
+
+            <div class="main-content">
+                ${data.textContent}
+            </div>
+
+            <div class="closing-wrapper">
+                <div class="footer-date">
+                    En <strong>Santa Ana</strong>, a los ${dia} días del mes de ${mes} del año ${anio}.
                 </div>
-            </div>
 
-            <div class="patient-section">
-                <div><span class="section-title">Paciente:</span><br>${documentData.patientName}</div>
-                <div><span class="section-title">Expediente:</span><br>${documentData.fileNumber}</div>
-                <div><span class="section-title">DUI:</span><br>${documentData.patientDui || 'N/A'}</div>
-                <div><span class="section-title">Fecha:</span><br>${new Date().toLocaleDateString('es-SV')}</div>
-            </div>
-
-            <div class="content-body">
-                ${documentData.finalText}
-            </div>
-
-            <div class="footer">
-                <div class="signature-line"></div>
-                <p class="doctor-name">Dr. ${documentData.doctorName}</p>
-                <p class="doctor-jvpm">JVPM: ${documentData.doctorJvpm || 'Pendiente'}</p>
-                <p class="doctor-jvpm">${documentData.doctorSpecialty || ''}</p>
+                <div class="signature-area">
+                    <div class="line"></div>
+                    <p style="margin-bottom: 10px; font-weight: bold;">Firma y Sello Médico</p>
+                    <p class="signature-name">${data.doctorName}</p>
+                    <p class="signature-detail">${data.clinicName}</p>
+                    <p class="signature-detail">JVPM ${data.doctorJvpm}</p>
+                </div>
             </div>
         </body>
         </html>
     `;
 
-    await page.setContent(htmlContent);
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
     
-    // Generamos el PDF como Buffer
     const pdfBuffer = await page.pdf({
         format: 'Letter',
         printBackground: true,
-        margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
+        margin: { 
+            top: '15mm', 
+            bottom: '15mm', 
+            left: '20mm', 
+            right: '20mm' 
+        }
     });
 
     await browser.close();
-    
-    // Retornamos el Base64 para guardarlo en la DB
-    return pdfBuffer.toString('base64');
+    return Buffer.from(pdfBuffer).toString('base64');
 };

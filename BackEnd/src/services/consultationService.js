@@ -1,5 +1,5 @@
 import { db } from "../config/db.js";
-import { insurers, medicalConsultations, patients, prescribedMedications, preclinicalRecords, users } from "../models/schema.js";
+import { insurers, medicalConsultations, patients, prescribedMedications, preclinicalRecords, users, consultationDocuments } from "../models/schema.js";
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getInsurerById } from "./insurerService.js";
@@ -135,78 +135,103 @@ const buildDateRange = (from, to) => {
 
 export const createMedicalConsultation = async (preclinicalId, data, doctorId) => {
     return await db.transaction(async (tx) => {
-    const [preclinical] = await tx
-        .select()
-        .from(preclinicalRecords)
-        .where(eq(preclinicalRecords.id, preclinicalId))
-        .limit(1);
+        // 1. Verificar que el registro de pre-clínica existe
+        const [preclinical] = await tx
+            .select()
+            .from(preclinicalRecords)
+            .where(eq(preclinicalRecords.id, preclinicalId))
+            .limit(1);
 
-    if (!preclinical) {
-        const error = new Error("Registro de pre-clínica no encontrado.");
-        error.status = 404;
-        throw error;
-    }
-    const consultationCoverage = await resolveConsultationCoverage(data);
+        if (!preclinical) {
+            const error = new Error("Registro de pre-clínica no encontrado.");
+            error.status = 404;
+            throw error;
+        }
 
-    const consultationId = uuidv4();
-    await tx.insert(medicalConsultations).values({
-        id: consultationId,
-        preclinicalId: preclinicalId,
-        patientId: preclinical.patientId,
-        insurerId: consultationCoverage.insurerId,
-        doctorId: doctorId,
-        agreedAmount: consultationCoverage.agreedAmount,
-        anamnesis: data.anamnesis || null,
-        physicalExam: data.physicalExam || null,
-        diagnosis: data.diagnosis || null,
-        diagnosisCode: data.diagnosisCode || null,
-        diagnosisCodeName: data.diagnosisCodeName || null,
-        labResults: data.labResults || null,
-        observations: data.observations || null,
-        documents: data.documents || null,
-    });
+        // 2. Resolver la cobertura de la aseguradora/particular
+        const consultationCoverage = await resolveConsultationCoverage(data);
 
-    const medications = normalizePrescribedMedications(data);
-    if (medications.length > 0) {
-        const medsToInsert = medications.map((med) => ({
-            id: uuidv4(),
-            consultationId: consultationId,
-            name: med.name.trim(),
-            concentration: med.concentration,
-            concentrationUnit: med.concentrationUnit,
-            dose: med.dose,
-            doseUnit: med.doseUnit,
-            route: med.route,
-            frequency: med.frequency,
-            duration: med.duration,
-            additionalInstructions: med.additionalInstructions,
+        // 3. Crear la Consulta Médica Principal
+        const consultationId = uuidv4();
+        await tx.insert(medicalConsultations).values({
+            id: consultationId,
+            preclinicalId: preclinicalId,
+            patientId: preclinical.patientId,
+            insurerId: consultationCoverage.insurerId,
+            doctorId: doctorId,
+            agreedAmount: consultationCoverage.agreedAmount,
+            anamnesis: data.anamnesis || null,
+            physicalExam: data.physicalExam || null,
+            diagnosis: data.diagnosis || null,
+            diagnosisCode: data.diagnosisCode || null,
+            diagnosisCodeName: data.diagnosisCodeName || null,
+            labResults: data.labResults || null,
+            observations: data.observations || null,
+            // Nota: El campo "documents" de la tabla medicalConsultations ya no se usa aquí
+            // porque guardamos en la tabla relacional consultationDocuments a continuación.
+        });
+
+        // 4. Guardar Documentos (PDFs generados por IA o Plantillas)
+        // Buscamos "documentos" (nombre enviado por el Front) o "documents"
+        const documentosGenerados = data.documentos || data.documents || [];
+        if (documentosGenerados.length > 0) {
+            const docsToInsert = documentosGenerados.map((doc) => ({
+                id: uuidv4(),
+                consultationId: consultationId, // Aquí se crea el vínculo legal
+                patientId: preclinical.patientId,
+                documentType: doc.documentType || "other",
+                textContent: doc.textContent || "",
+                pdfBase64: doc.pdfBase64, // El string largo del PDF
             }));
-        await tx.insert(prescribedMedications).values(medsToInsert);
-    }
-    const sanitizeValue = (val) => (val === "" || val === null ? null : val);
-
-    await tx.update(preclinicalRecords)
-        .set({
-            status: "done",
             
-            bloodPressure: data.bloodPressure !== undefined ? sanitizeValue(data.bloodPressure) : preclinical.bloodPressure,
-            temperature: data.temperature !== undefined ? sanitizeValue(data.temperature) : preclinical.temperature,
-            weight: data.weight !== undefined ? sanitizeValue(data.weight) : preclinical.weight,
-            height: data.height !== undefined ? sanitizeValue(data.height) : preclinical.height,
-            heartRate: data.heartRate !== undefined ? sanitizeValue(data.heartRate) : preclinical.heartRate,
-            oxygenSaturation: data.oxygenSaturation !== undefined ? sanitizeValue(data.oxygenSaturation) : preclinical.oxygenSaturation,
-            bmi: data.bmi !== undefined ? sanitizeValue(data.bmi) : preclinical.bmi,
-            updatedAt: new Date(),
-        })
-        .where(eq(preclinicalRecords.id, preclinicalId));
+            await tx.insert(consultationDocuments).values(docsToInsert);
+        }
 
-    return {
-        consultationId,
-        message: "Consulta guardada exitosamente",
-        insurerId: consultationCoverage.insurerId,
-        agreedAmount: consultationCoverage.agreedAmount === null ? null : Number(consultationCoverage.agreedAmount),
-        billingType: consultationCoverage.billingType,
-    };
+        // 5. Guardar Medicamentos Recetados
+        const medications = normalizePrescribedMedications(data);
+        if (medications.length > 0) {
+            const medsToInsert = medications.map((med) => ({
+                id: uuidv4(),
+                consultationId: consultationId,
+                name: med.name.trim(),
+                concentration: med.concentration,
+                concentrationUnit: med.concentrationUnit,
+                dose: med.dose,
+                doseUnit: med.doseUnit,
+                route: med.route,
+                frequency: med.frequency,
+                duration: med.duration,
+                additionalInstructions: med.additionalInstructions,
+            }));
+            
+            await tx.insert(prescribedMedications).values(medsToInsert);
+        }
+
+        // 6. Actualizar signos vitales finales y cerrar Pre-clínica
+        const sanitizeValue = (val) => (val === "" || val === null ? null : val);
+
+        await tx.update(preclinicalRecords)
+            .set({
+                status: "done",
+                bloodPressure: data.bloodPressure !== undefined ? sanitizeValue(data.bloodPressure) : preclinical.bloodPressure,
+                temperature: data.temperature !== undefined ? sanitizeValue(data.temperature) : preclinical.temperature,
+                weight: data.weight !== undefined ? sanitizeValue(data.weight) : preclinical.weight,
+                height: data.height !== undefined ? sanitizeValue(data.height) : preclinical.height,
+                heartRate: data.heartRate !== undefined ? sanitizeValue(data.heartRate) : preclinical.heartRate,
+                oxygenSaturation: data.oxygenSaturation !== undefined ? sanitizeValue(data.oxygenSaturation) : preclinical.oxygenSaturation,
+                bmi: data.bmi !== undefined ? sanitizeValue(data.bmi) : preclinical.bmi,
+                updatedAt: new Date(),
+            })
+            .where(eq(preclinicalRecords.id, preclinicalId));
+
+        // 7. Retornar respuesta de éxito con metadata
+        return {
+            consultationId,
+            message: "Consulta guardada exitosamente",
+            insurerId: consultationCoverage.insurerId,
+            agreedAmount: consultationCoverage.agreedAmount === null ? null : Number(consultationCoverage.agreedAmount),
+            billingType: consultationCoverage.billingType,
+        };
     });
 };
 export const getConsultationByPreclinicalId = async (preclinicalId) => {
@@ -223,7 +248,7 @@ export const getConsultationByPreclinicalId = async (preclinicalId) => {
             diagnosis: medicalConsultations.diagnosis,
             labResults: medicalConsultations.labResults,
             observations: medicalConsultations.observations,
-            documents: medicalConsultations.documents,
+            // Eliminamos la llamada a la antigua columna JSON "documents"
             createdAt: medicalConsultations.createdAt,
             updatedAt: medicalConsultations.updatedAt,
             insurerCompanyName: insurers.companyName,
@@ -238,10 +263,16 @@ export const getConsultationByPreclinicalId = async (preclinicalId) => {
         error.status = 404;
         throw error;
     }
+
     const medications = await db
         .select()
         .from(prescribedMedications)
         .where(eq(prescribedMedications.consultationId, consultation.id));
+    const attachedDocuments = await db
+        .select()
+        .from(consultationDocuments)
+        .where(eq(consultationDocuments.consultationId, consultation.id));
+
     const { insurerCompanyName, ...consultationData } = consultation;
 
     return {
@@ -251,9 +282,9 @@ export const getConsultationByPreclinicalId = async (preclinicalId) => {
             companyName: insurerCompanyName,
         } : null,
         receta: medications, 
+        documentos: attachedDocuments, // Adjuntamos los documentos al Frontend
     };
 };
-
 export const getClinicalHistoryByPatientId = async (patientId) => {
     const fiveYearsAgo = new Date();
     fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
