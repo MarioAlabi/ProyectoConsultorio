@@ -127,6 +127,8 @@ export const medicalConsultations = mysqlTable("medical_consultations", {
     anamnesis: text("anamnesis"),
     physicalExam: text("physical_exam"),
     diagnosis: text("diagnosis"),
+    diagnosisCode: varchar("diagnosis_code", { length: 10 }),
+    diagnosisCodeName: varchar("diagnosis_code_name", { length: 255 }),
     labResults: text("lab_results"),
     observations: text("observations"),
     documents: varchar("documents", { length: 255 }),
