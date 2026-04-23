@@ -710,6 +710,78 @@ const run = async () => {
         expect.status(res, 200);
     });
 
+    await test("GET /api/consultations/reports/diagnostics — HU-07 report", async () => {
+        const res = await doctor.get("/api/consultations/reports/diagnostics", {
+            query: { fromYear: 2024, toYear: 2026 },
+        });
+        expect.status(res, 200);
+        expect.truthy(Array.isArray(res.body?.data?.byCode), "byCode array");
+        expect.truthy(Array.isArray(res.body?.data?.byYear), "byYear array");
+        expect.truthy(res.body?.data?.totals, "totals");
+    });
+
+    await test("GET /api/consultations/reports/diagnosis-catalog — catalog", async () => {
+        const res = await doctor.get("/api/consultations/reports/diagnosis-catalog");
+        expect.status(res, 200);
+        expect.truthy(Array.isArray(res.body?.data), "array");
+    });
+
+    await test("GET /api/consultations/reports/diagnostics — assistant forbidden", async () => {
+        const res = await assistant.get("/api/consultations/reports/diagnostics");
+        expect.status(res, 403);
+    });
+
+    // ── 8.5 AI Clinical endpoints (accept 503 if no GEMINI_API_KEY) ─────────
+    log.section("8.5 AI Clinical integrations");
+
+    await test("POST /api/ai/suggest-icd10 — auth + reachable", async () => {
+        const res = await doctor.post("/api/ai/suggest-icd10", { diagnosis: "Diabetes mellitus tipo 2" });
+        expect.statusIn(res, [200, 400, 500, 502, 503]);
+    });
+
+    await test("POST /api/ai/suggest-icd10 — assistant forbidden", async () => {
+        const res = await assistant.post("/api/ai/suggest-icd10", { diagnosis: "x" });
+        expect.status(res, 403);
+    });
+
+    await test("GET /api/ai/patient/:id/summary — auth + reachable", async () => {
+        const res = await doctor.get(`/api/ai/patient/${state.patientId}/summary`);
+        expect.statusIn(res, [200, 400, 500, 502, 503]);
+    });
+
+    await test("POST /api/ai/draft-anamnesis — auth + reachable", async () => {
+        const res = await doctor.post("/api/ai/draft-anamnesis", {
+            motivo: "Cefalea de 3 días",
+            edad: 35,
+            genero: "male",
+        });
+        expect.statusIn(res, [200, 400, 500, 502, 503]);
+    });
+
+    await test("POST /api/ai/check-prescription — auth + reachable", async () => {
+        const res = await doctor.post("/api/ai/check-prescription", {
+            medications: [{ name: "Paracetamol", dose: "1 tableta", frequency: "c/8h" }],
+            patient: { age: 35, isMinor: false },
+        });
+        expect.statusIn(res, [200, 400, 500, 502, 503]);
+    });
+
+    await test("POST /api/ai/extract-history — auth + reachable", async () => {
+        const res = await assistant.post("/api/ai/extract-history", {
+            text: "Diabetes tipo 2 desde 2020. Alergia a penicilina.",
+        });
+        expect.statusIn(res, [200, 400, 500, 502, 503]);
+    });
+
+    await test("POST /api/ai/analyze-report — auth + reachable", async () => {
+        const res = await doctor.post("/api/ai/analyze-report", {
+            byYear: [{ year: 2025, total: 10, diagnoses: [] }],
+            period: "2025",
+            totalConsultations: 10,
+        });
+        expect.statusIn(res, [200, 400, 500, 502, 503]);
+    });
+
     // ── 9. Document templates ───────────────────────────────────────
     log.section("9. Document templates");
 
