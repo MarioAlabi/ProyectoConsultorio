@@ -4,7 +4,11 @@ WORKDIR /app
 
 COPY package*.json ./
 
+RUN apk add --no-cache mariadb-client
+
+
 RUN npm install
+
 
 COPY . .
 
