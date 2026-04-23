@@ -6,9 +6,11 @@
   "main": "src/config/index.js",
   "scripts": {
     "test": "node test/consultationHistory.test.js",
+    "test:e2e": "node test/e2e.test.js",
     "start": "node src/config/index.js",
     "dev": "nodemon src/config/index.js",
     "seed": "node src/seed.js",
+    "seed:templates": "node src/seedTemplates.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -18,6 +20,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/genai": "^1.50.1",
     "better-auth": "^1.4.6",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
