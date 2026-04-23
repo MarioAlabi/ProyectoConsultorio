@@ -107,7 +107,7 @@ export const AdministrarUsuarios = () => {
     });
   };
 
-const onSubmit = (formData) => {
+  const onSubmit = (formData) => {
     startTransition(async () => {
       // --- 1. PRE-VALIDACIÓN DE DUPLICADOS (Corta el error de raíz) ---
       // Revisamos si el DUI ya existe (y nos aseguramos de no bloquearnos a nosotros mismos si estamos editando)
