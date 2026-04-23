@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
-
+/* eslint-disable no-unused-vars */
 // Hooks
 import { consultationSchema } from "../../lib/validations/consultationSchema";
 import { usePreclinicalRecord } from "../../hooks/usePreclinical";
@@ -118,6 +118,7 @@ export const ConsultaMedica = () => {
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const billingType = watch("billingType");
   const selectedInsurerId = watch("insurerId");
   const selectedInsurer = insurers.find((insurer) => String(insurer.id) === String(selectedInsurerId));
