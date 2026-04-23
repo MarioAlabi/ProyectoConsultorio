@@ -397,7 +397,14 @@ export const ConsultaMedica = () => {
                       <label className="form-label">Aseguradora</label>
                       <select className="form-input" {...insurerField} onChange={(e) => { insurerField.onChange(e); const ins = insurers.find((i) => String(i.id) === String(e.target.value)); setValue("agreedAmount", ins ? String(ins.fixedConsultationAmount ?? "") : "", { shouldValidate: true }); }} style={{ backgroundColor: "white" }}>
                         <option value="">Seleccione una aseguradora</option>
-                        {insurers.map((i) => (<option key={i.id} value={i.id}>{i.companyName}</option>))}
+                        
+                        {insurers
+                          .filter((i) => i.status !== 'inactive')
+                          .map((i) => (
+                            <option key={i.id} value={i.id}>{i.companyName}</option>
+                          ))
+                        }
+                        
                       </select>
                       {errors.insurerId && <span style={S.errorMsg}>{errors.insurerId.message}</span>}
                     </div>
