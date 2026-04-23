@@ -12,11 +12,19 @@ export const backupDB = (req, res) => {
 
     const cmd = `mysqldump -h ${process.env.DB_HOST} -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > ${filePath}`;
 
-    exec(cmd, (error) => {
-        if (error) return res.status(500).send("Error al generar el respaldo");
-        // CA-04: Generar archivo descargable [cite: 32, 68]
+
+    exec(cmd, (error, stdout, stderr) => {
+        if (error) {
+            console.error("❌ ERROR REAL DE CONSOLA:", stderr || error.message);
+            // Cambiamos temporalmente el send para ver el error en la pantalla blanca
+            return res.status(500).send(`Falla interna: ${stderr || error.message}`);
+        }
         res.download(filePath);
     });
+    /*exec(cmd, (error) => {
+        if (error) return res.status(500).send("Error al generar el respaldo");
+        res.download(filePath);
+    });*/
 };
 
 // Lógica para Restaurar Respaldo
