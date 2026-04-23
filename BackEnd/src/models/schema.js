@@ -9,6 +9,13 @@ export const users = mysqlTable("users", {
     banned: boolean("banned").notNull().default(false),
     banReason: varchar("ban_reason", { length: 255 }),
     banExpires: datetime("ban_expires"),
+    dui: varchar("dui", { length: 10 }).unique(), // Formato 00000000-0
+    phone: varchar("phone", { length: 20 }),
+    address: text("address"), // Opcional (sin .notNull()) 
+    hiringDate: date("hiring_date"),
+    isNurse: boolean("is_nurse").default(false),
+    jvpm: varchar("jvpm", { length: 20 }).unique(), 
+    jvpe: varchar("jvpe", { length: 20 }).unique(),
     createdAt: datetime("created_at").notNull(),
     updatedAt: datetime("updated_at").notNull(),
 });
