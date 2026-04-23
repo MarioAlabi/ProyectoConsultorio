@@ -24,7 +24,6 @@ import {
 } from "../../hooks/useAIClinical";
 import { calcularEdad, clasificarIMC } from "../../lib/utils";
 import { DocumentGeneratorModal } from "../../components/DocumentGeneratorModal";
-import "../../views/shared/Shared.css";
 
 const toNull = (v) => (v === "" || v === undefined ? null : v);
 
