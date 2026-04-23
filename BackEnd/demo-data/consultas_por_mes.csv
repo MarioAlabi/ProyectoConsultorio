@@ -1,0 +1,371 @@
+year,month,code,diagnosis,total
+2024,1,E11.9,Diabetes mellitus tipo 2 sin complicaciones,3
+2024,1,J00,Rinofaringitis aguda (resfriado común),2
+2024,1,Z00.0,Examen médico general,2
+2024,1,I10,Hipertensión esencial (primaria),2
+2024,1,M54.5,Lumbago no especificado,2
+2024,1,N39.0,Infección de vías urinarias, sitio no especificado,2
+2024,1,K29.7,Gastritis no especificada,2
+2024,1,E78.5,Hiperlipidemia no especificada,1
+2024,1,B34.9,Infección viral no especificada,1
+2024,1,A09,Diarrea y gastroenteritis de presunto origen infeccioso,1
+2024,1,R51,Cefalea,1
+2024,1,R50.9,Fiebre no especificada,1
+2024,1,E66.9,Obesidad no especificada,1
+2024,1,F41.1,Trastorno de ansiedad generalizada,1
+2024,1,J06.9,Infección aguda de las vías respiratorias superiores,1
+2024,2,I10,Hipertensión esencial (primaria),4
+2024,2,E11.9,Diabetes mellitus tipo 2 sin complicaciones,3
+2024,2,J45.9,Asma, no especificada,2
+2024,2,R51,Cefalea,2
+2024,2,M25.5,Dolor articular,2
+2024,2,E66.9,Obesidad no especificada,2
+2024,2,K29.7,Gastritis no especificada,2
+2024,2,B34.9,Infección viral no especificada,1
+2024,2,F32.9,Episodio depresivo, no especificado,1
+2024,2,Z00.0,Examen médico general,1
+2024,2,H10.9,Conjuntivitis no especificada,1
+2024,3,J00,Rinofaringitis aguda (resfriado común),2
+2024,3,F32.9,Episodio depresivo, no especificado,2
+2024,3,I10,Hipertensión esencial (primaria),2
+2024,3,J45.9,Asma, no especificada,1
+2024,3,R51,Cefalea,1
+2024,3,B34.9,Infección viral no especificada,1
+2024,3,Z00.0,Examen médico general,1
+2024,3,R50.9,Fiebre no especificada,1
+2024,3,N39.0,Infección de vías urinarias, sitio no especificado,1
+2024,3,E11.9,Diabetes mellitus tipo 2 sin complicaciones,1
+2024,3,L20.9,Dermatitis atópica no especificada,1
+2024,3,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2024,3,E78.5,Hiperlipidemia no especificada,1
+2024,4,E11.9,Diabetes mellitus tipo 2 sin complicaciones,4
+2024,4,J00,Rinofaringitis aguda (resfriado común),3
+2024,4,J06.9,Infección aguda de las vías respiratorias superiores,2
+2024,4,F41.1,Trastorno de ansiedad generalizada,2
+2024,4,M54.5,Lumbago no especificado,1
+2024,4,R51,Cefalea,1
+2024,4,Z76.8,Control de salud del niño sano,1
+2024,4,I10,Hipertensión esencial (primaria),1
+2024,4,E78.5,Hiperlipidemia no especificada,1
+2024,4,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2024,4,F32.9,Episodio depresivo, no especificado,1
+2024,4,S93.4,Esguince de tobillo,1
+2024,4,B34.9,Infección viral no especificada,1
+2024,4,Z00.0,Examen médico general,1
+2024,5,J45.9,Asma, no especificada,3
+2024,5,A09,Diarrea y gastroenteritis de presunto origen infeccioso,2
+2024,5,J00,Rinofaringitis aguda (resfriado común),2
+2024,5,Z00.0,Examen médico general,2
+2024,5,E11.9,Diabetes mellitus tipo 2 sin complicaciones,2
+2024,5,E66.9,Obesidad no especificada,1
+2024,5,S93.4,Esguince de tobillo,1
+2024,5,J06.9,Infección aguda de las vías respiratorias superiores,1
+2024,5,K29.7,Gastritis no especificada,1
+2024,5,L20.9,Dermatitis atópica no especificada,1
+2024,5,B34.9,Infección viral no especificada,1
+2024,5,M54.5,Lumbago no especificado,1
+2024,5,I10,Hipertensión esencial (primaria),1
+2024,5,H10.9,Conjuntivitis no especificada,1
+2024,5,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2024,6,M54.5,Lumbago no especificado,3
+2024,6,J00,Rinofaringitis aguda (resfriado común),3
+2024,6,E78.5,Hiperlipidemia no especificada,3
+2024,6,E11.9,Diabetes mellitus tipo 2 sin complicaciones,3
+2024,6,Z00.0,Examen médico general,3
+2024,6,M25.5,Dolor articular,2
+2024,6,I10,Hipertensión esencial (primaria),2
+2024,6,B34.9,Infección viral no especificada,2
+2024,6,R50.9,Fiebre no especificada,2
+2024,6,R51,Cefalea,1
+2024,6,E66.9,Obesidad no especificada,1
+2024,6,J06.9,Infección aguda de las vías respiratorias superiores,1
+2024,6,F32.9,Episodio depresivo, no especificado,1
+2024,6,F41.1,Trastorno de ansiedad generalizada,1
+2024,7,I10,Hipertensión esencial (primaria),4
+2024,7,J00,Rinofaringitis aguda (resfriado común),4
+2024,7,E11.9,Diabetes mellitus tipo 2 sin complicaciones,4
+2024,7,M54.5,Lumbago no especificado,3
+2024,7,H10.9,Conjuntivitis no especificada,3
+2024,7,N39.0,Infección de vías urinarias, sitio no especificado,2
+2024,7,J45.9,Asma, no especificada,2
+2024,7,K29.7,Gastritis no especificada,2
+2024,7,J06.9,Infección aguda de las vías respiratorias superiores,2
+2024,7,B34.9,Infección viral no especificada,1
+2024,7,E66.9,Obesidad no especificada,1
+2024,7,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2024,7,R50.9,Fiebre no especificada,1
+2024,8,A09,Diarrea y gastroenteritis de presunto origen infeccioso,3
+2024,8,J06.9,Infección aguda de las vías respiratorias superiores,3
+2024,8,E11.9,Diabetes mellitus tipo 2 sin complicaciones,2
+2024,8,E78.5,Hiperlipidemia no especificada,2
+2024,8,B34.9,Infección viral no especificada,2
+2024,8,I10,Hipertensión esencial (primaria),2
+2024,8,O80,Parto único espontáneo,1
+2024,8,R51,Cefalea,1
+2024,8,N39.0,Infección de vías urinarias, sitio no especificado,1
+2024,8,J00,Rinofaringitis aguda (resfriado común),1
+2024,8,Z00.0,Examen médico general,1
+2024,8,L20.9,Dermatitis atópica no especificada,1
+2024,8,J45.9,Asma, no especificada,1
+2024,8,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2024,8,H66.9,Otitis media no especificada,1
+2024,8,F41.1,Trastorno de ansiedad generalizada,1
+2024,8,K29.7,Gastritis no especificada,1
+2024,9,J06.9,Infección aguda de las vías respiratorias superiores,3
+2024,9,J45.9,Asma, no especificada,3
+2024,9,E11.9,Diabetes mellitus tipo 2 sin complicaciones,2
+2024,9,M54.5,Lumbago no especificado,2
+2024,9,K29.7,Gastritis no especificada,2
+2024,9,R50.9,Fiebre no especificada,1
+2024,9,J00,Rinofaringitis aguda (resfriado común),1
+2024,9,S93.4,Esguince de tobillo,1
+2024,9,A09,Diarrea y gastroenteritis de presunto origen infeccioso,1
+2024,9,L20.9,Dermatitis atópica no especificada,1
+2024,9,H66.9,Otitis media no especificada,1
+2024,9,I10,Hipertensión esencial (primaria),1
+2024,9,E78.5,Hiperlipidemia no especificada,1
+2024,9,B34.9,Infección viral no especificada,1
+2024,10,E11.9,Diabetes mellitus tipo 2 sin complicaciones,4
+2024,10,B34.9,Infección viral no especificada,2
+2024,10,I10,Hipertensión esencial (primaria),2
+2024,10,H10.9,Conjuntivitis no especificada,1
+2024,10,Z00.0,Examen médico general,1
+2024,10,J00,Rinofaringitis aguda (resfriado común),1
+2024,10,N39.0,Infección de vías urinarias, sitio no especificado,1
+2024,10,E78.5,Hiperlipidemia no especificada,1
+2024,10,F32.9,Episodio depresivo, no especificado,1
+2024,10,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2024,10,R51,Cefalea,1
+2024,10,R50.9,Fiebre no especificada,1
+2024,10,O80,Parto único espontáneo,1
+2024,10,M54.5,Lumbago no especificado,1
+2024,11,Z00.0,Examen médico general,3
+2024,11,K29.7,Gastritis no especificada,3
+2024,11,E66.9,Obesidad no especificada,2
+2024,11,J00,Rinofaringitis aguda (resfriado común),2
+2024,11,I10,Hipertensión esencial (primaria),2
+2024,11,R51,Cefalea,2
+2024,11,E11.9,Diabetes mellitus tipo 2 sin complicaciones,2
+2024,11,O80,Parto único espontáneo,1
+2024,11,M25.5,Dolor articular,1
+2024,11,S93.4,Esguince de tobillo,1
+2024,11,A09,Diarrea y gastroenteritis de presunto origen infeccioso,1
+2024,11,J06.9,Infección aguda de las vías respiratorias superiores,1
+2024,11,R50.9,Fiebre no especificada,1
+2024,11,J45.9,Asma, no especificada,1
+2024,12,F41.1,Trastorno de ansiedad generalizada,3
+2024,12,S93.4,Esguince de tobillo,2
+2024,12,J00,Rinofaringitis aguda (resfriado común),2
+2024,12,A09,Diarrea y gastroenteritis de presunto origen infeccioso,2
+2024,12,R51,Cefalea,2
+2024,12,J06.9,Infección aguda de las vías respiratorias superiores,2
+2024,12,E66.9,Obesidad no especificada,1
+2024,12,B34.9,Infección viral no especificada,1
+2024,12,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2024,12,N39.0,Infección de vías urinarias, sitio no especificado,1
+2024,12,R50.9,Fiebre no especificada,1
+2024,12,K29.7,Gastritis no especificada,1
+2024,12,I10,Hipertensión esencial (primaria),1
+2025,1,J00,Rinofaringitis aguda (resfriado común),4
+2025,1,K29.7,Gastritis no especificada,3
+2025,1,J06.9,Infección aguda de las vías respiratorias superiores,3
+2025,1,B34.9,Infección viral no especificada,2
+2025,1,J45.9,Asma, no especificada,2
+2025,1,A09,Diarrea y gastroenteritis de presunto origen infeccioso,2
+2025,1,F41.1,Trastorno de ansiedad generalizada,1
+2025,1,N39.0,Infección de vías urinarias, sitio no especificado,1
+2025,1,E11.9,Diabetes mellitus tipo 2 sin complicaciones,1
+2025,1,E78.5,Hiperlipidemia no especificada,1
+2025,1,E66.9,Obesidad no especificada,1
+2025,1,R50.9,Fiebre no especificada,1
+2025,1,I10,Hipertensión esencial (primaria),1
+2025,1,M54.5,Lumbago no especificado,1
+2025,2,A09,Diarrea y gastroenteritis de presunto origen infeccioso,3
+2025,2,R51,Cefalea,2
+2025,2,K29.7,Gastritis no especificada,2
+2025,2,S93.4,Esguince de tobillo,1
+2025,2,E66.9,Obesidad no especificada,1
+2025,2,J06.9,Infección aguda de las vías respiratorias superiores,1
+2025,2,J45.9,Asma, no especificada,1
+2025,2,H10.9,Conjuntivitis no especificada,1
+2025,2,J00,Rinofaringitis aguda (resfriado común),1
+2025,2,L20.9,Dermatitis atópica no especificada,1
+2025,2,E11.9,Diabetes mellitus tipo 2 sin complicaciones,1
+2025,2,N39.0,Infección de vías urinarias, sitio no especificado,1
+2025,3,E11.9,Diabetes mellitus tipo 2 sin complicaciones,3
+2025,3,N39.0,Infección de vías urinarias, sitio no especificado,2
+2025,3,K29.7,Gastritis no especificada,2
+2025,3,I10,Hipertensión esencial (primaria),2
+2025,3,A09,Diarrea y gastroenteritis de presunto origen infeccioso,1
+2025,3,M54.5,Lumbago no especificado,1
+2025,3,M25.5,Dolor articular,1
+2025,3,E66.9,Obesidad no especificada,1
+2025,3,J45.9,Asma, no especificada,1
+2025,3,R51,Cefalea,1
+2025,3,R50.9,Fiebre no especificada,1
+2025,3,F41.1,Trastorno de ansiedad generalizada,1
+2025,3,Z00.0,Examen médico general,1
+2025,3,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2025,3,J06.9,Infección aguda de las vías respiratorias superiores,1
+2025,3,O80,Parto único espontáneo,1
+2025,4,Z00.0,Examen médico general,2
+2025,4,R51,Cefalea,2
+2025,4,J00,Rinofaringitis aguda (resfriado común),1
+2025,4,K29.7,Gastritis no especificada,1
+2025,4,M54.5,Lumbago no especificado,1
+2025,4,J06.9,Infección aguda de las vías respiratorias superiores,1
+2025,4,L20.9,Dermatitis atópica no especificada,1
+2025,4,E11.9,Diabetes mellitus tipo 2 sin complicaciones,1
+2025,4,M25.5,Dolor articular,1
+2025,4,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2025,4,F32.9,Episodio depresivo, no especificado,1
+2025,4,A09,Diarrea y gastroenteritis de presunto origen infeccioso,1
+2025,4,I10,Hipertensión esencial (primaria),1
+2025,5,J06.9,Infección aguda de las vías respiratorias superiores,8
+2025,5,K29.7,Gastritis no especificada,2
+2025,5,E78.5,Hiperlipidemia no especificada,2
+2025,5,E11.9,Diabetes mellitus tipo 2 sin complicaciones,2
+2025,5,N39.0,Infección de vías urinarias, sitio no especificado,1
+2025,5,Z00.0,Examen médico general,1
+2025,5,M25.5,Dolor articular,1
+2025,5,Z76.8,Control de salud del niño sano,1
+2025,5,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2025,5,R51,Cefalea,1
+2025,5,A09,Diarrea y gastroenteritis de presunto origen infeccioso,1
+2025,6,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,4
+2025,6,Z00.0,Examen médico general,4
+2025,6,I10,Hipertensión esencial (primaria),3
+2025,6,J06.9,Infección aguda de las vías respiratorias superiores,3
+2025,6,J00,Rinofaringitis aguda (resfriado común),3
+2025,6,H10.9,Conjuntivitis no especificada,3
+2025,6,A09,Diarrea y gastroenteritis de presunto origen infeccioso,2
+2025,6,M25.5,Dolor articular,2
+2025,6,M54.5,Lumbago no especificado,1
+2025,6,Z76.8,Control de salud del niño sano,1
+2025,6,F32.9,Episodio depresivo, no especificado,1
+2025,6,O80,Parto único espontáneo,1
+2025,7,I10,Hipertensión esencial (primaria),6
+2025,7,R50.9,Fiebre no especificada,4
+2025,7,J06.9,Infección aguda de las vías respiratorias superiores,3
+2025,7,J00,Rinofaringitis aguda (resfriado común),3
+2025,7,J45.9,Asma, no especificada,2
+2025,7,K29.7,Gastritis no especificada,2
+2025,7,M25.5,Dolor articular,2
+2025,7,Z00.0,Examen médico general,2
+2025,7,N39.0,Infección de vías urinarias, sitio no especificado,1
+2025,7,B34.9,Infección viral no especificada,1
+2025,7,E11.9,Diabetes mellitus tipo 2 sin complicaciones,1
+2025,8,M25.5,Dolor articular,4
+2025,8,I10,Hipertensión esencial (primaria),4
+2025,8,E11.9,Diabetes mellitus tipo 2 sin complicaciones,3
+2025,8,R51,Cefalea,2
+2025,8,M54.5,Lumbago no especificado,2
+2025,8,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,2
+2025,8,J45.9,Asma, no especificada,1
+2025,8,K29.7,Gastritis no especificada,1
+2025,8,J06.9,Infección aguda de las vías respiratorias superiores,1
+2025,8,F32.9,Episodio depresivo, no especificado,1
+2025,8,B34.9,Infección viral no especificada,1
+2025,8,H10.9,Conjuntivitis no especificada,1
+2025,9,I10,Hipertensión esencial (primaria),6
+2025,9,E11.9,Diabetes mellitus tipo 2 sin complicaciones,3
+2025,9,K29.7,Gastritis no especificada,2
+2025,9,B34.9,Infección viral no especificada,2
+2025,9,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2025,9,M54.5,Lumbago no especificado,1
+2025,9,M25.5,Dolor articular,1
+2025,9,J00,Rinofaringitis aguda (resfriado común),1
+2025,9,R51,Cefalea,1
+2025,9,Z00.0,Examen médico general,1
+2025,9,E66.9,Obesidad no especificada,1
+2025,9,A09,Diarrea y gastroenteritis de presunto origen infeccioso,1
+2025,9,S93.4,Esguince de tobillo,1
+2025,10,E11.9,Diabetes mellitus tipo 2 sin complicaciones,3
+2025,10,K29.7,Gastritis no especificada,2
+2025,10,I10,Hipertensión esencial (primaria),2
+2025,10,M25.5,Dolor articular,2
+2025,10,R51,Cefalea,2
+2025,10,M54.5,Lumbago no especificado,1
+2025,10,J00,Rinofaringitis aguda (resfriado común),1
+2025,10,R50.9,Fiebre no especificada,1
+2025,10,J45.9,Asma, no especificada,1
+2025,10,Z00.0,Examen médico general,1
+2025,10,N39.0,Infección de vías urinarias, sitio no especificado,1
+2025,10,H10.9,Conjuntivitis no especificada,1
+2025,11,B34.9,Infección viral no especificada,5
+2025,11,J00,Rinofaringitis aguda (resfriado común),3
+2025,11,I10,Hipertensión esencial (primaria),3
+2025,11,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,2
+2025,11,Z00.0,Examen médico general,2
+2025,11,M54.5,Lumbago no especificado,2
+2025,11,F41.1,Trastorno de ansiedad generalizada,2
+2025,11,M25.5,Dolor articular,1
+2025,11,H10.9,Conjuntivitis no especificada,1
+2025,11,L20.9,Dermatitis atópica no especificada,1
+2025,11,E78.5,Hiperlipidemia no especificada,1
+2025,11,H66.9,Otitis media no especificada,1
+2025,11,N39.0,Infección de vías urinarias, sitio no especificado,1
+2025,11,R51,Cefalea,1
+2025,11,J06.9,Infección aguda de las vías respiratorias superiores,1
+2025,11,S93.4,Esguince de tobillo,1
+2025,11,J45.9,Asma, no especificada,1
+2025,12,J00,Rinofaringitis aguda (resfriado común),3
+2025,12,I10,Hipertensión esencial (primaria),3
+2025,12,J06.9,Infección aguda de las vías respiratorias superiores,2
+2025,12,R51,Cefalea,2
+2025,12,E66.9,Obesidad no especificada,2
+2025,12,E78.5,Hiperlipidemia no especificada,1
+2025,12,B34.9,Infección viral no especificada,1
+2025,12,M25.5,Dolor articular,1
+2025,12,M54.5,Lumbago no especificado,1
+2025,12,E11.9,Diabetes mellitus tipo 2 sin complicaciones,1
+2026,1,I10,Hipertensión esencial (primaria),4
+2026,1,N39.0,Infección de vías urinarias, sitio no especificado,3
+2026,1,J06.9,Infección aguda de las vías respiratorias superiores,3
+2026,1,E78.5,Hiperlipidemia no especificada,2
+2026,1,J00,Rinofaringitis aguda (resfriado común),2
+2026,1,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,2
+2026,1,E66.9,Obesidad no especificada,1
+2026,1,M25.5,Dolor articular,1
+2026,1,Z76.8,Control de salud del niño sano,1
+2026,1,S93.4,Esguince de tobillo,1
+2026,1,F41.1,Trastorno de ansiedad generalizada,1
+2026,1,Z00.0,Examen médico general,1
+2026,1,L20.9,Dermatitis atópica no especificada,1
+2026,1,B34.9,Infección viral no especificada,1
+2026,1,E11.9,Diabetes mellitus tipo 2 sin complicaciones,1
+2026,2,Z00.0,Examen médico general,3
+2026,2,I10,Hipertensión esencial (primaria),3
+2026,2,E11.9,Diabetes mellitus tipo 2 sin complicaciones,2
+2026,2,N39.0,Infección de vías urinarias, sitio no especificado,2
+2026,2,F32.9,Episodio depresivo, no especificado,2
+2026,2,K29.7,Gastritis no especificada,1
+2026,2,R51,Cefalea,1
+2026,2,J06.9,Infección aguda de las vías respiratorias superiores,1
+2026,2,R50.9,Fiebre no especificada,1
+2026,2,H66.9,Otitis media no especificada,1
+2026,2,A09,Diarrea y gastroenteritis de presunto origen infeccioso,1
+2026,2,K21.9,Enfermedad del reflujo gastroesofágico sin esofagitis,1
+2026,3,E11.9,Diabetes mellitus tipo 2 sin complicaciones,4
+2026,3,E66.9,Obesidad no especificada,3
+2026,3,A09,Diarrea y gastroenteritis de presunto origen infeccioso,2
+2026,3,J00,Rinofaringitis aguda (resfriado común),2
+2026,3,K29.7,Gastritis no especificada,2
+2026,3,N39.0,Infección de vías urinarias, sitio no especificado,2
+2026,3,B34.9,Infección viral no especificada,2
+2026,3,J06.9,Infección aguda de las vías respiratorias superiores,1
+2026,3,O80,Parto único espontáneo,1
+2026,3,R50.9,Fiebre no especificada,1
+2026,3,R51,Cefalea,1
+2026,3,S93.4,Esguince de tobillo,1
+2026,3,F41.1,Trastorno de ansiedad generalizada,1
+2026,4,M54.5,Lumbago no especificado,4
+2026,4,N39.0,Infección de vías urinarias, sitio no especificado,4
+2026,4,J00,Rinofaringitis aguda (resfriado común),3
+2026,4,J45.9,Asma, no especificada,2
+2026,4,A09,Diarrea y gastroenteritis de presunto origen infeccioso,2
+2026,4,J06.9,Infección aguda de las vías respiratorias superiores,1
+2026,4,Z00.0,Examen médico general,1
+2026,4,F32.9,Episodio depresivo, no especificado,1
+2026,4,I10,Hipertensión esencial (primaria),1
+2026,4,K29.7,Gastritis no especificada,1
