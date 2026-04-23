@@ -28,7 +28,7 @@ export const ConsultaMedica = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data, isLoading, isError } = usePreclinicalRecord(id);
+const { data, isLoading, isError } = usePreclinicalRecord(id);
   const finishMutation = useFinishConsultation();
   const { data: insurers = [] } = useInsurers();
 
@@ -45,6 +45,13 @@ export const ConsultaMedica = () => {
       billingType: "private",
       insurerId: "",
       agreedAmount: "",
+      // Agregamos valores por defecto para los signos vitales
+      bloodPressure: "",
+      temperature: "",
+      heartRate: "",
+      oxygenSaturation: "",
+      weight: "",
+      height: "",
     },
   });
 
@@ -53,6 +60,23 @@ export const ConsultaMedica = () => {
   const selectedInsurer = insurers.find((insurer) => insurer.id === selectedInsurerId);
   const billingTypeField = register("billingType");
   const insurerField = register("insurerId");
+
+  // Observamos los signos vitales para calcular IMC y presión en tiempo real
+  const currentWeight = watch("weight");
+  const currentHeight = watch("height");
+  const currentBp = watch("bloodPressure");
+
+  // Cargar datos pre-clínicos en el formulario cuando la data esté lista
+  useEffect(() => {
+    if (data) {
+      setValue("bloodPressure", data.bloodPressure || "");
+      setValue("temperature", data.temperature || "");
+      setValue("heartRate", data.heartRate || "");
+      setValue("oxygenSaturation", data.oxygenSaturation || "");
+      setValue("weight", data.weight || "");
+      setValue("height", data.height || "");
+    }
+  }, [data, setValue]);
 
   useEffect(() => {
     if (billingType !== "insurance") {
@@ -65,11 +89,12 @@ export const ConsultaMedica = () => {
     }
   }, [billingType, selectedInsurer, setValue]);
 
+  // Cálculo de IMC en tiempo real basado en los inputs
   const bmi = useMemo(() => {
-    if (!data?.weight || !data?.height) return null;
-    const wKg = parseFloat(data.weight) * 0.453592;
-    return (wKg / (parseFloat(data.height) ** 2)).toFixed(2);
-  }, [data]);
+    if (!currentWeight || !currentHeight) return null;
+    const wKg = parseFloat(currentWeight) * 0.453592; // Asumiendo que el peso está en libras
+    return (wKg / (parseFloat(currentHeight) ** 2)).toFixed(2);
+  }, [currentWeight, currentHeight]);
 
   const imcInfo = clasificarIMC(bmi ? parseFloat(bmi) : null);
 
@@ -90,6 +115,15 @@ export const ConsultaMedica = () => {
   const onSubmit = (formData) => {
     const body = {
       ...formData,
+      // Usamos toNull para convertir "" a null
+      bloodPressure: toNull(formData.bloodPressure),
+      temperature: toNull(formData.temperature),
+      heartRate: toNull(formData.heartRate),
+      oxygenSaturation: toNull(formData.oxygenSaturation),
+      weight: toNull(formData.weight),
+      height: toNull(formData.height),
+      bmi: bmi ? String(bmi) : null, 
+      
       insurerId: formData.billingType === "insurance" ? formData.insurerId : undefined,
       agreedAmount: formData.billingType === "insurance" ? formData.agreedAmount : undefined,
       medicamentos: medicamentos
@@ -105,8 +139,9 @@ export const ConsultaMedica = () => {
   };
 
   const evaluarPresion = (bp) => {
-    if (!bp) return { label: "N/A", color: "#6b7280" };
+    if (!bp || !bp.includes("/")) return { label: "N/A", color: "#6b7280" };
     const [sys, dia] = bp.split("/").map(Number);
+    if (isNaN(sys) || isNaN(dia)) return { label: "N/A", color: "#6b7280" };
     if (sys < 120 && dia < 80) return { label: "Normal", color: "#22c55e" };
     if (sys < 140 && dia < 90) return { label: "Elevada", color: "#f59e0b" };
     return { label: "Alta", color: "#ef4444" };
@@ -119,7 +154,8 @@ export const ConsultaMedica = () => {
     main: { display: "flex", flexDirection: "column", gap: "1.5rem" },
     card: { backgroundColor: "white", borderRadius: "18px", padding: "2rem", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" },
     sectionTitle: { color: "#0d9488", margin: "0 0 1rem", fontSize: "1.1rem", borderBottom: "2px solid #f0fdfa", paddingBottom: "8px" },
-    vitalRow: { display: "flex", justifyContent: "space-between", padding: "0.6rem 0", borderBottom: "1px solid #f3f4f6" },
+    vitalRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid #f3f4f6" },
+    vitalInput: { width: "80px", padding: "0.25rem 0.5rem", border: "1px solid #d1d5db", borderRadius: "6px", textAlign: "right", outline: "none", fontSize: "0.9rem" },
     errorMsg: { color: "#ef4444", fontSize: "0.8rem", marginTop: "0.25rem" },
     medCard: { padding: "1rem", border: "1px solid #e5e7eb", borderRadius: "12px", marginBottom: "1rem" },
     medGrid: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem" },
@@ -127,52 +163,96 @@ export const ConsultaMedica = () => {
 
   if (isLoading) return <div style={{ ...S.page, display: "flex", justifyContent: "center", alignItems: "center" }}><p style={{ color: "#6b7280" }}>Cargando consulta...</p></div>;
   if (isError || !data) return <div style={{ ...S.page, display: "flex", justifyContent: "center", alignItems: "center" }}><p style={{ color: "#ef4444" }}>Error al cargar datos de la consulta.</p></div>;
-
-  const bp = evaluarPresion(data.bloodPressure);
+console.log("Datos de la pre-clínica:", data);
+  const bpInfo = evaluarPresion(currentBp);
   const edad = calcularEdad(data.patientDob);
+  
+const expediente = 
+  data.patientFileNumber || 
+  data.fileNumber || 
+  data.file_number || 
+  data.patient?.file_number || 
+  "N/A";
+const rawGender = data.patientGender || data.gender || data.patient?.gender;
+const isMale = rawGender?.toLowerCase() === "male" || rawGender?.toLowerCase() === "masculino";
 
+const fechaNacimiento = data.patientDob || data.yearOfBirth || data.year_of_birth || data.patient?.year_of_birth;
+console.log("Llaves disponibles en data:", Object.keys(data));
+console.log("Valores encontrados:", { edad, rawGender, expediente });
   return (
     <div style={S.page}>
       <div style={S.layout}>
-        {/* Sidebar: Info paciente + Signos */}
-        <aside style={S.sidebar}>
-          <h2 style={{ margin: "0 0 0.5rem", color: "#1f2937" }}>{data.patientName || "Paciente"}</h2>
-          <p style={{ color: "#6b7280", margin: "0 0 1rem", fontSize: "0.9rem" }}>
-            {edad > 0 ? `${edad} anios` : ""} | {data.patientGender === "male" ? "Masculino" : "Femenino"} | Exp: {data.patientFileNumber || "N/A"}
-          </p>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ display: "contents" }}>
+          
+          {/* Sidebar: Info paciente + Signos Vitales Editables */}
+          <aside style={S.sidebar}>
+            <h2 style={{ margin: "0 0 0.5rem", color: "#1f2937" }}>{data.patientName || data.fullName || "Paciente"}</h2>
+            <p style={{ color: "#6b7280", margin: "0 0 1rem", fontSize: "0.9rem" }}>
+              {edad > 0 ? `${edad} años` : "Edad N/A"} | {isMale ? "Masculino" : "Femenino"} | Exp: {expediente}
+            </p>
+            <h3 style={{ color: "#0d9488", fontSize: "1rem", margin: "1rem 0 0.5rem" }}>Signos Vitales</h3>
+            
+            <div style={S.vitalRow}>
+              <span style={{ color: "#6b7280", display: "flex", flexDirection: "column" }}>
+                Presión Arterial <small style={{ color: bpInfo.color, fontWeight: 600 }}>{bpInfo.label}</small>
+              </span>
+              <input type="text" placeholder="120/80" style={S.vitalInput} {...register("bloodPressure")} />
+            </div>
+            
+            <div style={S.vitalRow}>
+              <span style={{ color: "#6b7280" }}>Temperatura (°C)</span>
+              <input type="number" step="0.1" style={S.vitalInput} {...register("temperature")} />
+            </div>
+            
+            <div style={S.vitalRow}>
+              <span style={{ color: "#6b7280" }}>Frec. Cardíaca (bpm)</span>
+              <input type="number" style={S.vitalInput} {...register("heartRate")} />
+            </div>
+            
+            <div style={S.vitalRow}>
+              <span style={{ color: "#6b7280" }}>Saturación O2 (%)</span>
+              <input type="number" style={S.vitalInput} {...register("oxygenSaturation")} />
+            </div>
+            
+            <div style={S.vitalRow}>
+              <span style={{ color: "#6b7280" }}>Peso (lb)</span>
+              <input type="number" step="0.1" style={S.vitalInput} {...register("weight")} />
+            </div>
+            
+            <div style={S.vitalRow}>
+              <span style={{ color: "#6b7280" }}>Estatura (m)</span>
+              <input type="number" step="0.01" style={S.vitalInput} {...register("height")} />
+            </div>
+            
+            <div style={S.vitalRow}>
+              <span style={{ color: "#6b7280", display: "flex", flexDirection: "column" }}>
+                IMC <small style={{ color: imcInfo.color, fontWeight: 600 }}>{imcInfo.label}</small>
+              </span>
+              <span style={{ fontWeight: 600, paddingRight: "0.5rem" }}>{bmi || "N/A"}</span>
+            </div>
 
-          <h3 style={{ color: "#0d9488", fontSize: "1rem", margin: "1rem 0 0.5rem" }}>Signos Vitales</h3>
-          <div style={S.vitalRow}><span style={{ color: "#6b7280" }}>Presion Arterial</span><span style={{ fontWeight: 600, color: bp.color }}>{data.bloodPressure || "N/A"} <small>({bp.label})</small></span></div>
-          <div style={S.vitalRow}><span style={{ color: "#6b7280" }}>Temperatura</span><span style={{ fontWeight: 600 }}>{data.temperature ? `${data.temperature} C` : "N/A"}</span></div>
-          <div style={S.vitalRow}><span style={{ color: "#6b7280" }}>Frecuencia Cardiaca</span><span style={{ fontWeight: 600 }}>{data.heartRate ? `${data.heartRate} bpm` : "N/A"}</span></div>
-          <div style={S.vitalRow}><span style={{ color: "#6b7280" }}>Saturacion O2</span><span style={{ fontWeight: 600 }}>{data.oxygenSaturation ? `${data.oxygenSaturation}%` : "N/A"}</span></div>
-          <div style={S.vitalRow}><span style={{ color: "#6b7280" }}>Peso</span><span style={{ fontWeight: 600 }}>{data.weight ? `${data.weight} lb` : "N/A"}</span></div>
-          <div style={S.vitalRow}><span style={{ color: "#6b7280" }}>Estatura</span><span style={{ fontWeight: 600 }}>{data.height ? `${data.height} m` : "N/A"}</span></div>
-          <div style={S.vitalRow}><span style={{ color: "#6b7280" }}>IMC</span><span style={{ fontWeight: 600, color: imcInfo.color }}>{bmi || "N/A"} <small>({imcInfo.label})</small></span></div>
+            <div style={{ marginTop: "1.5rem", padding: "1rem", backgroundColor: "#f0fdfa", borderRadius: "10px" }}>
+              <strong style={{ color: "#0d9488" }}>Motivo:</strong>
+              <p style={{ margin: "0.3rem 0 0", color: "#374151", fontSize: "0.9rem" }}>{data.motivo || "N/A"}</p>
+            </div>
+          </aside>
 
-          <div style={{ marginTop: "1.5rem", padding: "1rem", backgroundColor: "#f0fdfa", borderRadius: "10px" }}>
-            <strong style={{ color: "#0d9488" }}>Motivo:</strong>
-            <p style={{ margin: "0.3rem 0 0", color: "#374151", fontSize: "0.9rem" }}>{data.motivo || "N/A"}</p>
-          </div>
-        </aside>
-
-        {/* Main: Formulario consulta */}
-        <main style={S.main}>
-          <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Main: Formulario consulta */}
+          <main style={S.main}>
             <div style={S.card}>
-              <h2 style={S.sectionTitle}>Consulta Medica</h2>
+              <h2 style={S.sectionTitle}>Consulta Médica</h2>
               <div className="form-group" style={{ marginBottom: "1rem" }}>
                 <label className="form-label">Anamnesis / Historia de enfermedad actual *</label>
-                <textarea className="form-input" rows={4} placeholder="Describa los sintomas, evolucion..." {...register("anamnesis")} />
+                <textarea className="form-input" rows={4} placeholder="Describa los síntomas, evolución..." {...register("anamnesis")} />
                 {errors.anamnesis && <span style={S.errorMsg}>{errors.anamnesis.message}</span>}
               </div>
               <div className="form-group" style={{ marginBottom: "1rem" }}>
-                <label className="form-label">Examen Fisico</label>
-                <textarea className="form-input" rows={3} placeholder="Hallazgos del examen fisico..." {...register("physicalExam")} />
+                <label className="form-label">Examen Físico</label>
+                <textarea className="form-input" rows={3} placeholder="Hallazgos del examen físico..." {...register("physicalExam")} />
               </div>
               <div className="form-group" style={{ marginBottom: "1rem" }}>
-                <label className="form-label">Diagnostico *</label>
-                <textarea className="form-input" rows={2} placeholder="Diagnostico clinico..." {...register("diagnosis")} />
+                <label className="form-label">Diagnóstico *</label>
+                <textarea className="form-input" rows={2} placeholder="Diagnóstico clínico..." {...register("diagnosis")} />
                 {errors.diagnosis && <span style={S.errorMsg}>{errors.diagnosis.message}</span>}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
@@ -190,7 +270,7 @@ export const ConsultaMedica = () => {
             <div style={S.card}>
               <h2 style={S.sectionTitle}>Cobertura de la consulta</h2>
               <p style={{ margin: "0 0 1rem", color: "#6b7280", fontSize: "0.95rem" }}>
-                Define si esta atencion sera normal o si viene respaldada por una aseguradora.
+                Define si esta atención será normal o si viene respaldada por una aseguradora.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: billingType === "insurance" ? "1fr 1fr 1fr" : "1fr", gap: "1rem" }}>
                 <div className="form-group">
@@ -256,15 +336,15 @@ export const ConsultaMedica = () => {
               {billingType === "insurance" && (
                 insurers.length === 0 ? (
                   <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: "12px", backgroundColor: "#fff7ed", color: "#9a3412" }}>
-                    No hay aseguradoras registradas. Crea una desde el menu "Aseguradoras" para poder asignarla a esta consulta.
+                    No hay aseguradoras registradas. Crea una desde el menú "Aseguradoras" para poder asignarla a esta consulta.
                   </div>
                 ) : selectedInsurer ? (
                   <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: "12px", backgroundColor: "#f0fdfa", color: "#115e59" }}>
-                    <strong>Paciente con aseguradora:</strong> {selectedInsurer.companyName}. Se cargo automaticamente el monto sugerido de ${Number(selectedInsurer.fixedConsultationAmount || 0).toFixed(2)} y puedes ajustarlo si hace falta.
+                    <strong>Paciente con aseguradora:</strong> {selectedInsurer.companyName}. Se cargó automáticamente el monto sugerido de ${Number(selectedInsurer.fixedConsultationAmount || 0).toFixed(2)} y puedes ajustarlo si hace falta.
                   </div>
                 ) : (
                   <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: "12px", backgroundColor: "#f8fafc", color: "#475569" }}>
-                    Selecciona la aseguradora para que se coloque automaticamente el monto cubierto.
+                    Selecciona la aseguradora para que se coloque automáticamente el monto cubierto.
                   </div>
                 )
               )}
@@ -273,7 +353,7 @@ export const ConsultaMedica = () => {
             {/* Medicamentos */}
             <div style={S.card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <h2 style={{ ...S.sectionTitle, marginBottom: 0 }}>Receta Medica ({medicamentos.length})</h2>
+                <h2 style={{ ...S.sectionTitle, marginBottom: 0 }}>Receta Médica ({medicamentos.length})</h2>
                 <button type="button" onClick={agregarMedicamento} className="doc-btn" style={{ color: "#0d9488" }}>+ Agregar Medicamento</button>
               </div>
 
@@ -290,12 +370,12 @@ export const ConsultaMedica = () => {
                     </div>
                     <div style={S.medGrid}>
                       <div className="form-group"><label className="form-label">Nombre *</label><input type="text" className="form-input" value={med.name} onChange={(e) => updateMed(idx, "name", e.target.value)} /></div>
-                      <div className="form-group"><label className="form-label">Concentracion</label><input type="text" className="form-input" value={med.concentration} onChange={(e) => updateMed(idx, "concentration", e.target.value)} /></div>
+                      <div className="form-group"><label className="form-label">Concentración</label><input type="text" className="form-input" value={med.concentration} onChange={(e) => updateMed(idx, "concentration", e.target.value)} /></div>
                       <div className="form-group"><label className="form-label">Unidad</label><select className="form-input" value={med.concentrationUnit} onChange={(e) => updateMed(idx, "concentrationUnit", e.target.value)} style={{ backgroundColor: "white" }}><option>mg</option><option>ml</option><option>g</option><option>UI</option><option>%</option></select></div>
                       <div className="form-group"><label className="form-label">Dosis</label><input type="text" className="form-input" value={med.dose} onChange={(e) => updateMed(idx, "dose", e.target.value)} /></div>
-                      <div className="form-group"><label className="form-label">Via</label><select className="form-input" value={med.route} onChange={(e) => updateMed(idx, "route", e.target.value)} style={{ backgroundColor: "white" }}><option>Oral</option><option>Intravenosa</option><option>Intramuscular</option><option>Topica</option><option>Sublingual</option><option>Rectal</option></select></div>
+                      <div className="form-group"><label className="form-label">Vía</label><select className="form-input" value={med.route} onChange={(e) => updateMed(idx, "route", e.target.value)} style={{ backgroundColor: "white" }}><option>Oral</option><option>Intravenosa</option><option>Intramuscular</option><option>Tópica</option><option>Sublingual</option><option>Rectal</option></select></div>
                       <div className="form-group"><label className="form-label">Frecuencia (hrs)</label><input type="text" className="form-input" value={med.frequency} onChange={(e) => updateMed(idx, "frequency", e.target.value)} /></div>
-                      <div className="form-group"><label className="form-label">Duracion (dias)</label><input type="text" className="form-input" value={med.duration} onChange={(e) => updateMed(idx, "duration", e.target.value)} /></div>
+                      <div className="form-group"><label className="form-label">Duración (días)</label><input type="text" className="form-input" value={med.duration} onChange={(e) => updateMed(idx, "duration", e.target.value)} /></div>
                       <div className="form-group" style={{ gridColumn: "span 2" }}><label className="form-label">Indicaciones</label><input type="text" className="form-input" value={med.additionalInstructions} onChange={(e) => updateMed(idx, "additionalInstructions", e.target.value)} /></div>
                     </div>
                   </div>
@@ -306,8 +386,8 @@ export const ConsultaMedica = () => {
             <button type="submit" className="submit-btn" disabled={finishMutation.isPending} style={{ width: "100%" }}>
               {finishMutation.isPending ? "Finalizando consulta..." : "Finalizar Consulta"}
             </button>
-          </form>
-        </main>
+          </main>
+        </form>
       </div>
     </div>
   );

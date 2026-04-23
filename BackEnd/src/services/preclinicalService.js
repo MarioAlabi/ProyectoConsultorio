@@ -152,7 +152,7 @@ export const getPreclinicalById = async (id) => {
       identityDocument: patients.identityDocument,
       yearOfBirth: patients.yearOfBirth,
       gender: patients.gender,
-
+      fileNumber: patients.fileNumber,
     })
     .from(preclinicalRecords)
     .leftJoin(patients, eq(preclinicalRecords.patientId, patients.id))

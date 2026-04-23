@@ -9,6 +9,13 @@ export const consultationSchema = z.object({
   billingType: z.enum(["private", "insurance"]).default("private"),
   insurerId: z.string().optional(),
   agreedAmount: z.string().optional(),
+  bloodPressure: z.string().optional().or(z.literal("")),
+  temperature: z.union([z.string(), z.number()]).optional().or(z.literal("")),
+  heartRate: z.union([z.string(), z.number()]).optional().or(z.literal("")),
+  oxygenSaturation: z.union([z.string(), z.number()]).optional().or(z.literal("")),
+  weight: z.union([z.string(), z.number()]).optional().or(z.literal("")),
+  height: z.union([z.string(), z.number()]).optional().or(z.literal("")),
+
 }).superRefine((data, ctx) => {
   if (data.billingType === "insurance" && !data.insurerId?.trim()) {
     ctx.addIssue({

@@ -181,16 +181,19 @@ export const createMedicalConsultation = async (preclinicalId, data, doctorId) =
             }));
         await tx.insert(prescribedMedications).values(medsToInsert);
     }
+    const sanitizeValue = (val) => (val === "" || val === null ? null : val);
+
     await tx.update(preclinicalRecords)
         .set({
             status: "done",
-            bloodPressure: data.bloodPressure !== undefined ? data.bloodPressure : preclinical.bloodPressure,
-            temperature: data.temperature !== undefined ? data.temperature : preclinical.temperature,
-            weight: data.weight !== undefined ? data.weight : preclinical.weight,
-            height: data.height !== undefined ? data.height : preclinical.height,
-            heartRate: data.heartRate !== undefined ? data.heartRate : preclinical.heartRate,
-            oxygenSaturation: data.oxygenSaturation !== undefined ? data.oxygenSaturation : preclinical.oxygenSaturation,
-            bmi: data.bmi !== undefined ? data.bmi : preclinical.bmi,
+            
+            bloodPressure: data.bloodPressure !== undefined ? sanitizeValue(data.bloodPressure) : preclinical.bloodPressure,
+            temperature: data.temperature !== undefined ? sanitizeValue(data.temperature) : preclinical.temperature,
+            weight: data.weight !== undefined ? sanitizeValue(data.weight) : preclinical.weight,
+            height: data.height !== undefined ? sanitizeValue(data.height) : preclinical.height,
+            heartRate: data.heartRate !== undefined ? sanitizeValue(data.heartRate) : preclinical.heartRate,
+            oxygenSaturation: data.oxygenSaturation !== undefined ? sanitizeValue(data.oxygenSaturation) : preclinical.oxygenSaturation,
+            bmi: data.bmi !== undefined ? sanitizeValue(data.bmi) : preclinical.bmi,
             updatedAt: new Date(),
         })
         .where(eq(preclinicalRecords.id, preclinicalId));
