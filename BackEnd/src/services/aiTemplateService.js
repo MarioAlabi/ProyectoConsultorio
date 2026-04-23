@@ -1,6 +1,11 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from "openai";
 
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const openai = new OpenAI({
+    apiKey: process.env.SECRET_KEY_GEMINI, // Mantenemos tu variable de entorno
+});
+
+const MODEL_NAME = process.env.AI_MODEL || "gpt-4o-mini";
+
 const PLACEHOLDERS_REFERENCE = [
     "{{paciente.nombre}}",
     "{{paciente.dui}}",
@@ -23,27 +28,18 @@ const SYSTEM_INSTRUCTION = `Eres un asistente clínico que redacta plantillas le
 
 Reglas estrictas:
 1. Devuelve SIEMPRE JSON válido con los campos { type, name, description, bodyTemplate }.
-2. "type" debe ser EXACTAMENTE "constancia" o "incapacidad". Usa "incapacidad" para reposos, embarazo, enfermedad, licencias médicas. Usa "constancia" para buena salud, aptitud, asistencia u otras certificaciones.
-3. "bodyTemplate" debe ser el documento COMPLETO listo para imprimir, en texto plano con saltos de línea, incluyendo encabezado, cuerpo, datos del paciente/médico y sección de firma.
-4. Usa los siguientes placeholders del sistema (son variables que el software reemplazará automáticamente con datos reales). NO inventes los valores: deja los placeholders tal cual.
-   Placeholders disponibles del sistema:
+2. "type" debe ser EXACTAMENTE "constancia" o "incapacidad". Usa "incapacidad" para reposos, licencias médicas. Usa "constancia" para buena salud, aptitud, asistencia.
+3. "bodyTemplate" debe ser el documento COMPLETO listo para imprimir, en texto plano con saltos de línea.
+4. Usa los siguientes placeholders del sistema. NO inventes valores:
 ${PLACEHOLDERS_REFERENCE.map((p) => `   - ${p}`).join("\n")}
-5. Si necesitas variables adicionales específicas del documento (por ejemplo días de incapacidad, fechas de reposo, semanas de embarazo, observaciones), defínelas con el formato {{categoria.variable}} en minúsculas y notación dot, ej: {{incapacidad.dias}}, {{incapacidad.desde}}, {{incapacidad.hasta}}, {{incapacidad.indicaciones}}, {{embarazo.semanas}}, {{embarazo.fechaProbableParto}}, {{constancia.observaciones}}, {{constancia.motivo}}.
-6. El "name" debe ser corto y descriptivo (máx 100 caracteres) y "description" una frase de una línea.
-7. No agregues firmas reales ni nombres inventados: la firma debe apuntar al placeholder {{medico.nombre}} y JVPM {{medico.jvpm}}.
-8. Respeta la estructura legal típica salvadoreña para este tipo de documentos.`;
+5. Si necesitas variables adicionales (días de incapacidad, fechas, observaciones), defínelas con el formato {{categoria.variable}} en minúsculas, ej: {{incapacidad.dias}}, {{constancia.observaciones}}.
+6. El "name" debe ser corto y descriptivo y "description" una frase de una línea.
+7. No agregues firmas reales, usa {{medico.nombre}} y JVPM {{medico.jvpm}}.`;
 
 const ALLOWED_TYPES = new Set(["constancia", "incapacidad"]);
 
-/**
- * Invoca Gemini para generar un borrador de plantilla a partir de un prompt del usuario.
- * @param {string} prompt - Descripción de lo que el médico quiere.
- * @param {{ preferType?: string, extraContext?: string }} [options]
- */
 export const draftTemplateWithAI = async (prompt, options = {}) => {
-    // Acepta ambos nombres de variable (SECRET_KEY_GEMINI tiene precedencia).
-    const apiKey = process.env.SECRET_KEY_GEMINI || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    if (!process.env.SECRET_KEY_GEMINI) {
         const error = new Error("La integración con IA no está configurada. Define SECRET_KEY_GEMINI en el servidor.");
         error.status = 503;
         throw error;
@@ -56,65 +52,34 @@ export const draftTemplateWithAI = async (prompt, options = {}) => {
         throw error;
     }
 
-    const userParts = [`Descripción solicitada por el médico:\n"""\n${cleanPrompt}\n"""`];
+    let userContent = `Descripción solicitada por el médico:\n"""\n${cleanPrompt}\n"""\n`;
     if (options.preferType && ALLOWED_TYPES.has(options.preferType)) {
-        userParts.push(`Tipo preferido: ${options.preferType}.`);
+        userContent += `Tipo preferido: ${options.preferType}.\n`;
     }
     if (options.extraContext) {
-        userParts.push(`Contexto adicional: ${options.extraContext}`);
+        userContent += `Contexto adicional: ${options.extraContext}\n`;
     }
-    userParts.push("Responde SOLO con JSON válido siguiendo el esquema solicitado.");
-
-    const ai = new GoogleGenAI({ apiKey });
 
     let response;
     try {
-        response = await ai.models.generateContent({
+        response = await openai.chat.completions.create({
             model: MODEL_NAME,
-            contents: userParts.join("\n\n"),
-            config: {
-                systemInstruction: SYSTEM_INSTRUCTION,
-                temperature: 0.4,
-                maxOutputTokens: 2048,
-                responseMimeType: "application/json",
-                responseJsonSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        type: {
-                            type: Type.STRING,
-                            enum: ["constancia", "incapacidad"],
-                            description: "Tipo de documento.",
-                        },
-                        name: {
-                            type: Type.STRING,
-                            description: "Nombre corto de la plantilla.",
-                        },
-                        description: {
-                            type: Type.STRING,
-                            description: "Descripción de una línea.",
-                        },
-                        bodyTemplate: {
-                            type: Type.STRING,
-                            description: "Cuerpo completo de la plantilla con placeholders.",
-                        },
-                    },
-                    required: ["type", "name", "bodyTemplate"],
-                    propertyOrdering: ["type", "name", "description", "bodyTemplate"],
-                },
-            },
+            messages: [
+                { role: "system", content: SYSTEM_INSTRUCTION },
+                { role: "user", content: userContent }
+            ],
+            response_format: { type: "json_object" }, // Forzamos JSON seguro
+            temperature: 0.4,
+            max_tokens: 2048
         });
     } catch (err) {
+        console.error("[AI ERROR]:", err);
         const error = new Error(`Error al contactar al modelo de IA: ${err.message || err}`);
         error.status = 502;
         throw error;
     }
 
-    const raw = response?.text;
-    if (!raw) {
-        const error = new Error("El modelo de IA no devolvió contenido.");
-        error.status = 502;
-        throw error;
-    }
+    const raw = response.choices[0].message.content;
 
     let parsed;
     try {
@@ -147,7 +112,7 @@ export const draftTemplateWithAI = async (prompt, options = {}) => {
         ? parsed.description.trim().slice(0, 255)
         : "";
 
-    // Extraer placeholders detectados para feedback al usuario.
+    // Extraer placeholders detectados para feedback al usuario
     const placeholders = Array.from(
         new Set(
             [...bodyTemplate.matchAll(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g)].map((m) => m[1].trim())

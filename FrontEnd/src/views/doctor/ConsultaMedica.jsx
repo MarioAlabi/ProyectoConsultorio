@@ -172,7 +172,7 @@ export const ConsultaMedica = () => {
             />
 
             <main style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <ClinicalForm />
+              <ClinicalForm preclinicalData={data} patientProfile={patientProfile} />
               
               <CoverageSection />
               

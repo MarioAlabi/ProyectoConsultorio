@@ -22,7 +22,7 @@ const validateTemplatePayload = (data = {}, { partial = false } = {}) => {
 
     if (!partial || type !== null) {
         if (!type || !TEMPLATE_TYPES.includes(type)) {
-            const error = new Error("El tipo de plantilla debe ser 'constancia' o 'incapacidad'.");
+            const error = new Error("El tipo debe ser 'constancia' o 'incapacidad'.");
             error.status = 400;
             throw error;
         }
@@ -30,7 +30,7 @@ const validateTemplatePayload = (data = {}, { partial = false } = {}) => {
 
     if (!partial || name !== null) {
         if (!name || name.length < 3) {
-            const error = new Error("El nombre de la plantilla es obligatorio (mínimo 3 caracteres).");
+            const error = new Error("Nombre obligatorio (mínimo 3 caracteres).");
             error.status = 400;
             throw error;
         }
@@ -38,16 +38,10 @@ const validateTemplatePayload = (data = {}, { partial = false } = {}) => {
 
     if (!partial || bodyTemplate !== null) {
         if (!bodyTemplate || bodyTemplate.length < 10) {
-            const error = new Error("El cuerpo de la plantilla es obligatorio (mínimo 10 caracteres).");
+            const error = new Error("El cuerpo es obligatorio (mínimo 10 caracteres).");
             error.status = 400;
             throw error;
         }
-    }
-
-    if (status !== null && !TEMPLATE_STATUSES.includes(status)) {
-        const error = new Error("El estado debe ser 'active' o 'inactive'.");
-        error.status = 400;
-        throw error;
     }
 
     const payload = {};
@@ -55,7 +49,7 @@ const validateTemplatePayload = (data = {}, { partial = false } = {}) => {
     if (name !== null) payload.name = name;
     if (bodyTemplate !== null) payload.bodyTemplate = bodyTemplate;
     if (description !== null) payload.description = description;
-    if (status !== null) payload.status = status;
+    if (status !== null && TEMPLATE_STATUSES.includes(status)) payload.status = status;
     if (data.isDefault !== undefined) payload.isDefault = !!isDefault;
 
     return payload;
@@ -79,12 +73,7 @@ export const getTemplates = async ({ type, includeInactive = false } = {}) => {
 };
 
 export const getTemplateById = async (id) => {
-    const [template] = await db
-        .select()
-        .from(documentTemplates)
-        .where(eq(documentTemplates.id, id))
-        .limit(1);
-
+    const [template] = await db.select().from(documentTemplates).where(eq(documentTemplates.id, id)).limit(1);
     if (!template) {
         const error = new Error("Plantilla no encontrada.");
         error.status = 404;
@@ -106,12 +95,7 @@ export const createTemplate = async (data, userId) => {
 
         await tx.insert(documentTemplates).values({
             id: templateId,
-            type: payload.type,
-            name: payload.name,
-            description: payload.description ?? null,
-            bodyTemplate: payload.bodyTemplate,
-            isDefault: payload.isDefault ?? false,
-            status: payload.status ?? "active",
+            ...payload,
             createdByUserId: userId || null,
         });
     });
@@ -122,10 +106,6 @@ export const createTemplate = async (data, userId) => {
 export const updateTemplate = async (id, data) => {
     const existing = await getTemplateById(id);
     const payload = validateTemplatePayload(data, { partial: true });
-
-    if (Object.keys(payload).length === 0) {
-        return existing;
-    }
 
     await db.transaction(async (tx) => {
         if (payload.isDefault === true) {
@@ -144,15 +124,8 @@ export const updateTemplate = async (id, data) => {
 };
 
 export const toggleTemplateStatus = async (id, status) => {
-    if (!TEMPLATE_STATUSES.includes(status)) {
-        const error = new Error("El estado debe ser 'active' o 'inactive'.");
-        error.status = 400;
-        throw error;
-    }
     await getTemplateById(id);
-    await db.update(documentTemplates)
-        .set({ status, updatedAt: new Date() })
-        .where(eq(documentTemplates.id, id));
+    await db.update(documentTemplates).set({ status, updatedAt: new Date() }).where(eq(documentTemplates.id, id));
     return await getTemplateById(id);
 };
 

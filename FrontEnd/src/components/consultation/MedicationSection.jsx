@@ -5,6 +5,7 @@ import { useSettings } from "../../hooks/useSettings";
 import { authClient } from "../../lib/auth-client";
 import { calcularEdad } from "../../lib/utils";
 import { PrescriptionPreviewModal } from "../../components/PrescriptionPreviewModal";
+import { useCheckPrescription } from "../../hooks/useAIClinical"; // <-- NUEVO HOOK
 
 const preventNegative = (e) => {
   if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") e.preventDefault();
@@ -22,12 +23,14 @@ const createMedicationDraft = () => ({
 const fieldLabel = { fontSize: "0.78rem", color: "var(--fg-muted)", marginBottom: "0.3rem", display: "block", fontWeight: 500 };
 const medSelect = { padding: "0.6rem 0.75rem", border: "1px solid var(--border-default)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface)", outline: "none", width: "100%", fontSize: "0.9rem", color: "var(--fg-primary)", fontFamily: "var(--font-body)" };
 
-
 export const MedicationSection = ({ medicamentos, setMedicamentos, data, patientProfile }) => {
   const { data: session } = authClient.useSession();
   const { data: settings } = useSettings();
   
   const [prescriptionPreview, setPrescriptionPreview] = useState({ open: false, html: "" });
+
+  // --- HOOK DE SEGURIDAD IA ---
+  const checkSafetyMutation = useCheckPrescription();
 
   const agregarMedicamento = () => setMedicamentos((current) => [...current, createMedicationDraft()]);
   
@@ -40,6 +43,34 @@ export const MedicationSection = ({ medicamentos, setMedicamentos, data, patient
   };
   
   const removeMed = (idx) => setMedicamentos((current) => current.filter((_, i) => i !== idx));
+
+  // --- FUNCIÓN DE ESCÁNER IA ---
+  const handleCheckSafety = () => {
+    const validMeds = medicamentos.filter((m) => m.name.trim() !== "");
+    if (validMeds.length === 0) {
+      return toast.error("Agregue al menos un medicamento válido para escanear.");
+    }
+
+    // Le mandamos los medicamentos y el perfil completo del paciente (para que la IA lea antecedentes y edad)
+    checkSafetyMutation.mutate(
+      { medications: validMeds, patient: patientProfile },
+      {
+        onSuccess: (response) => {
+          if (response.allClear) {
+            toast.success("Receta segura. No se detectaron interacciones ni riesgos mayores.", {
+              icon: '✅',
+              duration: 4000
+            });
+          } else {
+            toast("La IA detectó advertencias clínicas. Revisa el panel de alertas.", {
+              icon: '⚠️',
+              duration: 5000
+            });
+          }
+        }
+      }
+    );
+  };
 
   const buildPrescriptionHtml = () => {
     const datosClinica = {
@@ -147,6 +178,19 @@ export const MedicationSection = ({ medicamentos, setMedicamentos, data, patient
           Receta médica ({medicamentos.length})
         </h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          
+          {/* NUEVO: Botón de Escáner IA */}
+          <button 
+            type="button" 
+            onClick={handleCheckSafety} 
+            className="btn btn-sm" 
+            style={{ background: "var(--accent-plum-soft)", color: "var(--accent-plum)", border: "1px solid var(--accent-plum)" }}
+            disabled={checkSafetyMutation.isPending || medicamentos.length === 0}
+            title="Analizar interacciones, dosis y alergias según historial del paciente"
+          >
+            <i className="ri-shield-check-line"></i> {checkSafetyMutation.isPending ? "Escaneando..." : "Escáner IA"}
+          </button>
+
           <button type="button" onClick={handlePreviewPrescription} className="btn btn-secondary btn-sm">
             <i className="ri-eye-line"></i> Previsualizar
           </button>
@@ -155,6 +199,34 @@ export const MedicationSection = ({ medicamentos, setMedicamentos, data, patient
           </button>
         </div>
       </div>
+
+      {/* PANEL DE ADVERTENCIAS IA */}
+      {checkSafetyMutation.data?.warnings?.length > 0 && (
+        <div style={{ background: "#fef2f2", border: "1px solid #f87171", padding: "1rem", borderRadius: "8px", marginBottom: "1rem" }}>
+          <h4 style={{ margin: "0 0 0.5rem 0", color: "#b91c1c", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <i className="ri-error-warning-line" style={{ fontSize: "1.2rem" }}></i> Alertas Farmacológicas (IA)
+          </h4>
+          <ul style={{ margin: 0, paddingLeft: "1.2rem", color: "#7f1d1d", fontSize: "0.9rem" }}>
+            {checkSafetyMutation.data.warnings.map((w, i) => (
+              <li key={i} style={{ marginBottom: "0.4rem", lineHeight: 1.4 }}>
+                <strong>{w.medication}:</strong> {w.message}
+                <span 
+                  style={{ 
+                    marginLeft: "0.5rem", fontSize: "0.7rem", padding: "2px 6px", borderRadius: "4px",
+                    background: w.severity === 'high' ? '#dc2626' : w.severity === 'medium' ? '#f59e0b' : '#6b7280',
+                    color: "white", fontWeight: "bold"
+                  }}
+                >
+                  {w.severity.toUpperCase()}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p style={{ margin: "0.6rem 0 0 0", fontSize: "0.8rem", color: "#991b1b", fontStyle: "italic" }}>
+            * Recordatorio: La IA es una herramienta de apoyo, la decisión final siempre es médica.
+          </p>
+        </div>
+      )}
 
       {medicamentos.length === 0 ? (
         <div style={{ textAlign: "center", color: "var(--fg-muted)", padding: "2rem 1rem", background: "var(--bg-surface-alt)", borderRadius: "var(--radius-md)", border: "1px dashed var(--border-default)" }}>

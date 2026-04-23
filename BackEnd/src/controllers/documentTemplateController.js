@@ -17,10 +17,13 @@ export const listTemplatesController = async (req, res, next) => {
             type,
             includeInactive: includeInactive === "true" || includeInactive === "1",
         });
+        
+        // Enriquecemos con placeholders calculados al vuelo para el frontend
         const enriched = data.map((t) => ({
             ...t,
             placeholders: extractPlaceholders(t.bodyTemplate),
         }));
+        
         res.status(200).json({ success: true, data: enriched });
     } catch (error) {
         next(error);
@@ -32,7 +35,10 @@ export const getTemplateController = async (req, res, next) => {
         const data = await getTemplateById(req.params.id);
         res.status(200).json({
             success: true,
-            data: { ...data, placeholders: extractPlaceholders(data.bodyTemplate) },
+            data: { 
+                ...data, 
+                placeholders: extractPlaceholders(data.bodyTemplate) 
+            },
         });
     } catch (error) {
         next(error);
@@ -42,6 +48,7 @@ export const getTemplateController = async (req, res, next) => {
 export const createTemplateController = async (req, res, next) => {
     try {
         const result = await createTemplate(req.body, req.user?.id);
+        
         logAudit({
             tableName: "document_templates",
             recordId: result.id,
@@ -51,6 +58,7 @@ export const createTemplateController = async (req, res, next) => {
             description: `Plantilla "${result.name}" (${result.type}) creada`,
             ipAddress: req.ip,
         });
+        
         res.status(201).json({ success: true, data: result });
     } catch (error) {
         next(error);
@@ -61,6 +69,7 @@ export const updateTemplateController = async (req, res, next) => {
     try {
         const previous = await getTemplateById(req.params.id);
         const result = await updateTemplate(req.params.id, req.body);
+        
         logAudit({
             tableName: "document_templates",
             recordId: req.params.id,
@@ -68,9 +77,10 @@ export const updateTemplateController = async (req, res, next) => {
             user: req.user,
             previousValues: previous,
             newValues: result,
-            description: `Plantilla "${result.name}" (${result.type}) actualizada`,
+            description: `Plantilla "${result.name}" actualizada`,
             ipAddress: req.ip,
         });
+        
         res.status(200).json({ success: true, data: result });
     } catch (error) {
         next(error);
@@ -81,15 +91,17 @@ export const toggleTemplateStatusController = async (req, res, next) => {
     try {
         const { status } = req.body;
         const result = await toggleTemplateStatus(req.params.id, status);
+        
         logAudit({
             tableName: "document_templates",
             recordId: req.params.id,
             action: "STATUS_CHANGE",
             user: req.user,
             newValues: { status },
-            description: `Plantilla "${result.name}" cambiada a ${status}`,
+            description: `Estado de plantilla "${result.name}" cambiado a ${status}`,
             ipAddress: req.ip,
         });
+        
         res.status(200).json({ success: true, data: result });
     } catch (error) {
         next(error);
@@ -99,6 +111,7 @@ export const toggleTemplateStatusController = async (req, res, next) => {
 export const draftTemplateWithAIController = async (req, res, next) => {
     try {
         const { prompt, preferType, extraContext } = req.body || {};
+        // Llama al servicio que refactorizamos a GPT
         const result = await draftTemplateWithAI(prompt, { preferType, extraContext });
         res.status(200).json({ success: true, data: result });
     } catch (error) {
@@ -110,15 +123,17 @@ export const deleteTemplateController = async (req, res, next) => {
     try {
         const previous = await getTemplateById(req.params.id);
         const result = await deleteTemplate(req.params.id);
+        
         logAudit({
             tableName: "document_templates",
             recordId: req.params.id,
             action: "DELETE",
             user: req.user,
             previousValues: previous,
-            description: `Plantilla "${previous.name}" eliminada`,
+            description: `Plantilla "${previous.name}" eliminada definitivamente`,
             ipAddress: req.ip,
         });
+        
         res.status(200).json({ success: true, data: result });
     } catch (error) {
         next(error);

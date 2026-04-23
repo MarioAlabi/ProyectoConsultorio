@@ -1,400 +1,138 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from "openai";
 
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+// Configuración del cliente OpenAI usando tu variable de entorno
+const openai = new OpenAI({
+    apiKey: process.env.SECRET_KEY_GEMINI || process.env.GEMINI_API_KEY,
+});
 
-const requireApiKey = () => {
-    // Acepta ambos nombres de variable para compatibilidad:
-    // - SECRET_KEY_GEMINI (convención del flujo documentService/aiService)
-    // - GEMINI_API_KEY    (convención original de aiTemplateService)
+const MODEL_NAME = process.env.AI_MODEL || "gpt-4o-mini";
+
+/**
+ * Helper unificado para llamadas a la IA con OpenAI
+ */
+const callAI = async ({ systemInstruction, userContent, temperature = 0.3, maxTokens = 2048 }) => {
     const apiKey = process.env.SECRET_KEY_GEMINI || process.env.GEMINI_API_KEY;
+    
     if (!apiKey) {
         const error = new Error("La integración con IA no está configurada. Define SECRET_KEY_GEMINI en el servidor.");
         error.status = 503;
         throw error;
     }
-    return apiKey;
-};
 
-const callGemini = async ({ systemInstruction, userContent, schema, temperature = 0.3, maxOutputTokens = 1024 }) => {
-    const apiKey = requireApiKey();
-    const ai = new GoogleGenAI({ apiKey });
-
-    let response;
     try {
-        response = await ai.models.generateContent({
+        const response = await openai.chat.completions.create({
             model: MODEL_NAME,
-            contents: userContent,
-            config: {
-                systemInstruction,
-                temperature,
-                maxOutputTokens,
-                responseMimeType: "application/json",
-                responseJsonSchema: schema,
-            },
+            messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: userContent }
+            ],
+            // Forzamos al modelo a responder siempre con un objeto JSON válido
+            response_format: { type: "json_object" },
+            temperature,
+            max_tokens: maxTokens,
         });
+
+        const content = response.choices[0].message.content;
+        return JSON.parse(content);
     } catch (err) {
+        console.error("[AI CLINICAL ERROR]:", err);
         const error = new Error(`Error al contactar al modelo de IA: ${err.message || err}`);
         error.status = 502;
         throw error;
     }
-
-    const raw = response?.text;
-    if (!raw) {
-        const error = new Error("El modelo de IA no devolvió contenido.");
-        error.status = 502;
-        throw error;
-    }
-
-    const cleaned = raw
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/```\s*$/i, "")
-        .trim();
-
-    try {
-        return JSON.parse(cleaned);
-    } catch (firstErr) {
-        const firstBrace = cleaned.indexOf("{");
-        const lastBrace = cleaned.lastIndexOf("}");
-        if (firstBrace !== -1 && lastBrace > firstBrace) {
-            const candidate = cleaned.slice(firstBrace, lastBrace + 1);
-            try {
-                return JSON.parse(candidate);
-            } catch {
-            }
-        }
-        console.error("[AI] JSON inválido devuelto por Gemini. Raw (primeros 500 chars):", cleaned.slice(0, 500));
-        const error = new Error("La respuesta del modelo de IA no es JSON válido.");
-        error.status = 502;
-        error.cause = firstErr;
-        throw error;
-    }
 };
 
+// --- INSTRUCCIONES DEL SISTEMA ---
 
-const ICD10_INSTRUCTION = `Eres un codificador clínico experto en CIE-10 (ICD-10, versión OMS en español).
-A partir de un texto libre de diagnóstico escrito por un médico salvadoreño, debes devolver:
-- El código CIE-10 más probable (formato: letra + dígitos, ej. E11.9, J45.9, I10).
-- El nombre canónico oficial en español del diagnóstico.
-- Un nivel de confianza entre 0 y 1.
-- Hasta 3 alternativas si hay ambigüedad.
+const ICD10_INSTRUCTION = `Eres un codificador clínico experto en CIE-10 (OMS en español).
+A partir de un diagnóstico, devuelve un JSON con:
+- code: Código CIE-10 (letra + dígitos).
+- canonicalName: Nombre oficial.
+- confidence: Nivel de confianza (0-1).
+- alternatives: Array de { code, canonicalName } si hay ambigüedad.`;
 
-Reglas:
-1. Usa siempre códigos CIE-10 válidos de la OMS (no inventes códigos).
-2. Si el texto es ambiguo o incompleto, devuelve la mejor aproximación y baja la confianza.
-3. NO interpretes abreviaturas sin evidencia clara (ej. "DM2" = Diabetes mellitus tipo 2 = E11.9).
-4. Para diagnósticos compuestos (ej. "HTA + DM2"), devuelve el principal y lista el otro en alternatives.
-5. Si el texto no es un diagnóstico médico, devuelve confidence: 0 y un código vacío.`;
+const SUMMARY_INSTRUCTION = `Eres un asistente clínico. Genera un resumen ejecutivo de 3-5 líneas de un paciente.
+Menciona edad, género, condiciones crónicas, alergias y patrón reciente.
+Devuelve JSON: { "summary": "...", "flags": [{ "severity": "info/warning/critical", "message": "..." }] }.`;
+
+const ANAMNESIS_INSTRUCTION = `Eres un asistente clínico. Redacta un borrador de anamnesis en prosa médica (3-6 líneas).
+Basado en motivo de consulta y signos vitales. No inventes síntomas.
+Devuelve JSON: { "draft": "...", "suggestedQuestions": ["..."] }.`;
+
+const RX_SAFETY_INSTRUCTION = `Eres un asistente farmacológico. Revisa recetas para detectar riesgos, alergias o interacciones.
+Devuelve JSON: { "allClear": boolean, "warnings": [{ "severity": "low/medium/high", "medication": "...", "message": "..." }] }.`;
+
+const HISTORY_EXTRACT_INSTRUCTION = `Asistente de estructuración de datos médicos. 
+Convierte texto libre en: { "allergies": [], "chronicConditions": [], "surgeries": [{ "name": "", "year": "" }], "currentMedications": [], "habits": { "smoking": "...", "alcohol": "...", "drugs": "..." } }.`;
+
+const REPORT_NARRATIVE_INSTRUCTION = `Analista de datos clínicos. Redacta párrafos analíticos de reportes estadísticos médicos.
+Devuelve JSON: { "narrative": "...", "highlights": ["..."] }.`;
+
+// --- FUNCIONES EXPORTADAS ---
 
 export const suggestIcd10 = async (diagnosisText) => {
     const clean = typeof diagnosisText === "string" ? diagnosisText.trim() : "";
-    if (clean.length < 2) {
-        const error = new Error("Diagnóstico muy corto para analizar.");
-        error.status = 400;
-        throw error;
-    }
+    if (clean.length < 2) throw new Error("Diagnóstico muy corto.");
 
-    return await callGemini({
+    return await callAI({
         systemInstruction: ICD10_INSTRUCTION,
-        userContent: `Diagnóstico libre: """${clean}"""\n\nResponde SOLO con JSON válido (sin markdown, sin texto extra).`,
-        temperature: 0.1, // más determinista para codificación
-        maxOutputTokens: 1024,
-        schema: {
-            type: Type.OBJECT,
-            properties: {
-                code: { type: Type.STRING, description: "Código CIE-10 (ej. E11.9)." },
-                canonicalName: { type: Type.STRING, description: "Nombre oficial del diagnóstico." },
-                confidence: { type: Type.NUMBER, description: "Nivel de confianza 0-1." },
-                alternatives: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            code: { type: Type.STRING },
-                            canonicalName: { type: Type.STRING },
-                        },
-                        required: ["code", "canonicalName"],
-                    },
-                },
-            },
-            required: ["code", "canonicalName", "confidence"],
-        },
+        userContent: `Diagnóstico libre: """${clean}"""`,
+        temperature: 0.1
     });
 };
 
-
-const SUMMARY_INSTRUCTION = `Eres un asistente clínico que produce resúmenes ejecutivos de pacientes para médicos de consulta externa.
-A partir del perfil del paciente y su historial de consultas, genera un "patient at a glance": un párrafo breve (máx 5 líneas) que permita al médico entender el paciente en 10 segundos.
-
-Reglas:
-1. Sé conciso, factual, en español médico claro.
-2. Menciona edad, género, condiciones crónicas relevantes, alergias, última consulta y patrón reciente.
-3. NO inventes datos. Si no hay información, omite esa sección.
-4. NO des recomendaciones clínicas, solo describe el estado actual.
-5. Devuelve también una lista corta de "flags" (banderas rojas) si detectas algo que el médico debe notar: alergias, condiciones crónicas no controladas, múltiples consultas recientes por el mismo motivo.`;
-
 export const summarizePatient = async ({ patient, consultations }) => {
-    if (!patient) {
-        const error = new Error("Paciente requerido para generar resumen.");
-        error.status = 400;
-        throw error;
-    }
-
-    const consultaSample = (consultations || []).slice(0, 10).map((c) => ({
-        fecha: c.consultationDate,
-        motivo: c.reason || c.motivo || "",
-        diagnostico: c.diagnosis || "",
-        medicamentos: (c.medications || []).map((m) => m.name).filter(Boolean),
-    }));
+    if (!patient) throw new Error("Paciente requerido.");
 
     const payload = {
         paciente: {
             edad: patient.age,
             genero: patient.gender,
-            esMenor: !!patient.isMinor,
-            antecedentesPersonales: patient.personalHistory || "",
-            antecedentesFamiliares: patient.familyHistory || "",
+            antecedentes: patient.personalHistory || "",
         },
-        ultimasConsultas: consultaSample,
+        consultas: (consultations || []).slice(0, 10)
     };
 
-    return await callGemini({
+    return await callAI({
         systemInstruction: SUMMARY_INSTRUCTION,
-        userContent: `Datos del paciente:\n${JSON.stringify(payload, null, 2)}\n\nResponde SOLO con JSON válido (sin markdown, sin texto extra).`,
-        temperature: 0.3,
-        maxOutputTokens: 1500,
-        schema: {
-            type: Type.OBJECT,
-            properties: {
-                summary: { type: Type.STRING, description: "Resumen de 3-5 líneas del paciente." },
-                flags: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            severity: { type: Type.STRING, enum: ["info", "warning", "critical"] },
-                            message: { type: Type.STRING },
-                        },
-                        required: ["severity", "message"],
-                    },
-                },
-            },
-            required: ["summary"],
-        },
+        userContent: `Datos: ${JSON.stringify(payload)}`
     });
 };
-
-// ─── 3. Borrador de anamnesis ──────────────────────────────────────────────────
-
-const ANAMNESIS_INSTRUCTION = `Eres un asistente clínico que redacta borradores de anamnesis para que el médico los revise y complete. NO reemplazas al médico; solo le das un punto de partida.
-
-Reglas:
-1. Escribe en prosa clínica estructurada (3-6 líneas), en español médico.
-2. Parte del motivo de consulta y los signos vitales capturados en preclínica.
-3. Referencia antecedentes relevantes si los hay.
-4. Incluye preguntas sugeridas que el médico puede explorar (ej. "Se sugiere indagar tiempo de evolución y factores desencadenantes").
-5. NO hagas diagnósticos. NO inventes síntomas que el paciente no reportó.
-6. Al final, indica que es un borrador generado por IA que requiere validación médica.`;
 
 export const draftAnamnesis = async ({ motivo, signosVitales, antecedentes, edad, genero }) => {
-    const clean = typeof motivo === "string" ? motivo.trim() : "";
-    if (clean.length < 3) {
-        const error = new Error("El motivo de consulta es requerido para generar un borrador.");
-        error.status = 400;
-        throw error;
-    }
-
-    const payload = {
-        motivoConsulta: clean,
-        edad: edad ?? null,
-        genero: genero || null,
-        signosVitales: signosVitales || null,
-        antecedentesPersonales: antecedentes?.personal || "",
-        antecedentesFamiliares: antecedentes?.familiares || "",
-    };
-
-    return await callGemini({
+    const payload = { motivo, signosVitales, antecedentes, edad, genero };
+    return await callAI({
         systemInstruction: ANAMNESIS_INSTRUCTION,
-        userContent: `Datos preclínicos:\n${JSON.stringify(payload, null, 2)}\n\nGenera un borrador de anamnesis. Responde SOLO con JSON válido (sin markdown, sin texto extra).`,
-        temperature: 0.4,
-        maxOutputTokens: 1500,
-        schema: {
-            type: Type.OBJECT,
-            properties: {
-                draft: { type: Type.STRING, description: "Borrador de anamnesis en prosa." },
-                suggestedQuestions: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                    description: "Preguntas que el médico puede explorar.",
-                },
-            },
-            required: ["draft"],
-        },
+        userContent: `Datos preclínicos: ${JSON.stringify(payload)}`,
+        temperature: 0.4
     });
 };
-
-
-const RX_SAFETY_INSTRUCTION = `Eres un asistente farmacológico que revisa recetas antes de que el médico las imprima.
-Detectas problemas críticos como:
-- Contraindicaciones por alergia documentada en antecedentes.
-- Dosis inapropiadas para la edad (pediátrica / adulto mayor).
-- Interacciones importantes entre los medicamentos de la misma receta.
-- Ausencia de indicaciones específicas (frecuencia, duración).
-
-Reglas:
-1. NO reemplazas la revisión del médico, solo alertas riesgos evidentes.
-2. Si no detectas nada, devuelve warnings: [] y allClear: true.
-3. Severidad: "high" (contraindicación absoluta, alergia), "medium" (revisar dosis/frecuencia), "low" (sugerencia menor).
-4. Sé específico: menciona el nombre del medicamento y la razón del warning.
-5. NO inventes interacciones sin evidencia farmacológica conocida.`;
 
 export const checkPrescriptionSafety = async ({ medications, patient }) => {
-    if (!Array.isArray(medications) || medications.length === 0) {
-        const error = new Error("La receta está vacía, no hay nada que revisar.");
-        error.status = 400;
-        throw error;
-    }
-
-    const payload = {
-        paciente: {
-            edad: patient?.age ?? null,
-            genero: patient?.gender || null,
-            esMenor: !!patient?.isMinor,
-            antecedentesPersonales: patient?.personalHistory || "",
-            antecedentesFamiliares: patient?.familyHistory || "",
-        },
-        receta: medications.map((m) => ({
-            nombre: m.name,
-            concentracion: `${m.concentration || ""} ${m.concentrationUnit || ""}`.trim(),
-            dosis: `${m.doseAmount || m.dose || ""} ${m.doseUnit || ""}`.trim(),
-            via: m.route,
-            frecuencia: `${m.frequencyAmount || ""} ${m.frequencyUnit || ""}`.trim() || m.frequency,
-            duracion: `${m.durationAmount || ""} ${m.durationUnit || ""}`.trim() || m.duration,
-            indicaciones: m.additionalInstructions || "",
-        })),
-    };
-
-    return await callGemini({
+    if (!medications?.length) throw new Error("La receta está vacía.");
+    
+    const payload = { medications, patient };
+    return await callAI({
         systemInstruction: RX_SAFETY_INSTRUCTION,
-        userContent: `Revisa la siguiente receta:\n${JSON.stringify(payload, null, 2)}\n\nResponde SOLO con JSON válido (sin markdown, sin texto extra).`,
-        temperature: 0.1,
-        maxOutputTokens: 2048,
-        schema: {
-            type: Type.OBJECT,
-            properties: {
-                allClear: { type: Type.BOOLEAN },
-                warnings: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            severity: { type: Type.STRING, enum: ["low", "medium", "high"] },
-                            medication: { type: Type.STRING },
-                            message: { type: Type.STRING },
-                        },
-                        required: ["severity", "message"],
-                    },
-                },
-            },
-            required: ["allClear", "warnings"],
-        },
+        userContent: `Revisa esta receta: ${JSON.stringify(payload)}`,
+        temperature: 0.1
     });
 };
-
-
-const HISTORY_EXTRACT_INSTRUCTION = `Eres un asistente que convierte texto libre de antecedentes médicos en datos estructurados.
-El texto puede mezclar alergias, enfermedades crónicas, cirugías previas, hábitos y medicamentos actuales.
-
-Reglas:
-1. Extrae SOLO lo que está en el texto. NO infieras ni completes.
-2. Normaliza nombres comunes (ej. "DM2" → "Diabetes mellitus tipo 2").
-3. Si detectas años entre paréntesis o fechas, inclúyelos.
-4. "habits" es un objeto con campos opcionales smoking, alcohol, drugs. Valores: "never", "former", "current", "unknown".
-5. Si el texto está vacío o no contiene antecedentes, devuelve todos los arrays vacíos.`;
 
 export const extractStructuredHistory = async (rawHistoryText) => {
-    const clean = typeof rawHistoryText === "string" ? rawHistoryText.trim() : "";
-
-    return await callGemini({
+    return await callAI({
         systemInstruction: HISTORY_EXTRACT_INSTRUCTION,
-        userContent: `Texto a estructurar:\n"""${clean || "(vacío)"}"""\n\nResponde SOLO con JSON válido (sin markdown, sin texto extra).`,
-        temperature: 0.1,
-        maxOutputTokens: 1500,
-        schema: {
-            type: Type.OBJECT,
-            properties: {
-                allergies: { type: Type.ARRAY, items: { type: Type.STRING } },
-                chronicConditions: { type: Type.ARRAY, items: { type: Type.STRING } },
-                surgeries: {
-                    type: Type.ARRAY,
-                    items: {
-                        type: Type.OBJECT,
-                        properties: {
-                            name: { type: Type.STRING },
-                            year: { type: Type.STRING },
-                        },
-                        required: ["name"],
-                    },
-                },
-                currentMedications: { type: Type.ARRAY, items: { type: Type.STRING } },
-                habits: {
-                    type: Type.OBJECT,
-                    properties: {
-                        smoking: { type: Type.STRING, enum: ["never", "former", "current", "unknown"] },
-                        alcohol: { type: Type.STRING, enum: ["never", "former", "current", "unknown"] },
-                        drugs: { type: Type.STRING, enum: ["never", "former", "current", "unknown"] },
-                    },
-                },
-            },
-            required: ["allergies", "chronicConditions", "surgeries", "currentMedications"],
-        },
+        userContent: `Texto: ${rawHistoryText || "(vacío)"}`,
+        temperature: 0.1
     });
 };
 
-
-const REPORT_NARRATIVE_INSTRUCTION = `Eres un analista de datos clínicos que redacta resúmenes ejecutivos de reportes estadísticos.
-A partir de contadores de diagnósticos agrupados por año, escribes un párrafo analítico (3-6 líneas) que destaque:
-- Diagnósticos más frecuentes en el período.
-- Tendencias notables (incrementos/decrementos año a año, expresados en porcentaje).
-- Patrones estacionales o demográficos si son evidentes en los datos.
-
-Reglas:
-1. Usa español médico claro y profesional, tono de reporte ejecutivo.
-2. Incluye cifras concretas (porcentajes, conteos).
-3. NO hagas recomendaciones clínicas; solo describe lo observado.
-4. Si los datos son muy escasos (<5 registros), menciónalo.`;
-
 export const analyzeDiagnosticsReport = async ({ byYear, period, totalConsultations }) => {
-    const compactByYear = (byYear || []).map((y) => ({
-        year: y.year,
-        total: y.total,
-        topDiagnoses: (y.diagnoses || [])
-            .slice(0, 5)
-            .map((d) => ({ code: d.code, name: d.name, count: d.count })),
-    }));
-
-    const payload = {
-        periodo: period,
-        totalConsultas: totalConsultations,
-        resumenAnual: compactByYear,
-    };
-
-    return await callGemini({
+    const payload = { byYear, period, totalConsultations };
+    return await callAI({
         systemInstruction: REPORT_NARRATIVE_INSTRUCTION,
-        userContent: `Datos del reporte:\n${JSON.stringify(payload, null, 2)}\n\nResponde SOLO con JSON válido que cumpla el esquema (sin texto extra, sin markdown).`,
+        userContent: `Datos del reporte: ${JSON.stringify(payload)}`,
         temperature: 0.4,
-        maxOutputTokens: 2048,
-        schema: {
-            type: Type.OBJECT,
-            properties: {
-                narrative: { type: Type.STRING, description: "Párrafo analítico de 3-6 líneas." },
-                highlights: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING },
-                    description: "3-5 puntos destacados en bullets cortos.",
-                },
-            },
-            required: ["narrative"],
-            propertyOrdering: ["narrative", "highlights"],
-        },
+        maxTokens: 2048
     });
 };

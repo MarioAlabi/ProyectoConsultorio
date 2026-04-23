@@ -8,6 +8,8 @@ import {
 export const generateDocumentController = async (req, res, next) => {
     try {
         const { templateId, patientId, consultationId, extras, title } = req.body;
+        
+        // El servicio ya genera el texto Y el PDF en Base64
         const result = await generateDocument({
             templateId,
             patientId,
@@ -17,6 +19,7 @@ export const generateDocumentController = async (req, res, next) => {
             doctorId: req.user?.id,
         });
 
+        // Auditoría obligatoria (CSSP El Salvador)
         logAudit({
             tableName: "generated_documents",
             recordId: result.id,
@@ -24,21 +27,19 @@ export const generateDocumentController = async (req, res, next) => {
             user: req.user,
             newValues: {
                 templateId: result.templateId,
-                type: result.type,
-                patientId: result.patientId,
-                consultationId: result.consultationId,
                 title: result.title,
+                patientId: result.patientId
             },
-            description: `${result.type === "incapacidad" ? "Incapacidad" : "Constancia"} emitida para paciente ${result.patientId}`,
+            description: `Documento "${result.title}" emitido para paciente`,
             ipAddress: req.ip,
         });
 
+        // Enviamos el resultado que incluye el pdfBase64 para el Front
         res.status(201).json({ success: true, data: result });
     } catch (error) {
         next(error);
     }
 };
-
 export const listPatientDocumentsController = async (req, res, next) => {
     try {
         const { patientId } = req.params;
