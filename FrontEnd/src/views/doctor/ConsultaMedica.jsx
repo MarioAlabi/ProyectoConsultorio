@@ -17,6 +17,7 @@ import { authClient } from "../../lib/auth-client";
 import { Modal } from "../../components/Modal";
 import { ClinicalHistoryTimeline } from "../../components/clinical-history/ClinicalHistoryTimeline";
 import { calcularEdad, clasificarIMC } from "../../lib/utils";
+import { DocumentGeneratorModal } from "../../components/DocumentGeneratorModal"; 
 import "../../views/shared/Shared.css";
 
 const toNull = (v) => (v === "" || v === undefined ? null : v);
@@ -60,7 +61,7 @@ const getBpStatus = (bp) => {
 };
 
 export const ConsultaMedica = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // Este es el preclinicalId
   const navigate = useNavigate();
 
   const { data: session } = authClient.useSession();
@@ -75,17 +76,20 @@ export const ConsultaMedica = () => {
 
   const { data: patientProfile } = usePatient(patientId);
   const { data: historialClinico, isLoading: historialLoading, isError: historialError } = usePatientClinicalHistory(patientId);
-
   const finishMutation = useFinishConsultation();
   const updatePatientMutation = useUpdatePatient();
   const { data: insurers = [] } = useInsurers();
 
   const [medicamentos, setMedicamentos] = useState([]);
+  const [documentosGenerados, setDocumentosGenerados] = useState([]); // <-- Hook de estado movido adentro del componente
   const [showHistory, setShowHistory] = useState(false);
   
   const [isEditingAntecedents, setIsEditingAntecedents] = useState(false);
   const [tempPersonalHistory, setTempPersonalHistory] = useState("");
   const [tempFamilyHistory, setTempFamilyHistory] = useState("");
+  
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState("certificate");
 
   const { register, watch, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(consultationSchema),
@@ -108,10 +112,9 @@ export const ConsultaMedica = () => {
   const currentTemp = watch("temperature");
   const currentHr = watch("heartRate");
   const currentO2 = watch("oxygenSaturation");
+  const currentDiagnosis = watch("diagnosis");
 
-  // ✅ SOLUCIÓN DE LA EDAD A PRUEBA DE BALAS
   const dobToUse = data?.patientDob || patientProfile?.yearOfBirth;
-  // Solo aplicamos el .split() si es un texto (String), de lo contrario lo pasamos directo.
   const safeDob = typeof dobToUse === "string" ? dobToUse.split("T")[0] : dobToUse;
   const edad = safeDob ? calcularEdad(safeDob) : null;
 
@@ -155,6 +158,14 @@ export const ConsultaMedica = () => {
 
   const imcInfo = clasificarIMC(bmi ? parseFloat(bmi) : null) || { label: "N/A", color: "#6b7280" };
   const bpInfo = getBpStatus(currentBp);
+
+  const handleAbrirDocumento = () => {
+    if (!currentDiagnosis) {
+      toast.error("Por favor, ingrese un diagnóstico primero para que la IA tenga contexto.");
+      return;
+    }
+    setIsDocModalOpen(true);
+  };
 
   const handleSaveAntecedents = () => {
     if (!patientId) return toast.error("Error: ID de paciente no encontrado.");
@@ -296,6 +307,7 @@ export const ConsultaMedica = () => {
       insurerId: formData.billingType === "insurance" ? formData.insurerId : undefined,
       agreedAmount: formData.billingType === "insurance" ? formData.agreedAmount : undefined,
       medicamentos: medicamentosPreparados,
+      documentos: documentosGenerados,
     };
 
     finishMutation.mutate({ id, data: body }, {
@@ -596,8 +608,42 @@ export const ConsultaMedica = () => {
               )}
             </div>
 
+            <div style={S.card}>
+              <h2 style={S.sectionTitle}>Documentos Clínicos</h2>
+              <p style={{ margin: "0 0 1rem", color: "#6b7280", fontSize: "0.95rem" }}>
+                Genere constancias, incapacidades o recetas con asistencia de IA antes de finalizar la consulta. (Requiere ingresar el diagnóstico primero).
+              </p>
+              
+              <div style={{ display: "flex", gap: "1rem", alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0, minWidth: "250px" }}>
+                  <label className="form-label">Tipo de Documento</label>
+                  <select 
+                    className="form-input" 
+                    value={selectedDocType} 
+                    onChange={(e) => setSelectedDocType(e.target.value)}
+                    style={{ backgroundColor: "white" }}
+                  >
+                    <option value="certificate">Constancia Médica (Buena Salud, Embarazo, etc.)</option>
+                    <option value="sick_leave">Incapacidad Médica</option>
+                    <option value="prescription">Receta Médica Extra</option>
+                    <option value="other">Documento Libre / Otro</option>
+                  </select>
+                </div>
+                
+                <button 
+                  type="button" 
+                  onClick={handleAbrirDocumento} 
+                  className="submit-btn" 
+                  style={{ margin: 0, backgroundColor: "#0ea5e9", padding: "0.75rem 1.5rem" }}
+                >
+                  <i className="ri-file-text-line" style={{ marginRight: "8px" }}></i>
+                  Redactar Documento
+                </button>
+              </div>
+            </div>
+
             <button type="submit" className="submit-btn" disabled={finishMutation.isPending} style={{ width: "100%", padding: "1rem", fontSize: "1.1rem", marginTop: "1rem" }}>
-              {finishMutation.isPending ? "Finalizando..." : "Finalizar Consulta"}
+              {finishMutation.isPending ? "Finalizando consulta..." : "Finalizar Consulta"}
             </button>
           </main>
         </form>
@@ -606,6 +652,15 @@ export const ConsultaMedica = () => {
       <Modal isOpen={showHistory} onClose={() => setShowHistory(false)} title={`Historial Clínico - ${data?.patientName || "Paciente"}`} size="xl">
         <ClinicalHistoryTimeline history={historialClinico} isLoading={historialLoading} isError={historialError} />
       </Modal>
+
+      <DocumentGeneratorModal 
+        isOpen={isDocModalOpen} 
+        onClose={() => setIsDocModalOpen(false)} 
+        initialDocType={selectedDocType} 
+        patientId={data?.patientId || data?.patient?.id} 
+        currentDiagnosis={currentDiagnosis} 
+        onDocumentGenerated={(nuevoDoc) => setDocumentosGenerados([...documentosGenerados, nuevoDoc])}
+      />
     </div>
   );
 };

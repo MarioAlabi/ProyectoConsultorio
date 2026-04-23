@@ -12,6 +12,7 @@ import auditRoutes from "./routes/auditRoutes.js";
 import insurerRoutes from "./routes/insurerRoutes.js";
 import mantenimientoRoutes from './routes/mantenimientoroutes.js';
 import settingsRoutes from "./routes/settingsRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 const app = express();
 
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
@@ -41,6 +42,8 @@ app.use("/api/audit", auditRoutes);
 app.use("/api/insurers", insurerRoutes);
 app.use('/api/admin', mantenimientoRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/documents", documentRoutes);
+
 app.get("/status", (req, res) => {
     res.json({
         status: "ok",
