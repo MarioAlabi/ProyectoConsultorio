@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, text, datetime, boolean, int, bigint, longtext, uniqueIndex, date, mysqlEnum, timestamp, decimal } from "drizzle-orm/mysql-core";
+import { mysqlTable, varchar, text, datetime, boolean, int, bigint, longtext, uniqueIndex, date, mysqlEnum, timestamp, decimal, foreignKey } from "drizzle-orm/mysql-core";
 export const users = mysqlTable("users", {
     id: varchar("id", { length: 36 }).primaryKey(),
     name: varchar("name", { length: 80 }).notNull(),
@@ -138,9 +138,7 @@ export const medicalConsultations = mysqlTable("medical_consultations", {
 });
 export const prescribedMedications = mysqlTable("prescribed_medications", {
     id: varchar("id", { length: 36 }).primaryKey(),
-    consultationId: varchar("consultation_id", { length: 36 })
-        .notNull()
-        .references(() => medicalConsultations.id, { onDelete: "cascade" }),
+    consultationId: varchar("consultation_id", { length: 36 }).notNull(),
     name: varchar("name", { length: 150 }).notNull(),
     concentration: varchar("concentration", { length: 50 }),
     concentrationUnit: varchar("concentration_unit", { length: 20 }),
@@ -152,7 +150,13 @@ export const prescribedMedications = mysqlTable("prescribed_medications", {
     additionalInstructions: text("additional_instructions"),
 
     createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+    foreignKey({
+        columns: [table.consultationId],
+        foreignColumns: [medicalConsultations.id],
+        name: "fk_pm_consultation_id",
+    }).onDelete("cascade"),
+]);
 
 export const auditLogs = mysqlTable("audit_logs", {
     id: varchar("id", { length: 36 }).primaryKey(),
@@ -198,9 +202,7 @@ export const clinicSettings = mysqlTable("clinic_settings", {
 
 export const consultationDocuments = mysqlTable("consultation_documents", {
     id: varchar("id", { length: 36 }).primaryKey(),
-    consultationId: varchar("consultation_id", { length: 36 })
-        .notNull() 
-        .references(() => medicalConsultations.id, { onDelete: "cascade" }),
+    consultationId: varchar("consultation_id", { length: 36 }).notNull(),
     patientId: varchar("patient_id", { length: 36 })
         .notNull()
         .references(() => patients.id, { onDelete: "cascade" }),
@@ -216,7 +218,13 @@ export const consultationDocuments = mysqlTable("consultation_documents", {
     
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
-});
+}, (table) => [
+    foreignKey({
+        columns: [table.consultationId],
+        foreignColumns: [medicalConsultations.id],
+        name: "fk_cons_doc_consult_id",
+    }).onDelete("cascade"),
+]);
 
 export const documentTemplates = mysqlTable("document_templates", {
     id: varchar("id", { length: 36 }).primaryKey(),
