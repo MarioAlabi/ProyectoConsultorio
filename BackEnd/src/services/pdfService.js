@@ -1,13 +1,40 @@
 import puppeteer from 'puppeteer';
+import fs from 'fs';
+import alertService from './alertService.js';
+
+const getChromeExecutablePath = () => {
+    if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+        return process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+    const possiblePaths = [
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/snap/bin/chromium',
+    ];
+    return possiblePaths.find((p) => fs.existsSync(p));
+};
 
 export const generateConsultationPdf = async (data) => {
-    const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox'] });
+    try {
+        const execPath = getChromeExecutablePath();
+        const launchOptions = {
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        };
+        if (execPath) {
+            launchOptions.executablePath = execPath;
+        }
+
+        const browser = await puppeteer.launch(launchOptions);
     const page = await browser.newPage();
 
     const fechaActual = new Date();
     const dia = fechaActual.getDate();
     const mes = fechaActual.toLocaleString('es-ES', { month: 'long' });
     const anio = fechaActual.getFullYear();
+    const docTitle = data.title || "CONSTANCIA MÉDICA";
 
     const htmlContent = `
         <!DOCTYPE html>
@@ -91,7 +118,7 @@ export const generateConsultationPdf = async (data) => {
                 <p>${data.clinicAddress}</p>
             </div>
 
-            <div class="doc-title">CONSTANCIA MÉDICA</div>
+            <div class="doc-title">${docTitle}</div>
 
             <div class="main-content">
                 ${data.textContent}
@@ -129,4 +156,9 @@ export const generateConsultationPdf = async (data) => {
 
     await browser.close();
     return Buffer.from(pdfBuffer).toString('base64');
+  } catch (error) {
+    console.error("[PDF SERVICE] Error generando PDF:", error);
+    alertService.notifyPdfEngineFailure(error).catch(() => {});
+    throw error;
+  }
 };

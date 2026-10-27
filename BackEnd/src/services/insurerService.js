@@ -121,8 +121,8 @@ export const getInsurers = async () => {
         .orderBy(asc(insurers.companyName));
 };
 
-export const getInsurerById = async (id) => {
-    const [insurer] = await db
+export const getInsurerById = async (id, executor = db) => {
+    const [insurer] = await executor
         .select()
         .from(insurers)
         .where(eq(insurers.id, id))

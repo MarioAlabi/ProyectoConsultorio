@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../models/schema.js";
 import dotenv from "dotenv";
+import alertService from "../services/alertService.js";
 
 dotenv.config();
 
@@ -28,6 +29,9 @@ export const connectDB = async () => {
 
   } catch (error) {
     console.error('Error connecting to MariaDB database:', error.message);
+    try {
+      await alertService.notifyDatabaseConnectionLost(error);
+    } catch {}
     process.exit(1);
   }
 };

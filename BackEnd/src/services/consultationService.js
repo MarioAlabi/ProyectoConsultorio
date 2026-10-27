@@ -53,7 +53,7 @@ const normalizeAmount = (value) => {
     return Number(cleaned);
 };
 
-const resolveConsultationCoverage = async (data = {}) => {
+const resolveConsultationCoverage = async (data = {}, executor = db) => {
     const billingType = normalizeBillingType(data.billingType);
 
     if (!["private", "insurance"].includes(billingType)) {
@@ -77,7 +77,7 @@ const resolveConsultationCoverage = async (data = {}) => {
         throw error;
     }
 
-    const insurer = await getInsurerById(insurerId);
+    const insurer = await getInsurerById(insurerId, executor);
     const customAgreedAmount = data.agreedAmount;
     const hasCustomAgreedAmount =
         customAgreedAmount !== undefined &&
@@ -149,7 +149,7 @@ export const createMedicalConsultation = async (preclinicalId, data, doctorId) =
         }
 
         // 2. Resolver la cobertura de la aseguradora/particular
-        const consultationCoverage = await resolveConsultationCoverage(data);
+        const consultationCoverage = await resolveConsultationCoverage(data, tx);
 
         // 3. Crear la Consulta Médica Principal
         const consultationId = uuidv4();

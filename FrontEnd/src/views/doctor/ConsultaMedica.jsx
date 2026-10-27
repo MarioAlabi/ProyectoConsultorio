@@ -64,31 +64,39 @@ export const ConsultaMedica = () => {
         let base64Raw = doc.pdfBase64;
         if (!base64Raw) continue;
 
-        // 1. Aseguramos que tenga el prefijo correcto para fetch
-        const dataUri = base64Raw.startsWith('data:application/pdf;base64,') 
-          ? base64Raw 
-          : `data:application/pdf;base64,${base64Raw}`;
-
-        // 2. Usamos fetch para convertir el Data URI en un BLOB real de forma nativa
-        // Esto es MIL veces más estable que usar atob() manualmente
-        const response = await fetch(dataUri);
-        const blob = await response.blob();
-        
+        // Limpiar prefijo data uri si viene incluido
+        const cleanBase64 = base64Raw.replace(/^data:application\/pdf;base64,/, '');
+        const byteCharacters = atob(cleanBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let j = 0; j < byteCharacters.length; j++) {
+          byteNumbers[j] = byteCharacters.charCodeAt(j);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
         const blobUrl = URL.createObjectURL(blob);
-        
-        // 3. Abrimos la ventana con un ligero retraso para evitar bloqueos
-        setTimeout(() => {
-          const printWindow = window.open(blobUrl);
-          if (printWindow) {
-            printWindow.onload = () => {
-              // Intentamos imprimir, si falla, al menos el PDF queda visible para el usuario
-              try { printWindow.print(); } catch (e) { console.warn("Auto-print bloqueado, pero PDF cargado."); }
-            };
-          } else {
-            toast.error("Ventana bloqueada. Por favor permite los pop-ups.");
-          }
-        }, i * 1000);
 
+        // Imprimir vía iframe oculto para evitar bloqueos del navegador (pop-up blocker)
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.src = blobUrl;
+        document.body.appendChild(iframe);
+
+        iframe.onload = () => {
+          setTimeout(() => {
+            try {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+            } catch (e) {
+              console.warn("Auto-print fallback:", e);
+              window.open(blobUrl, '_blank');
+            }
+          }, 300);
+        };
       } catch (error) {
         console.error("Error al procesar PDF para impresión:", error);
         toast.error("No se pudo procesar uno de los documentos.");

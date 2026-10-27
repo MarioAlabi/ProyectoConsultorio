@@ -111,12 +111,7 @@ export const GenerateDocumentModal = ({
     const logoUrl = clinicSettings?.logoUrl || "";
     const clinicName = clinicSettings?.clinicName || "Consultorio Médico";
     const address = clinicSettings?.address || "";
-    const printWindow = window.open("", "_blank", "width=820,height=900");
-    if (!printWindow) {
-      toast.error("El navegador bloqueó la ventana de impresión. Habilítala para imprimir.");
-      return;
-    }
-    printWindow.document.write(`<!doctype html><html><head><title>${title}</title>
+    const html = `<!doctype html><html><head><title>${title}</title>
       <style>
         @media print { @page { margin: 18mm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         body { font-family: 'Georgia', 'Times New Roman', serif; color: #1f2937; padding: 24px; line-height: 1.55; }
@@ -134,22 +129,32 @@ export const GenerateDocumentModal = ({
         </div>
       </div>
       <pre>${content.replace(/</g, "&lt;")}</pre>
-      </body></html>`);
-    printWindow.document.close();
-    // Diferimos el print desde el padre para evitar inyectar <script> en el HTML.
-    const triggerPrint = () => {
-      try {
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      } catch {
-        // silencioso: la ventana de impresión puede ser cerrada por el usuario antes de terminar
-      }
-    };
-    if (printWindow.document.readyState === "complete") {
-      setTimeout(triggerPrint, 300);
-    } else {
-      printWindow.addEventListener("load", () => setTimeout(triggerPrint, 300));
+      </body></html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (e) {
+          console.warn("Iframe print error:", e);
+        } finally {
+          setTimeout(() => iframe.remove(), 1000);
+        }
+      }, 300);
     }
   };
 

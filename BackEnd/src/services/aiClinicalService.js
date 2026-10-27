@@ -1,46 +1,4 @@
-import OpenAI from "openai";
-
-// Configuración del cliente OpenAI usando tu variable de entorno
-const openai = new OpenAI({
-    apiKey: process.env.SECRET_KEY_GEMINI || process.env.GEMINI_API_KEY,
-});
-
-const MODEL_NAME = process.env.AI_MODEL || "gpt-4o-mini";
-
-/**
- * Helper unificado para llamadas a la IA con OpenAI
- */
-const callAI = async ({ systemInstruction, userContent, temperature = 0.3, maxTokens = 2048 }) => {
-    const apiKey = process.env.SECRET_KEY_GEMINI || process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-        const error = new Error("La integración con IA no está configurada. Define SECRET_KEY_GEMINI en el servidor.");
-        error.status = 503;
-        throw error;
-    }
-
-    try {
-        const response = await openai.chat.completions.create({
-            model: MODEL_NAME,
-            messages: [
-                { role: "system", content: systemInstruction },
-                { role: "user", content: userContent }
-            ],
-            // Forzamos al modelo a responder siempre con un objeto JSON válido
-            response_format: { type: "json_object" },
-            temperature,
-            max_tokens: maxTokens,
-        });
-
-        const content = response.choices[0].message.content;
-        return JSON.parse(content);
-    } catch (err) {
-        console.error("[AI CLINICAL ERROR]:", err);
-        const error = new Error(`Error al contactar al modelo de IA: ${err.message || err}`);
-        error.status = 502;
-        throw error;
-    }
-};
+import { generateJson, Type } from "./aiClient.js";
 
 // --- INSTRUCCIONES DEL SISTEMA ---
 
@@ -53,20 +11,47 @@ A partir de un diagnóstico, devuelve un JSON con:
 
 const SUMMARY_INSTRUCTION = `Eres un asistente clínico. Genera un resumen ejecutivo de 3-5 líneas de un paciente.
 Menciona edad, género, condiciones crónicas, alergias y patrón reciente.
-Devuelve JSON: { "summary": "...", "flags": [{ "severity": "info/warning/critical", "message": "..." }] }.`;
+Devuelve JSON: { "summary": "...", "flags": [{ "severity": "info"|"warning"|"critical", "message": "..." }] }.`;
 
 const ANAMNESIS_INSTRUCTION = `Eres un asistente clínico. Redacta un borrador de anamnesis en prosa médica (3-6 líneas).
 Basado en motivo de consulta y signos vitales. No inventes síntomas.
 Devuelve JSON: { "draft": "...", "suggestedQuestions": ["..."] }.`;
 
-const RX_SAFETY_INSTRUCTION = `Eres un asistente farmacológico. Revisa recetas para detectar riesgos, alergias o interacciones.
-Devuelve JSON: { "allClear": boolean, "warnings": [{ "severity": "low/medium/high", "medication": "...", "message": "..." }] }.`;
+const RX_SAFETY_INSTRUCTION = `Eres un asistente farmacológico que revisa recetas antes de que el médico las imprima.
+Detectas problemas críticos como:
+- Contraindicaciones por alergia documentada en antecedentes.
+- Dosis inapropiadas para la edad (pediátrica / adulto mayor).
+- Interacciones importantes entre los medicamentos de la misma receta.
+- Ausencia de indicaciones específicas (frecuencia, duración).
 
-const HISTORY_EXTRACT_INSTRUCTION = `Asistente de estructuración de datos médicos. 
-Convierte texto libre en: { "allergies": [], "chronicConditions": [], "surgeries": [{ "name": "", "year": "" }], "currentMedications": [], "habits": { "smoking": "...", "alcohol": "...", "drugs": "..." } }.`;
+Reglas:
+1. NO reemplazas la revisión del médico, solo alertas riesgos evidentes.
+2. Si no detectas nada, devuelve warnings: [] y allClear: true.
+3. Severidad: "high" (contraindicación absoluta, alergia), "medium" (revisar dosis/frecuencia), "low" (sugerencia menor).
+4. Sé específico: menciona el nombre del medicamento y la razón del warning.
+5. NO inventes interacciones sin evidencia farmacológica conocida.`;
 
-const REPORT_NARRATIVE_INSTRUCTION = `Analista de datos clínicos. Redacta párrafos analíticos de reportes estadísticos médicos.
-Devuelve JSON: { "narrative": "...", "highlights": ["..."] }.`;
+const HISTORY_EXTRACT_INSTRUCTION = `Eres un asistente que convierte texto libre de antecedentes médicos en datos estructurados.
+El texto puede mezclar alergias, enfermedades crónicas, cirugías previas, hábitos y medicamentos actuales.
+
+Reglas:
+1. Extrae SOLO lo que está en el texto. NO infieras ni completes.
+2. Normaliza nombres comunes (ej. "DM2" → "Diabetes mellitus tipo 2").
+3. Si detectas años entre paréntesis o fechas, inclúyelos.
+4. "habits" es un objeto con campos opcionales smoking, alcohol, drugs. Valores: "never", "former", "current", "unknown".
+5. Si el texto está vacío o no contiene antecedentes, devuelve todos los arrays vacíos.`;
+
+const REPORT_NARRATIVE_INSTRUCTION = `Eres un analista de datos clínicos que redacta resúmenes ejecutivos de reportes estadísticos.
+A partir de contadores de diagnósticos agrupados por año, escribes un párrafo analítico (3-6 líneas) que destaque:
+- Diagnósticos más frecuentes en el período.
+- Tendencias notables (incrementos/decrementos año a año, expresados en porcentaje).
+- Patrones estacionales o demográficos si son evidentes en los datos.
+
+Reglas:
+1. Usa español médico claro y profesional, tono de reporte ejecutivo.
+2. Incluye cifras concretas (porcentajes, conteos).
+3. NO hagas recomendaciones clínicas; solo describe lo observado.
+4. Si los datos son muy escasos (<5 registros), menciónalo.`;
 
 // --- FUNCIONES EXPORTADAS ---
 
@@ -74,10 +59,31 @@ export const suggestIcd10 = async (diagnosisText) => {
     const clean = typeof diagnosisText === "string" ? diagnosisText.trim() : "";
     if (clean.length < 2) throw new Error("Diagnóstico muy corto.");
 
-    return await callAI({
+    return await generateJson({
         systemInstruction: ICD10_INSTRUCTION,
-        userContent: `Diagnóstico libre: """${clean}"""`,
-        temperature: 0.1
+        prompt: `Diagnóstico libre: """${clean}"""`,
+        temperature: 0.1,
+        maxTokens: 1024,
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                code: { type: Type.STRING },
+                canonicalName: { type: Type.STRING },
+                confidence: { type: Type.NUMBER },
+                alternatives: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            code: { type: Type.STRING },
+                            canonicalName: { type: Type.STRING },
+                        },
+                        required: ["code", "canonicalName"],
+                    },
+                },
+            },
+            required: ["code", "canonicalName"],
+        },
     });
 };
 
@@ -90,49 +96,180 @@ export const summarizePatient = async ({ patient, consultations }) => {
             genero: patient.gender,
             antecedentes: patient.personalHistory || "",
         },
-        consultas: (consultations || []).slice(0, 10)
+        consultas: (consultations || []).slice(0, 10),
     };
 
-    return await callAI({
+    return await generateJson({
         systemInstruction: SUMMARY_INSTRUCTION,
-        userContent: `Datos: ${JSON.stringify(payload)}`
+        prompt: `Datos del paciente:\n${JSON.stringify(payload, null, 2)}`,
+        temperature: 0.3,
+        maxTokens: 1500,
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                summary: { type: Type.STRING },
+                flags: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            severity: { type: Type.STRING, enum: ["info", "warning", "critical"] },
+                            message: { type: Type.STRING },
+                        },
+                        required: ["severity", "message"],
+                    },
+                },
+            },
+            required: ["summary"],
+        },
     });
 };
 
 export const draftAnamnesis = async ({ motivo, signosVitales, antecedentes, edad, genero }) => {
     const payload = { motivo, signosVitales, antecedentes, edad, genero };
-    return await callAI({
+    return await generateJson({
         systemInstruction: ANAMNESIS_INSTRUCTION,
-        userContent: `Datos preclínicos: ${JSON.stringify(payload)}`,
-        temperature: 0.4
+        prompt: `Datos preclínicos:\n${JSON.stringify(payload, null, 2)}`,
+        temperature: 0.4,
+        maxTokens: 1500,
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                draft: { type: Type.STRING, description: "Borrador de anamnesis en prosa." },
+                suggestedQuestions: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                    description: "Preguntas que el médico puede explorar.",
+                },
+            },
+            required: ["draft"],
+        },
     });
 };
 
 export const checkPrescriptionSafety = async ({ medications, patient }) => {
-    if (!medications?.length) throw new Error("La receta está vacía.");
-    
-    const payload = { medications, patient };
-    return await callAI({
+    if (!Array.isArray(medications) || medications.length === 0) {
+        const error = new Error("La receta está vacía, no hay nada que revisar.");
+        error.status = 400;
+        throw error;
+    }
+
+    const payload = {
+        paciente: {
+            edad: patient?.age ?? null,
+            genero: patient?.gender || null,
+            esMenor: !!patient?.isMinor,
+            antecedentesPersonales: patient?.personalHistory || "",
+            antecedentesFamiliares: patient?.familyHistory || "",
+        },
+        receta: medications.map((m) => ({
+            nombre: m.name,
+            concentracion: `${m.concentration || ""} ${m.concentrationUnit || ""}`.trim(),
+            dosis: `${m.doseAmount || m.dose || ""} ${m.doseUnit || ""}`.trim(),
+            via: m.route,
+            frecuencia: `${m.frequencyAmount || ""} ${m.frequencyUnit || ""}`.trim() || m.frequency,
+            duracion: `${m.durationAmount || ""} ${m.durationUnit || ""}`.trim() || m.duration,
+            indicaciones: m.additionalInstructions || "",
+        })),
+    };
+
+    return await generateJson({
         systemInstruction: RX_SAFETY_INSTRUCTION,
-        userContent: `Revisa esta receta: ${JSON.stringify(payload)}`,
-        temperature: 0.1
+        prompt: `Revisa la siguiente receta:\n${JSON.stringify(payload, null, 2)}`,
+        temperature: 0.1,
+        maxTokens: 2048,
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                allClear: { type: Type.BOOLEAN },
+                warnings: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            severity: { type: Type.STRING, enum: ["low", "medium", "high"] },
+                            medication: { type: Type.STRING },
+                            message: { type: Type.STRING },
+                        },
+                        required: ["severity", "message"],
+                    },
+                },
+            },
+            required: ["allClear", "warnings"],
+        },
     });
 };
 
 export const extractStructuredHistory = async (rawHistoryText) => {
-    return await callAI({
+    const clean = typeof rawHistoryText === "string" ? rawHistoryText.trim() : "";
+
+    return await generateJson({
         systemInstruction: HISTORY_EXTRACT_INSTRUCTION,
-        userContent: `Texto: ${rawHistoryText || "(vacío)"}`,
-        temperature: 0.1
+        prompt: `Texto a estructurar:\n"""${clean || "(vacío)"}"""`,
+        temperature: 0.1,
+        maxTokens: 1500,
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                allergies: { type: Type.ARRAY, items: { type: Type.STRING } },
+                chronicConditions: { type: Type.ARRAY, items: { type: Type.STRING } },
+                surgeries: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            name: { type: Type.STRING },
+                            year: { type: Type.STRING },
+                        },
+                        required: ["name"],
+                    },
+                },
+                currentMedications: { type: Type.ARRAY, items: { type: Type.STRING } },
+                habits: {
+                    type: Type.OBJECT,
+                    properties: {
+                        smoking: { type: Type.STRING, enum: ["never", "former", "current", "unknown"] },
+                        alcohol: { type: Type.STRING, enum: ["never", "former", "current", "unknown"] },
+                        drugs: { type: Type.STRING, enum: ["never", "former", "current", "unknown"] },
+                    },
+                },
+            },
+            required: ["allergies", "chronicConditions", "surgeries", "currentMedications"],
+        },
     });
 };
 
 export const analyzeDiagnosticsReport = async ({ byYear, period, totalConsultations }) => {
-    const payload = { byYear, period, totalConsultations };
-    return await callAI({
+    const compactByYear = (byYear || []).map((y) => ({
+        year: y.year,
+        total: y.total,
+        topDiagnoses: (y.diagnoses || [])
+            .slice(0, 5)
+            .map((d) => ({ code: d.code, name: d.name, count: d.count })),
+    }));
+
+    const payload = {
+        periodo: period,
+        totalConsultas: totalConsultations,
+        resumenAnual: compactByYear,
+    };
+
+    return await generateJson({
         systemInstruction: REPORT_NARRATIVE_INSTRUCTION,
-        userContent: `Datos del reporte: ${JSON.stringify(payload)}`,
+        prompt: `Datos del reporte:\n${JSON.stringify(payload, null, 2)}`,
         temperature: 0.4,
-        maxTokens: 2048
+        maxTokens: 2048,
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                narrative: { type: Type.STRING, description: "Párrafo analítico de 3-6 líneas." },
+                highlights: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                    description: "3-5 puntos destacados en bullets cortos.",
+                },
+            },
+            required: ["narrative"],
+        },
     });
 };

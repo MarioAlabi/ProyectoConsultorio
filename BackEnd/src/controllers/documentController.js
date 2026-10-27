@@ -5,7 +5,7 @@ import { patients,clinicSettings, users } from "../models/schema.js";
 import { eq } from "drizzle-orm";
 
 // =========================================================================
-// FUNCIÓN 1: Conecta con OpenAI para redactar el borrador (generateDraft)
+// FUNCIÓN 1: Conecta con Google Gemini para redactar el borrador (generateDraft)
 // =========================================================================
 export const generateDraft = async (req, res, next) => {
     try {
@@ -49,7 +49,7 @@ export const generateDraft = async (req, res, next) => {
 
 export const renderPdfOnly = async (req, res, next) => {
     try {
-        const { patientId, finalText } = req.body;
+        const { patientId, finalText, title } = req.body;
         const doctorId = req.user.id; // ID del doctor logueado
 
         // 1. Consultamos TODA la data necesaria en paralelo para ser veloces
@@ -59,6 +59,7 @@ export const renderPdfOnly = async (req, res, next) => {
 
         // 2. Mapeamos los datos asegurándonos de que NADA sea N/A
         const documentParams = {
+            title: title || "CONSTANCIA MÉDICA",
             // Datos del Paciente
             patientName: patientData?.fullName || "Paciente no identificado",
             patientDui: patientData?.identityDocument || "N/A",

@@ -237,6 +237,7 @@ test("guarda medicamentos correctamente al registrar una consulta", async (t) =>
 
                     return Promise.resolve([
                         {
+                            id: "insurer-1",
                             patientId: "patient-1",
                             insurerId: "insurer-1",
                             insurerCompanyName: "Seguros Vida",
@@ -279,6 +280,9 @@ test("guarda medicamentos correctamente al registrar una consulta", async (t) =>
     const result = await createMedicalConsultation(
         "preclinical-1",
         {
+            billingType: "insurance",
+            insurerId: "insurer-1",
+            agreedAmount: "25.00",
             anamnesis: "Dolor de cabeza",
             diagnosis: "Hipertension arterial",
             medicamentos: [

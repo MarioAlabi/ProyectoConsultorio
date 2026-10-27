@@ -1,10 +1,4 @@
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-    apiKey: process.env.SECRET_KEY_GEMINI, // Mantenemos tu variable de entorno
-});
-
-const MODEL_NAME = process.env.AI_MODEL || "gpt-4o-mini";
+import { generateJson, Type } from "./aiClient.js";
 
 const PLACEHOLDERS_REFERENCE = [
     "{{paciente.nombre}}",
@@ -39,12 +33,6 @@ ${PLACEHOLDERS_REFERENCE.map((p) => `   - ${p}`).join("\n")}
 const ALLOWED_TYPES = new Set(["constancia", "incapacidad"]);
 
 export const draftTemplateWithAI = async (prompt, options = {}) => {
-    if (!process.env.SECRET_KEY_GEMINI) {
-        const error = new Error("La integración con IA no está configurada. Define SECRET_KEY_GEMINI en el servidor.");
-        error.status = 503;
-        throw error;
-    }
-
     const cleanPrompt = typeof prompt === "string" ? prompt.trim() : "";
     if (cleanPrompt.length < 5) {
         const error = new Error("Describe el documento que necesitas con al menos 5 caracteres.");
@@ -60,35 +48,35 @@ export const draftTemplateWithAI = async (prompt, options = {}) => {
         userContent += `Contexto adicional: ${options.extraContext}\n`;
     }
 
-    let response;
-    try {
-        response = await openai.chat.completions.create({
-            model: MODEL_NAME,
-            messages: [
-                { role: "system", content: SYSTEM_INSTRUCTION },
-                { role: "user", content: userContent }
-            ],
-            response_format: { type: "json_object" }, // Forzamos JSON seguro
-            temperature: 0.4,
-            max_tokens: 2048
-        });
-    } catch (err) {
-        console.error("[AI ERROR]:", err);
-        const error = new Error(`Error al contactar al modelo de IA: ${err.message || err}`);
-        error.status = 502;
-        throw error;
-    }
-
-    const raw = response.choices[0].message.content;
-
-    let parsed;
-    try {
-        parsed = JSON.parse(raw);
-    } catch {
-        const error = new Error("La respuesta del modelo de IA no es JSON válido.");
-        error.status = 502;
-        throw error;
-    }
+    const parsed = await generateJson({
+        systemInstruction: SYSTEM_INSTRUCTION,
+        prompt: userContent,
+        temperature: 0.4,
+        maxTokens: 2048,
+        schema: {
+            type: Type.OBJECT,
+            properties: {
+                type: {
+                    type: Type.STRING,
+                    enum: ["constancia", "incapacidad"],
+                    description: "Tipo de documento.",
+                },
+                name: {
+                    type: Type.STRING,
+                    description: "Nombre corto de la plantilla.",
+                },
+                description: {
+                    type: Type.STRING,
+                    description: "Descripción de una línea.",
+                },
+                bodyTemplate: {
+                    type: Type.STRING,
+                    description: "Cuerpo completo de la plantilla con placeholders.",
+                },
+            },
+            required: ["type", "name", "bodyTemplate"],
+        },
+    });
 
     const type = String(parsed.type || "").toLowerCase();
     if (!ALLOWED_TYPES.has(type)) {
@@ -125,6 +113,5 @@ export const draftTemplateWithAI = async (prompt, options = {}) => {
         description,
         bodyTemplate,
         placeholders,
-        model: MODEL_NAME,
     };
 };

@@ -3,18 +3,26 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# 2. Instalamos dependencias del sistema primero para aprovechar la caché de capas
-RUN apk add --no-cache mariadb-client
+# 2. Instalamos dependencias del sistema (mariadb-client y Chromium para PDF con Puppeteer)
+RUN apk add --no-cache \
+    mariadb-client \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # 3. Copiamos los archivos de dependencias
 COPY package*.json ./
 
 # 4. Seteamos la variable CI para indicarle a npm que es un entorno automatizado
-# Esto ayuda a evitar bugs de rutas interactivas
 ENV CI=true
 
 # 5. IMPORTANTE: Usamos 'npm ci' en lugar de 'npm install'
-# 'npm ci' es más rápido, más seguro para CI/CD y no intenta modificar el lockfile
 RUN npm ci
 
 # 6. Copiamos el resto del código fuente
