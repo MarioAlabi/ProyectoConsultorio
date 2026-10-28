@@ -34,7 +34,8 @@ export const auth = betterAuth({
         }
     },
     advanced: {
-        cookieDomain: ".marioalabi.com", 
+        useSecureCookies: process.env.USE_SECURE_COOKIES === "true",
+        ...(process.env.COOKIE_DOMAIN ? { cookieDomain: process.env.COOKIE_DOMAIN } : {}),
     },
     plugins: [
         admin({
@@ -78,7 +79,7 @@ export const auth = betterAuth({
         },
         sendOnSignUp: true,
     },
-    trustedOrigins: (process.env.APP_ALLOWED_ORIGINS || "http://localhost:5173").split(","),
+    trustedOrigins: (process.env.APP_ALLOWED_ORIGINS || "http://localhost:5173").split(",").map(url => url.trim()),
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
 });

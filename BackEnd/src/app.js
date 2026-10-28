@@ -19,10 +19,10 @@ import aiClinicalRoutes from "./routes/aiClinicalRoutes.js";
 
 const app = express();
 
-// 1. Limpiamos espacios en blanco por si hubo un dedazo en el .env
+const defaultOrigins = ["http://localhost:5173"];
 const allowedOrigins = process.env.APP_ALLOWED_ORIGINS
     ? process.env.APP_ALLOWED_ORIGINS.split(',').map(url => url.trim())
-    : ["http://localhost:5173", "https://consultoriofront.marioalabi.com"];
+    : defaultOrigins;
 
 app.use(cors({
     origin: function (origin, callback) {

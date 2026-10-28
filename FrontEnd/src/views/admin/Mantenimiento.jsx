@@ -7,7 +7,9 @@ const Mantenimiento = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const API_URL = import.meta.env.VITE_API_URL !== undefined 
+    ? import.meta.env.VITE_API_URL 
+    : (import.meta.env.DEV ? "http://localhost:3000" : "");
 
   const handleBackup = async () => {
     setIsBackingUp(true);

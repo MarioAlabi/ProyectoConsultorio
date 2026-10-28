@@ -101,7 +101,7 @@ export const sendAdminAlert = async ({
     severity = 'critical',
 }) => {
     try {
-        const adminEmail = process.env.ADMIN_ALERT_EMAIL || 'marioedgardovilledaalabi@gmail.com';
+        const adminEmail = process.env.ADMIN_ALERT_EMAIL;
         const resendKey = process.env.RESEND_API_KEY;
 
         if (!resendKey) {
