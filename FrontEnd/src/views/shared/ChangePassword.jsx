@@ -24,8 +24,14 @@ export const ChangePassword = () => {
         revokeOtherSessions: true,
       });
       if (error) {
-        setError("root", { message: error.message || "Error al actualizar la contraseña." });
-        toast.error(error.message || "Error al actualizar la contraseña.");
+        const errorMessages = {
+          INVALID_PASSWORD: "La contraseña actual es incorrecta.",
+          PASSWORD_TOO_SHORT: "La nueva contraseña es demasiado corta (mínimo 6 caracteres).",
+          PASSWORD_TOO_LONG: "La nueva contraseña es demasiado larga.",
+        };
+        const message = errorMessages[error.code] || (error.message === "Invalid password" ? "La contraseña actual es incorrecta." : (error.message || "Error al actualizar la contraseña."));
+        setError("root", { message });
+        toast.error(message);
         return;
       }
       setSuccess(true);
