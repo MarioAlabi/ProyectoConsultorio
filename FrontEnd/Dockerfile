@@ -25,7 +25,15 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copiamos TU configuración personalizada de Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Exponemos el puerto 80 (interno del contenedor)
-EXPOSE 80
+# Generar certificado SSL autofirmado de respaldo para que Nginx arranque siempre
+RUN apk add --no-cache openssl && \
+    mkdir -p /etc/nginx/certs && \
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+      -keyout /etc/nginx/certs/consultorio.key \
+      -out /etc/nginx/certs/consultorio.crt \
+      -subj "/CN=localhost"
+
+# Exponemos los puertos 80 y 443 (internos del contenedor)
+EXPOSE 80 443
 
 CMD ["nginx", "-g", "daemon off;"]
