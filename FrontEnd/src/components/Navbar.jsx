@@ -50,7 +50,7 @@ const getInitials = (name = '') => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-export const Navbar = () => {
+export const Navbar = ({ isCollapsed = false, onToggleCollapse }) => {
   const location = useLocation();
   const { data: session } = authClient.useSession();
   const { data: settings } = useSettings();
@@ -68,7 +68,7 @@ export const Navbar = () => {
   };
 
   return (
-    <aside className="sidebar" aria-label="Navegación principal">
+    <aside className={`sidebar ${isCollapsed ? 'is-collapsed' : ''}`} aria-label="Navegación principal">
       <div className="sidebar__brand">
         <div className="sidebar__brand-mark" aria-hidden="true">
           {settings?.logoUrl ? (
@@ -83,6 +83,15 @@ export const Navbar = () => {
           </span>
           <span className="sidebar__brand-tag">Consultorio</span>
         </div>
+        <button
+          type="button"
+          className="sidebar__collapse-toggle"
+          onClick={onToggleCollapse}
+          title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+          aria-label={isCollapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
+        >
+          <i className="ri-menu-line" aria-hidden="true"></i>
+        </button>
       </div>
 
       <span className="sidebar__eyebrow">{ROLE_LABEL[role] || 'Menú'}</span>
@@ -93,16 +102,17 @@ export const Navbar = () => {
             <NavLink
               to={link.path}
               className={`sidebar__link ${isActive(link.path) ? 'is-active' : ''}`}
+              title={isCollapsed ? link.label : undefined}
             >
               <i className={link.icon} aria-hidden="true"></i>
-              <span>{link.label}</span>
+              <span className="sidebar__link-text">{link.label}</span>
             </NavLink>
           </li>
         ))}
       </ul>
 
       <div className="sidebar__footer">
-        <div className="sidebar__user">
+        <div className="sidebar__user" title={isCollapsed ? `${userName} (${ROLE_LABEL[role] || 'Usuario'})` : undefined}>
           <div className="sidebar__avatar" aria-hidden="true">
             {getInitials(userName)}
           </div>
@@ -111,7 +121,11 @@ export const Navbar = () => {
             <span className="sidebar__user-role">{ROLE_LABEL[role] || 'Usuario'}</span>
           </div>
         </div>
-        <LogoutButton className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'center' }} />
+        <LogoutButton
+          iconOnly={isCollapsed}
+          className="btn btn-ghost btn-sm sidebar__logout-btn"
+          style={{ width: '100%', justifyContent: 'center' }}
+        />
       </div>
     </aside>
   );

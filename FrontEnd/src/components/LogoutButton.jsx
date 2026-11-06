@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { authClient } from "../lib/auth-client";
 import { Modal } from "./Modal";
 
-export const LogoutButton = ({ className = "", style = {}, label = "Cerrar sesión" }) => {
+export const LogoutButton = ({ className = "", style = {}, label = "Cerrar sesión", iconOnly = false }) => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -27,9 +27,15 @@ export const LogoutButton = ({ className = "", style = {}, label = "Cerrar sesi�
         onClick={() => setShowModal(true)}
         className={fallbackClass}
         style={style}
+        title={iconOnly ? label : undefined}
+        aria-label={label}
       >
-        <i className="ri-logout-box-r-line" aria-hidden="true" style={{ marginRight: "0.3rem" }}></i>
-        {label}
+        <i
+          className="ri-logout-box-r-line"
+          aria-hidden="true"
+          style={iconOnly ? { margin: 0, fontSize: "1.15rem" } : { marginRight: "0.3rem" }}
+        ></i>
+        {!iconOnly && label}
       </button>
 
       <Modal
