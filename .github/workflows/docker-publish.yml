@@ -41,7 +41,5 @@ jobs:
           context: ./FrontEnd
           push: true
           tags: marioalabi/consultorio-frontend:latest
-          build-args: |
-            VITE_API_URL=https://consultorioback.marioalabi.com
           cache-from: type=gha
           cache-to: type=gha,mode=max
